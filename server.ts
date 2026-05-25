@@ -5,8 +5,92 @@
 
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
-import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString } from './db';
+import fs from 'fs';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
+
+let startupError: any = null;
+
+// Capture and diagnostics for any unhandled startup crashes
+process.on('uncaughtException', (err) => {
+    console.error('🚨 UNCAUGHT EXCEPTION:', err && (err.stack || err.message || err));
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ UNHANDLED PROMISE REJECTION:', reason);
+});
+
+const app = express();
+
+let _filename = '';
+let _dirname = '';
+if (typeof __filename !== 'undefined' && __filename) {
+    _filename = __filename;
+} else {
+    try {
+        _filename = fileURLToPath(import.meta.url);
+    } catch {
+        _filename = '';
+    }
+}
+
+if (typeof __dirname !== 'undefined' && __dirname) {
+    _dirname = __dirname;
+} else if (_filename) {
+    _dirname = path.dirname(_filename);
+} else {
+    _dirname = process.cwd();
+}
+
+// Safely load local .env credentials if they exist in the root folder
+try {
+    const envPath = path.join(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split('\n').forEach((line) => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                const eqIdx = trimmed.indexOf('=');
+                if (eqIdx !== -1) {
+                    const key = trimmed.substring(0, eqIdx).trim();
+                    const val = trimmed.substring(eqIdx + 1).trim();
+                    if (key && !process.env[key]) {
+                        process.env[key] = val;
+                    }
+                }
+            }
+        });
+        console.info("💡 Local .env configuration loaded successfully.");
+    }
+} catch (err) {
+    console.warn("Could not read local .env file:", err);
+}
+
+// Ensure any quotes or whitespace in DATABASE_URL are sanitized on startup
+if (process.env.DATABASE_URL) {
+    const val = process.env.DATABASE_URL.toString().replace(/['"]/g, '').trim();
+    const cleanLower = val.toLowerCase();
+    if (
+        !val ||
+        cleanLower === 'undefined' ||
+        cleanLower === 'null' ||
+        cleanLower === 'none' ||
+        cleanLower.includes('placeholder') ||
+        cleanLower.includes('<username>') ||
+        cleanLower.includes('<password>') ||
+        cleanLower.includes('@base:') ||
+        cleanLower.includes('your_host') ||
+        cleanLower.includes('insert-your') ||
+        cleanLower.includes('your-database')
+    ) {
+        console.warn(`📢 [Self-Healing DB] Detected placeholder, undefined, or empty DATABASE_URL: "${val}". Disabling database pool to instantly fall back to safe sandbox mode.`);
+        process.env.DATABASE_URL = '';
+    } else {
+        process.env.DATABASE_URL = val;
+    }
+}
 
 // Simple In-memory database fallback to ensure app stays 100% functional without DB configuration
 const memoryDb = {
@@ -23,18 +107,66 @@ memoryDb.users.push({
     created_at: new Date()
 });
 
-async function startServer() {
-    const app = express();
-    const PORT = 3000;
+async function startServer(app: express.Express) {
+    const isCompiledFile = _dirname.includes('dist') || _filename.includes('dist') || _filename.endsWith('.cjs');
+    const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION || process.env.GOOGLE_CLOUD_PROJECT !== undefined;
+    const hasCompiledAssets = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+    const isProductionMode = process.env.NODE_ENV === "production" || isCompiledFile || isCloudRun || hasCompiledAssets || !fs.existsSync(path.join(process.cwd(), 'server.ts'));
+
+    let port = 3000;
+    if (process.env.PORT) {
+        try {
+            const cleanedPortStr = process.env.PORT.toString().replace(/['"]/g, '').trim();
+            const parsedPort = parseInt(cleanedPortStr, 10);
+            if (!isNaN(parsedPort) && parsedPort > 0) {
+                port = parsedPort;
+            }
+        } catch {}
+    }
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-    // Try starting & initializing PostgreSQL structure
-    try {
-        await initializeDatabaseSchema();
-    } catch (e) {
+    // Try starting & initializing PostgreSQL structure asynchronously so it does not block server startup
+    console.info(`📡 Current server-side process.env.DATABASE_URL (masked): ${process.env.DATABASE_URL ? maskConnectionUri(process.env.DATABASE_URL) : 'None'}`);
+    initializeDatabaseSchema().catch((e) => {
         console.warn("Could not auto-initialize DB tables on reboot:", e);
+    });
+
+    /**
+     * SECURELY MASK DATABASE URI PASSWORDS FOR DIAGNOSIS
+     */
+    function maskConnectionUri(urlStr: string | undefined): string {
+        if (!urlStr) return '';
+        try {
+            const doubleSlashIdx = urlStr.indexOf('://');
+            if (doubleSlashIdx === -1) return 'invalid-url';
+            
+            const protocol = urlStr.substring(0, doubleSlashIdx);
+            const rest = urlStr.substring(doubleSlashIdx + 3);
+            
+            const firstSlashInRest = rest.indexOf('/');
+            const authority = firstSlashInRest === -1 ? rest : rest.substring(0, firstSlashInRest);
+            const dbName = firstSlashInRest === -1 ? '' : rest.substring(firstSlashInRest + 1);
+            
+            const lastAtIdx = authority.lastIndexOf('@');
+            if (lastAtIdx === -1) {
+                return `${protocol}://${authority}/${dbName}`; // no credentials
+            }
+            
+            const credentials = authority.substring(0, lastAtIdx);
+            const hostPort = authority.substring(lastAtIdx + 1);
+            
+            const colonInCreds = credentials.indexOf(':');
+            let user = credentials;
+            if (colonInCreds !== -1) {
+                user = credentials.substring(0, colonInCreds);
+            }
+            
+            return `${protocol}://${user}:******@${hostPort}/${dbName}`;
+        } catch (e) {
+            return 'invalid-url';
+        }
     }
 
     /**
@@ -44,7 +176,44 @@ async function startServer() {
         const connected = isDatabaseConnected();
         res.json({
             connected,
-            mode: connected ? 'production-postgres' : 'offline-memory'
+            status: connected ? 'ok' : 'offline',
+            mode: connected ? 'production-postgres' : 'offline-memory',
+            hasUrlEnv: !!process.env.DATABASE_URL,
+            dbUrlMasked: process.env.DATABASE_URL ? maskConnectionUri(process.env.DATABASE_URL) : ''
+        });
+    });
+
+    /**
+     * MANUAL RESET AND FORCE RECONNECT ENDPOINT FOR CLOUD RUN HANDSHAKES
+     */
+    app.post('/api/db-reconnect', async (req, res): Promise<any> => {
+        try {
+            console.log("⚡ Received client request to resolve database status and force reconnect...");
+            resetConnectionState();
+            
+            // Re-attempt initial schema checks or pool verification
+            await initializeDatabaseSchema();
+            
+            const connected = isDatabaseConnected();
+            return res.json({
+                success: connected,
+                status: connected ? 'ok' : 'offline',
+                message: connected ? 'Successfully re-established database connection pool and validated schema tables!' : 'Re-connection failed. Check that your database host, username, and password are correct, and your database allows incoming traffic.'
+            });
+        } catch (err: any) {
+            return res.status(500).json({
+                success: false,
+                error: err.message || 'Error occurred during forced database re-connection.'
+            });
+        }
+    });
+
+    /**
+     * RETRIEVE CURRENT DATABASE CONFIGURATION URL (UNMASKED FOR DIAGNOSTIC LOADER)
+     */
+    app.get('/api/get-raw-database-url', (req, res) => {
+        res.json({
+            url: process.env.DATABASE_URL || ''
         });
     });
 
@@ -92,7 +261,7 @@ async function startServer() {
             revision: revision || 'remix-v1-prod',
             configuration: configuration || 'infinite-heroes-config',
             project: process.env.GOOGLE_CLOUD_PROJECT || 'ai-studio-multiverse-sandbox',
-            port: process.env.PORT || '3000',
+            port: port.toString(),
             region: process.env.CLOUD_RUN_REGION || 'us-east1'
         });
     });
@@ -337,23 +506,92 @@ async function startServer() {
 
 
     // Setup Vite middleware / client delivery
-    if (process.env.NODE_ENV !== "production") {
-        const vite = await createViteServer({
-            server: { middlewareMode: true },
-            appType: 'spa'
-        });
-        app.use(vite.middlewares);
+    if (!isProductionMode) {
+        console.info("🛠️ [Setup] Server starting in DEVELOPMENT Mode. Initializing Vite dev server middleware...");
+        try {
+            const viteModule = await Function('return import("vite")')();
+            const { createServer: createViteServer } = viteModule;
+            const vite = await createViteServer({
+                server: { middlewareMode: true },
+                appType: 'spa'
+            });
+            app.use(vite.middlewares);
+        } catch (viteImportErr: any) {
+            console.error("🚨 Failed to dynamically load Vite in dev mode:", viteImportErr.message || viteImportErr);
+            console.info("🩹 Fallback Action: Attuning to production-grade asset delivery to prevent startup crash.");
+            let distPath = path.join(process.cwd(), 'dist');
+            if (!fs.existsSync(path.join(distPath, 'index.html')) && fs.existsSync(path.join(_dirname, 'index.html'))) {
+                distPath = _dirname;
+            }
+            if (fs.existsSync(path.join(distPath, 'index.html'))) {
+                console.info(`📂 Serving static files from verified directory: "${distPath}"`);
+                app.use(express.static(distPath));
+                app.use((req, res) => {
+                    res.sendFile(path.join(distPath, 'index.html'));
+                });
+            } else {
+                console.error("🚨 Fallback failed: 'dist/index.html' not found under either directory path.");
+                throw viteImportErr;
+            }
+        }
     } else {
-        const distPath = path.join(process.cwd(), 'dist');
-        app.use(express.static(distPath));
-        app.get('*', (req, res) => {
-            res.sendFile(path.join(distPath, 'index.html'));
-        });
+        console.info("🌐 [Setup] Server starting in PRODUCTION Mode. Serving compiled static assets...");
+        let distPath = path.join(process.cwd(), 'dist');
+        
+        // Dynamic fallback matching compile location inside 'dist' folder
+        if (!fs.existsSync(path.join(distPath, 'index.html'))) {
+            if (fs.existsSync(path.join(_dirname, 'index.html'))) {
+                distPath = _dirname;
+            }
+        }
+
+        if (fs.existsSync(path.join(distPath, 'index.html'))) {
+            console.info(`📂 Serving static files from verified directory: "${distPath}"`);
+            app.use(express.static(distPath));
+            app.use((req, res) => {
+                res.sendFile(path.join(distPath, 'index.html'));
+            });
+        } else {
+            console.error(`🚨 CRITICAL ERROR: 'dist/index.html' not found under root "${process.cwd()}" or location "${_dirname}". Starting a safe fallback response to ensure health checks pass.`);
+            app.use((req, res) => {
+                res.status(500).send(`
+                    <html>
+                        <head>
+                            <title>Configuration or Deployment Error</title>
+                            <style>body { font-family: sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; line-height: 1.6; max-width: 600px; margin: 0 auto; }</style>
+                        </head>
+                        <body>
+                            <h2>🚨 Build / Deployment Configuration Notice</h2>
+                            <p>Express server is active and listening on port ${port}, but compiled frontend files are missing.</p>
+                            <p><strong>Diagnosis:</strong> The 'dist' front-end directory or 'dist/index.html' was not found.</p>
+                            <p><strong>Solution:</strong> Ensure that <code>npm run build</code> runs as part of your deployment build phase so the Vite client is compiled.</p>
+                        </body>
+                    </html>
+                `);
+            });
+        }
     }
 
-    app.listen(PORT, "0.0.0.0", () => {
-        console.log(`🌐 Server active on http://0.0.0.0:${PORT} [mode: ${process.env.NODE_ENV || 'development'}]`);
-    });
+    // Start listening on port only when all API endpoints and static assets are fully configured
+    try {
+        const serverInstance = app.listen(port, "0.0.0.0", () => {
+            console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3000)'})`);
+        });
+
+        serverInstance.on('error', (err: any) => {
+            console.error("🚨 Resilient Server binding error event:", err);
+            if (err.code === 'EADDRINUSE') {
+                console.error(`💡 HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
+            }
+        });
+    } catch (listenError: any) {
+        console.error("🚨 CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);
+        process.exit(1);
+    }
+
 }
 
-startServer();
+startServer(app).catch((err) => {
+    console.error("🚨 CRITICAL ERROR DURING startServer():", err);
+    process.exit(1);
+});

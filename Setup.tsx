@@ -70,7 +70,12 @@ const Footer = () => {
 export const Setup: React.FC<SetupProps> = (props) => {
     if (!props.show && !props.isTransitioning) return null;
 
-    const [dbConnection, setDbConnection] = useState<{ status: string; mode: string }>({ status: 'Connecting', mode: '' });
+    const [dbConnection, setDbConnection] = useState<{ 
+        status: string; 
+        mode: string;
+        hasUrlEnv?: boolean;
+        dbUrlMasked?: string;
+    }>({ status: 'Connecting', mode: '' });
     const [cloudRunConfig, setCloudRunConfig] = useState<any>({ isCloudRun: false, service: '', revision: '', configuration: '', project: '', port: '', region: '' });
     const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
     const [creatorEmailInput, setCreatorEmailInput] = useState(props.activeCreator.email);
@@ -81,12 +86,20 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [testResult, setTestResult] = useState<{ success: boolean; message: string; tested: boolean } | null>(null);
 
+    const [isReconnecting, setIsReconnecting] = useState(false);
+    const [reconnectResultMessage, setReconnectResultMessage] = useState<string | null>(null);
+
     // Fetch DB Status
     const fetchDbStatus = async () => {
         try {
             const res = await fetch('/api/db-status');
             const data = await res.json();
-            setDbConnection({ status: data.status, mode: data.mode });
+            setDbConnection({ 
+                status: data.status, 
+                mode: data.mode,
+                hasUrlEnv: data.hasUrlEnv,
+                dbUrlMasked: data.dbUrlMasked
+            });
         } catch (e) {
             setDbConnection({ status: 'error', mode: 'In-Memory Fallback Sandbox' });
         }
@@ -170,11 +183,25 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     };
 
-    const handleTestConnection = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const str = testConnectionString.trim();
-        if (!str) {
-            alert("Please paste a database connection URL format to test!");
+    const handleLoadMyUrl = async () => {
+        try {
+            const res = await fetch('/api/get-raw-database-url');
+            const data = await res.json();
+            if (data.url) {
+                setTestConnectionString(data.url);
+            } else {
+                setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@136.116.100.202:5432/comics-v1");
+            }
+        } catch (e) {
+            setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@136.116.100.202:5432/comics-v1");
+        }
+    };
+
+    const handleTestConnection = async (e: React.FormEvent<any> | null, forceEnvUrl = false) => {
+        if (e) e.preventDefault();
+        const str = forceEnvUrl ? "" : testConnectionString.trim();
+        if (!str && !forceEnvUrl) {
+            alert("Please paste a database connection URL format to test, or click 'TEST SERVER-SIDE URL' to evaluate the loaded environment variables!");
             return;
         }
         setIsTestingConnection(true);
@@ -209,6 +236,32 @@ export const Setup: React.FC<SetupProps> = (props) => {
             });
         } finally {
             setIsTestingConnection(false);
+        }
+    };
+
+    const handleForceReconnect = async () => {
+        setIsReconnecting(true);
+        setReconnectResultMessage(null);
+        try {
+            const res = await fetch('/api/db-reconnect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setReconnectResultMessage("✓ CONNECTED! Active PostgreSQL pool is fully established.");
+                alert("Server-side Database connection established successfully! Live multi-tenant synchronization is active.");
+                fetchDbStatus();
+                if (props.activeCreator.id) {
+                    fetchVault();
+                }
+            } else {
+                setReconnectResultMessage("❌ " + (data.message || "Forced reconnect failed. Check credentials/firewall rules."));
+            }
+        } catch (e: any) {
+            setReconnectResultMessage("❌ Network connection proxy failure: " + e.message);
+        } finally {
+            setIsReconnecting(false);
         }
     };
 
@@ -321,6 +374,21 @@ export const Setup: React.FC<SetupProps> = (props) => {
                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                               Storage Model: {dbConnection.mode || 'Local Fallback Core'}
                          </p>
+                         <div className="mt-2 flex flex-col gap-1">
+                              <button 
+                                   type="button" 
+                                   disabled={isReconnecting}
+                                   onClick={handleForceReconnect}
+                                   className="w-fit bg-slate-900 hover:bg-slate-800 border-2 border-black hover:border-yellow-400 px-2 py-1 text-[9px] font-mono rounded tracking-wider uppercase text-yellow-300 active:translate-y-0.5 select-none disabled:opacity-40 font-bold"
+                              >
+                                   {isReconnecting ? 'RECONNECTING...' : '🔄 FORCE POOL RECONNECT'}
+                              </button>
+                              {reconnectResultMessage && (
+                                   <span className={`text-[10px] font-mono leading-tight block truncate ${reconnectResultMessage.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
+                                        {reconnectResultMessage}
+                                   </span>
+                              )}
+                         </div>
                     </div>
 
                     <div className="md:col-span-8">
@@ -352,9 +420,34 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         📢 LIVE DATABASE TESTER & PORT CHECKER
                     </span>
                     <p className="text-[11px] text-slate-400 font-mono mb-3 leading-relaxed">
-                        Test database routing and firewall status instantly. Paste a PostgreSQL connection URI, or load your custom parameters to trace active network tunnels to your server.
+                        Test database routing and firewall status instantly. Paste a PostgreSQL connection URI, or load your custom parameters to trace active network tunnels.
+                        <strong className="text-yellow-400 block mt-1.5 uppercase">⚡ CONTAINER NETWORK WARNING:</strong>
+                        Your application runs in a containerized Cloud Run environment. Inside a container, <code className="text-white bg-slate-800 px-1 py-0.5 rounded">localhost</code> or <code className="text-white bg-slate-800 px-1 py-0.5 rounded">127.0.0.1</code> refers to the web container itself, NOT your local computer or external database server! To link custom databases, you <strong className="text-cyan-300">MUST specify your database's Public IP Address</strong> or <strong className="text-cyan-300">External Hostname</strong>.
                     </p>
-                    <form onSubmit={handleTestConnection} className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
+
+                    {dbConnection.hasUrlEnv ? (
+                        <div className="mb-3 p-2.5 bg-slate-900/80 border-2 border-slate-700/60 rounded font-mono text-[11px] text-gray-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-inner">
+                             <div>
+                                  <span className="text-cyan-400 font-bold uppercase tracking-wider text-[10px] block sm:inline mr-1">📄 Active Server-side .env Config:</span>
+                                  <code className="text-yellow-300 font-bold selection:bg-yellow-500/30 text-xs">{dbConnection.dbUrlMasked}</code>
+                             </div>
+                             <button
+                                 type="button"
+                                 onClick={() => handleTestConnection(null, true)}
+                                 disabled={isTestingConnection}
+                                 className="px-2.5 py-1 bg-yellow-500 hover:bg-yellow-400 text-black font-comic font-extrabold rounded uppercase text-[10px] tracking-wide shadow-md active:translate-y-0.5 whitespace-nowrap self-end sm:self-auto disabled:opacity-40"
+                             >
+                                 ⚡ Check Active .env URL
+                             </button>
+                        </div>
+                    ) : (
+                        <div className="mb-3 p-2.5 bg-red-950/20 border-2 border-red-900/40 rounded font-mono text-[11px] text-red-400 flex flex-col gap-1">
+                             <span className="font-bold uppercase tracking-wider text-[10px]">⚠️ NO DATABASE_URL DETECTED IN SERVER ENV</span>
+                             <span>Your app is currently running in "Safe Offline Sandboxed memory mode". To link a persistent database, provide a DATABASE_URL secret in the application Settings.</span>
+                        </div>
+                    )}
+
+                    <form onSubmit={(e) => handleTestConnection(e)} className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
                         <div className="flex-1">
                             <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">PostgreSQL URL Connection String</label>
                             <input 
@@ -368,14 +461,15 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                onClick={() => setTestConnectionString("postgresql://postgres:ArmyGlobal@u8256@136.116.100.202:5432/comics-v1")}
+                                onClick={handleLoadMyUrl}
                                 className="bg-zinc-800 hover:bg-zinc-700 text-slate-300 border-2 border-black px-2.5 py-1.5 font-mono text-[10px] uppercase rounded active:translate-y-0.5 whitespace-nowrap"
-                                title="Load your custom connection string"
+                                title="Load server-side secret URL or template with placeholder"
                             >
                                 LOAD MY URL
                             </button>
                             <button
                                 type="submit"
+                                id="test-conn-btn"
                                 disabled={isTestingConnection}
                                 className="bg-cyan-600 hover:bg-cyan-500 border-2 border-black hover:border-yellow-300 px-5 py-1.5 font-comic text-xs uppercase font-bold tracking-wider text-white whitespace-nowrap active:translate-y-0.5 disabled:opacity-40"
                             >

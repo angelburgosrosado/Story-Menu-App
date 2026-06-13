@@ -179,6 +179,44 @@ export const Panel: React.FC<PanelProps> = ({
                             </button>
                         ))}
                     </div>
+
+                    {/* CUSTOM WRITTEN VALUE STATEMENT */}
+                    <div className="w-full border-t border-white/20 pt-2.5 mt-1 flex flex-col gap-1.5">
+                        <p className="text-[10px] text-gray-300 font-mono tracking-wider uppercase text-center">Or forge a Custom Decision Pathway:</p>
+                        <div className="flex gap-2 w-full">
+                            <input 
+                                type="text"
+                                placeholder="Type your hero's custom choice..."
+                                id={`custom-choice-input-${face.pageIndex}`}
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.stopPropagation();
+                                        const val = (e.currentTarget as HTMLInputElement).value?.trim();
+                                        if (val && face.pageIndex) {
+                                            playSparkleSFX();
+                                            onChoice(face.pageIndex, val);
+                                        }
+                                    }
+                                }}
+                                className="flex-1 bg-black/80 border-2 border-white/30 text-white rounded px-2.5 py-1.5 text-xs font-sans placeholder-gray-500 focus:outline-none focus:border-yellow-400 focus:bg-slate-900 transition-colors"
+                            />
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const inputNode = document.getElementById(`custom-choice-input-${face.pageIndex}`) as HTMLInputElement;
+                                    const val = inputNode?.value?.trim();
+                                    if (val && face.pageIndex) {
+                                        playSparkleSFX();
+                                        onChoice(face.pageIndex, val);
+                                    }
+                                }}
+                                className="bg-cyan-500 hover:bg-cyan-400 text-black border-2 border-black font-bold uppercase text-[10px] tracking-wide px-3 py-1.5 rounded-md shadow-[1px_1px_0px_white]"
+                            >
+                                GO
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

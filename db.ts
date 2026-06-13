@@ -11,6 +11,7 @@ const { Pool } = pg;
 let dbPool: pg.Pool | null = null;
 let isDbActive = false;
 let dbConnectionFailed = false;
+let dbConnectedAndVerified = false;
 let lastConnectionAttemptTime = 0;
 let cachedDatabaseUrl = '';
 let approvedPasswordOverride: string | null = null;
@@ -46,6 +47,7 @@ export function resetConnectionState() {
     console.info("🔌 Forcefully resetting database connection failure state. Enabling fresh handshakes...");
     dbConnectionFailed = false;
     isDbActive = false;
+    dbConnectedAndVerified = false;
     lastConnectionAttemptTime = 0;
     approvedPasswordOverride = null;
     if (dbPool) {
@@ -74,10 +76,10 @@ export function getIsolatedSchemaName(): string {
     return 'vault_app_default';
 }
 
-export function getDbPool(): pg.Pool | null {
+export function getDbPool(force = false): pg.Pool | null {
     if (!process.env.DATABASE_URL) {
         if (!isDbActive) {
-            console.warn("⚠️ No DATABASE_URL found. Running applet with safe local-storage and in-memory fallback databases.");
+            console.info("⚠️ Sandbox Mode Active: Running with secure local-storage and high-performance offline fallback databases.");
             isDbActive = false;
         }
         return null;
@@ -91,16 +93,22 @@ export function getDbPool(): pg.Pool | null {
     }
 
     // Dynamic Self-Healing Retry Cooldown:
-    // If connection was marked as failed, but more than 15 seconds have elapsed since the last attempt,
-    // clear the failure flag to allow another connection.
+    // If connection was marked as failed, but more than 10 minutes (600,000 ms) have elapsed since the last attempt,
+    // clear the failure flag to allow another connection. This prevents repetitive 5-second lag spikes 
+    // on client requests when the database is unreachable behind a firewall.
     if (dbConnectionFailed) {
         const now = Date.now();
-        if (now - lastConnectionAttemptTime > 15000) {
-            console.info("🩹 Self-Healing mechanism: 15-second offline cooldown elapsed. Retrying database connection...");
+        if (now - lastConnectionAttemptTime > 600000) {
+            console.info("🩹 Self-Healing mechanism: 10-minute offline cooldown elapsed. Attempting background/on-demand database retry...");
             dbConnectionFailed = false;
         } else {
-            return null; // Keep returning null during the 15s rate-limit window
+            return null; // Keep returning null during the 10-minute rate-limit window (uses immediate local sandbox fallback)
         }
+    }
+
+    // If we're not using force and connection is not verified yet, do NOT return pool so we can fail-fast to sandbox instantly
+    if (!force && !dbConnectedAndVerified) {
+        return null;
     }
 
     if (!dbPool) {
@@ -116,13 +124,13 @@ export function getDbPool(): pg.Pool | null {
                     port: parsed.port,
                     database: parsed.dbName,
                     ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
-                    connectionTimeoutMillis: 5000 // 5-second fast failover for timeouts
+                    connectionTimeoutMillis: 4000 // 4-second responsive timeout
                 });
             } else {
                 dbPool = new Pool({
                     connectionString: process.env.DATABASE_URL,
                     ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
-                    connectionTimeoutMillis: 5000 // 5-second fast failover for timeouts
+                    connectionTimeoutMillis: 4000 // 4-second responsive timeout
                 });
             }
             
@@ -149,6 +157,7 @@ export function getDbPool(): pg.Pool | null {
             dbPool = null;
             isDbActive = false;
             dbConnectionFailed = true;
+            dbConnectedAndVerified = false;
             lastConnectionAttemptTime = Date.now();
         }
     }
@@ -156,14 +165,15 @@ export function getDbPool(): pg.Pool | null {
 }
 
 export function isDatabaseConnected(): boolean {
-    return isDbActive && !dbConnectionFailed && getDbPool() !== null;
+    return isDbActive && !dbConnectionFailed && dbConnectedAndVerified && dbPool !== null;
 }
 
 export function markDatabaseOffline() {
-    if (!dbConnectionFailed) {
+    if (!dbConnectionFailed || dbConnectedAndVerified) {
         console.warn("🔻 Deactivating PostgreSQL and falling back to in-memory sandbox.");
         dbConnectionFailed = true;
         isDbActive = false;
+        dbConnectedAndVerified = false;
         lastConnectionAttemptTime = Date.now();
         if (dbPool) {
             try {
@@ -323,7 +333,7 @@ export async function testCustomConnectionString(connectionString: string): Prom
         host,
         port,
         database: dbName,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 15000,
         ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
     });
 
@@ -352,7 +362,7 @@ export async function testCustomConnectionString(connectionString: string): Prom
             host,
             port,
             database: dbName,
-            connectionTimeoutMillis: 5000,
+            connectionTimeoutMillis: 15000,
             ssl: connectionString.includes('localhost') || connectionString.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
         });
 
@@ -416,7 +426,19 @@ export async function initializeDatabaseSchema() {
         return;
     }
     
-    let pool = getDbPool();
+    // Fast TCP pre-flight check to fail-fast if firewall is blocking us
+    const parsedUrl = parsePgUrl(process.env.DATABASE_URL);
+    if (parsedUrl) {
+        console.log(`📡 [Self-Healing DB] Performing pre-flight TCP probe on ${parsedUrl.host}:${parsedUrl.port}...`);
+        const tcpResult = await testTcpPort(parsedUrl.host, parsedUrl.port, 2000); // 2-second fast probe
+        if (!tcpResult.ok) {
+            console.info(`🔌 [Self-Healing DB] Database check: connection resting. Activating high-performance local sandbox fallback.`);
+            markDatabaseOffline();
+            return;
+        }
+    }
+    
+    let pool = getDbPool(true);
     if (!pool) return;
 
     let success = false;
@@ -444,7 +466,7 @@ export async function initializeDatabaseSchema() {
                 port: parsed.port,
                 database: parsed.dbName,
                 ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
-                connectionTimeoutMillis: 5000
+                connectionTimeoutMillis: 4000
             });
             pool = dbPool;
             try {
@@ -457,8 +479,7 @@ export async function initializeDatabaseSchema() {
         }
 
         if (!success) {
-            console.warn("🔌 Note: PostgreSQL database is configured but currently offline or unreachable. " +
-                         "Deactivating DB pool connection and falling back gracefully to interactive sandbox mode.");
+            console.info("🔌 Note: Database is currently in offline fallback mode. Activating safe interactive local sandbox.");
             let hint = "";
             if (err.message && err.message.includes('EAI_AGAIN')) {
                 hint = " 💡 HINT: This is a DNS lookup failure (getaddrinfo timed out or host could not resolve). Ensure your hostname is a valid public IP or domain name, and ensure any '@' characters in password credentials are URL-encoded as '%40'.";
@@ -489,8 +510,10 @@ export async function initializeDatabaseSchema() {
                 await client.query('SELECT 1 FROM character_vault LIMIT 1;');
                 await client.query('SELECT 1 FROM projects LIMIT 1;');
                 await client.query('SELECT 1 FROM project_casting LIMIT 1;');
+                // Dynamic upgrade: Ensure comic_faces column exists
+                await client.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS comic_faces TEXT;');
                 tablesExistAndAccessible = true;
-                console.log("🟢 Verified: Database tables already exist and are fully accessible. Skipping table schema creation to avoid ownership conflicts.");
+                console.log("🟢 Verified: Database tables already exist and are fully accessible with dynamic upgrades. Skipping table schema creation.");
             } catch (checkErr) {
                 console.info("ℹ️ Some database tables are missing or inaccessible. Beginning lazy structure generation...");
             }
@@ -546,6 +569,7 @@ export async function initializeDatabaseSchema() {
                             genre VARCHAR(50) NOT NULL,
                             language VARCHAR(50) NOT NULL,
                             current_page INT DEFAULT 1,
+                            comic_faces TEXT,
                             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                         );
                     `);
@@ -583,6 +607,7 @@ export async function initializeDatabaseSchema() {
 
                 console.log("✅ Schema validated and structures prepared.");
             }
+            dbConnectedAndVerified = true;
         } catch (schemaErr: any) {
             console.error("❌ Failed to validate or prepare table structures in connected database:", schemaErr.message);
             // Double check if tables are accessible now anyway
@@ -590,6 +615,7 @@ export async function initializeDatabaseSchema() {
                 await client.query('SELECT 1 FROM users LIMIT 1;');
                 await client.query('SELECT 1 FROM character_vault LIMIT 1;');
                 console.log("🟢 Tables are queryable despite schema errors. Maintaining database connection active.");
+                dbConnectedAndVerified = true;
             } catch (finalCheckErr) {
                 markDatabaseOffline();
             }

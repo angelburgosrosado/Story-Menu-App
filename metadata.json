@@ -1,6 +1,6 @@
 {
-  "name": "Infinite Heroes REMIX",
-  "description": "Interactive multiverse comic book generator with premium text-to-speech narrators, generative retro soundtracks, customizable villains, and dynamic story arcs.",
+  "name": "Story.Menu",
+  "description": "Create, customize, and self-publish interactive AI multiverse comic books with high-fidelity speech synthesis engines, real-time ambient soundtracks, and dynamic character-driven story arcs.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

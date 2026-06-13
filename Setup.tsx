@@ -4,7 +4,18 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { GENRES, LANGUAGES, Persona, VOICES } from './types';
+import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema } from './types';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+    getCharactersFromFirestore, 
+    getProjectsFromFirestore, 
+    deleteCharacterFromFirestore, 
+    deleteProjectFromFirestore, 
+    saveProjectToFirestore,
+    getDraftsFromFirestore,
+    saveDraftToFirestore,
+    deleteDraftFromFirestore
+} from './storageFirestore';
 
 interface SetupProps {
     show: boolean;
@@ -33,6 +44,39 @@ interface SetupProps {
     onSelectHero: (p: Persona | null) => void;
     onSelectFriend: (p: Persona | null) => void;
     onSelectVillain: (p: Persona | null) => void;
+    onLoadProject: (project: any) => void;
+    creativeDirectives: string;
+    onCreativeDirectivesChange: (val: string) => void;
+    heroVisuals: string;
+    onHeroVisualsChange: (val: string) => void;
+    friendVisuals: string;
+    onFriendVisualsChange: (val: string) => void;
+    villainVisuals: string;
+    onVillainVisualsChange: (val: string) => void;
+    villainDna: string;
+    onVillainDnaChange: (val: string) => void;
+    nemesisDNA: CharacterIdentitySchema;
+    onNemesisDnaChange: (val: CharacterIdentitySchema) => void;
+    soundPrompt: string;
+    onSoundPromptChange: (val: string) => void;
+    onHeroHeadUpload?: (file: File) => void;
+    onHeroClothesUpload?: (file: File) => void;
+    onFriendHeadUpload?: (file: File) => void;
+    onFriendClothesUpload?: (file: File) => void;
+    onVillainHeadUpload?: (file: File) => void;
+    onVillainClothesUpload?: (file: File) => void;
+    onHeroHeadClear?: () => void;
+    onHeroClothesClear?: () => void;
+    onFriendHeadClear?: () => void;
+    onFriendClothesClear?: () => void;
+    onVillainHeadClear?: () => void;
+    onVillainClothesClear?: () => void;
+    storyTone?: string;
+    storyBlueprint: ChapterGoal[];
+    onStoryBlueprintChange: (val: ChapterGoal[]) => void;
+    onLoadDraft?: (draft: any) => void;
+    comicFaces?: any[];
+    onLogOut?: () => void;
 }
 
 const Footer = () => {
@@ -61,10 +105,22 @@ const Footer = () => {
         </div>
         <div className="flex items-center gap-4 mt-2 md:mt-0 text-sm">
             <span className="text-gray-400 font-mono">Gemini Multimodal Framework</span>
-            <a href="https://x.com/ammaar" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-white transition-colors duration-200">Created by @ammaar</a>
+            <span className="text-yellow-400 font-bold tracking-wide">Created by @MyIAD-Apps</span>
         </div>
     </div>
   );
+};
+
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+             const base64String = reader.result?.toString().split(',')[1] || '';
+             resolve(base64String);
+        };
+        reader.onerror = (error) => reject(error);
+    });
 };
 
 export const Setup: React.FC<SetupProps> = (props) => {
@@ -80,6 +136,732 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
     const [creatorEmailInput, setCreatorEmailInput] = useState(props.activeCreator.email);
     const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+
+    // Tab control & Studio Projects Library state
+    const [appSkin, setAppSkinState] = useState<'comic' | 'editorial'>(() => {
+        try {
+            return (localStorage.getItem('story_menu_skin') as any) || 'comic';
+        } catch (e) {
+            return 'comic';
+        }
+    });
+
+    const setAppSkin = (skin: 'comic' | 'editorial') => {
+        setAppSkinState(skin);
+        try {
+            localStorage.setItem('story_menu_skin', skin);
+        } catch (e) {
+            console.warn(e);
+        }
+    };
+
+    const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint'>('generate');
+    const [savedProjects, setSavedProjects] = useState<any[]>([]);
+
+    const isEditorial = appSkin === 'editorial';
+
+    // Skin computed values
+    const sOuterContainer = isEditorial 
+        ? "max-w-[1100px] w-full bg-[#fbfbfa] text-stone-900 border border-stone-200/80 shadow-2xl p-6 md:p-10 relative rounded-2xl font-sans"
+        : "max-w-[1100px] w-full bg-slate-900 text-white border-[6px] border-black shadow-[16px_16px_0px_#000] p-6 md:p-8 relative overflow-hidden rounded-2xl";
+
+    const sCard = isEditorial
+        ? "bg-white border border-stone-200 shadow-sm p-6 rounded-xl relative flex flex-col justify-between"
+        : "bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[6px_6px_0px_#000] text-white relative";
+
+    const sPanel = isEditorial
+        ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-stone-100 border border-stone-200 p-6 rounded-xl shadow-sm text-stone-800"
+        : "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-slate-950 border-4 border-black p-6 rounded-lg shadow-[4px_4px_0px_#000] text-gray-200";
+
+    const sHeaderBadge = isEditorial
+        ? "absolute -top-3.5 left-6 bg-stone-800 text-stone-50 border border-stone-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
+        : "absolute -top-4 left-6 bg-blue-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[-1.5deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+
+    const sHeaderBadgeRed = isEditorial
+        ? "absolute -top-3.5 left-6 bg-amber-700 text-stone-50 border border-amber-805 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
+        : "absolute -top-4 left-6 bg-red-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[1.5deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+
+    const sHeaderBadgeGreen = isEditorial
+        ? "absolute -top-3.5 left-6 bg-emerald-700 text-stone-50 border border-emerald-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
+        : "absolute -top-4 left-6 bg-green-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[-1deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+
+    const sTitle = isEditorial
+        ? "font-serif text-3xl font-extrabold tracking-tight text-stone-900 mb-2"
+        : "font-comic text-xl font-bold uppercase text-yellow-400 tracking-wider mb-1";
+
+    const sSubtitle = isEditorial
+        ? "text-stone-500 font-sans text-xs leading-relaxed"
+        : "text-slate-400 text-xs leading-relaxed";
+
+    const sInput = isEditorial
+        ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans"
+        : "w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold";
+
+    const sSelect = isEditorial
+        ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans font-semibold"
+        : "w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold";
+
+    const sLabel = isEditorial
+        ? "font-sans text-[11px] uppercase text-stone-500 font-bold tracking-wider block mb-1.5"
+        : "font-comic text-xs uppercase text-yellow-400 font-bold tracking-wider block mb-1";
+
+    const sPrimaryBtn = isEditorial
+        ? "bg-stone-900 hover:bg-stone-805 text-stone-50 font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer"
+        : "flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-white font-mono uppercase tracking-wider text-[10.5px] font-black px-3 py-2 rounded-md border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-[1px_1px_0px_#000] transition-all cursor-pointer";
+
+    const sRedBtn = isEditorial
+        ? "bg-red-700 hover:bg-red-800 text-white font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer border border-red-800"
+        : "flex items-center gap-1.5 bg-red-650 hover:bg-red-650 text-white font-mono uppercase tracking-wider text-[10.5px] font-black px-3 py-2 rounded-md border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-[1px_1px_0px_#000] transition-all cursor-pointer";
+    
+    // Draft state hooks
+    const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
+    const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+    const fetchDrafts = async () => {
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                const list = await getDraftsFromFirestore(props.activeCreator.id);
+                setSavedDrafts(list || []);
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore drafts fetch error, falling back to localStorage:", fsErr);
+            }
+        }
+        // Fallback to offline drafts in localStorage
+        try {
+            const stored = localStorage.getItem(`drafts_${props.activeCreator.id}`);
+            if (stored) {
+                setSavedDrafts(JSON.parse(stored));
+            } else {
+                setSavedDrafts([]);
+            }
+        } catch (e) {
+            console.error("Failed to load local drafts:", e);
+            setSavedDrafts([]);
+        }
+    };
+
+    const handleSaveDraft = async () => {
+        if (!props.activeCreator.id) {
+            alert("Please sign in or configure a creator profile to save drafts!");
+            return;
+        }
+        
+        setIsSavingDraft(true);
+        const draftTitle = prompt("Enter a title for your comic project draft:", `Draft: ${props.selectedGenre} (${new Date().toLocaleDateString()})`);
+        if (draftTitle === null) {
+            setIsSavingDraft(false);
+            return;
+        }
+        
+        const titleText = draftTitle.trim() || `Draft: ${props.selectedGenre} (${new Date().toLocaleDateString()})`;
+        
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        
+        const comicFacesStr = JSON.stringify(props.comicFaces || []);
+        const storyBlueprintStr = JSON.stringify(props.storyBlueprint || []);
+        const draftId = `draft_${Math.random().toString(36).substring(2, 11)}`;
+
+        if (isFirebaseUser) {
+            try {
+                await saveDraftToFirestore(props.activeCreator.id, {
+                    id: draftId,
+                    userId: props.activeCreator.id,
+                    title: titleText,
+                    genre: props.selectedGenre,
+                    comicFaces: comicFacesStr,
+                    storyBlueprint: storyBlueprintStr
+                });
+                alert("💾 Draft snapshot successfully saved to Firebase Firestore!");
+                fetchDrafts();
+            } catch (err) {
+                console.error("Failed to save draft to Firestore:", err);
+                alert("Failed to save draft to Firestore cloud storage. Falling back to offline local storage.");
+                saveDraftLocally(titleText, comicFacesStr, storyBlueprintStr);
+            } finally {
+                setIsSavingDraft(false);
+            }
+        } else {
+            saveDraftLocally(titleText, comicFacesStr, storyBlueprintStr);
+            setIsSavingDraft(false);
+        }
+    };
+
+    const saveDraftLocally = (titleText: string, comicFacesStr: string, storyBlueprintStr: string) => {
+        try {
+            const draftId = `draft_local_${Math.random().toString(36).substring(2, 11)}`;
+            const localDraft = {
+                id: draftId,
+                userId: props.activeCreator.id,
+                title: titleText,
+                genre: props.selectedGenre,
+                comicFaces: comicFacesStr,
+                storyBlueprint: storyBlueprintStr,
+                updatedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            };
+            const stored = localStorage.getItem(`drafts_${props.activeCreator.id}`);
+            const list = stored ? JSON.parse(stored) : [];
+            list.unshift(localDraft);
+            localStorage.setItem(`drafts_${props.activeCreator.id}`, JSON.stringify(list));
+            alert("💾 Draft snapshots saved locally (Offline mode)!");
+            fetchDrafts();
+        } catch (e) {
+            console.error("Local draft save error:", e);
+        }
+    };
+
+    const handleDeleteDraft = async (draftId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to shred this draft snapshot? This cannot be undone.")) return;
+        
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        
+        if (isFirebaseUser && !draftId.includes('draft_local')) {
+            try {
+                await deleteDraftFromFirestore(props.activeCreator.id, draftId);
+                fetchDrafts();
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore draft deletion failed, trying local fallback:", fsErr);
+            }
+        }
+        
+        try {
+            const stored = localStorage.getItem(`drafts_${props.activeCreator.id}`);
+            if (stored) {
+                let list = JSON.parse(stored);
+                list = list.filter((d: any) => d.id !== draftId);
+                localStorage.setItem(`drafts_${props.activeCreator.id}`, JSON.stringify(list));
+                fetchDrafts();
+            }
+        } catch (e) {
+            console.error("Failed to delete local draft:", e);
+        }
+    };
+
+    // Story Blueprint Manager State & Handlers
+    const [generatingBlueprint, setGeneratingBlueprint] = useState(false);
+    const [generatingPageGoal, setGeneratingPageGoal] = useState<number | null>(null);
+
+    const handleGenerateStoryBlueprint = async () => {
+        setGeneratingBlueprint(true);
+        try {
+            const response = await fetch('/api/gemini/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fieldName: 'storyBlueprint',
+                    genre: props.selectedGenre,
+                    customPremise: props.customPremise,
+                    storyTone: props.storyTone || 'Exciting & Action-packed'
+                })
+            });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || 'Blueprint generate failed');
+            }
+            const data = await response.json();
+            if (data.blueprint && Array.isArray(data.blueprint)) {
+                props.onStoryBlueprintChange(data.blueprint);
+            } else {
+                alert("Failed to extract valid chapter blueprint formats. Please retry!");
+            }
+        } catch (e: any) {
+            console.error("Story Blueprint Generate Error:", e);
+            alert(`Saga error generating story blueprint: ${e.message}`);
+        } finally {
+            setGeneratingBlueprint(false);
+        }
+    };
+
+    const handleGeneratePageGoal = async (pageNum: number) => {
+        setGeneratingPageGoal(pageNum);
+        try {
+            const currentGoalObj = props.storyBlueprint ? props.storyBlueprint.find((b: any) => b.chapterNum === pageNum) : null;
+            const response = await fetch('/api/gemini/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fieldName: `Chapter ${pageNum} Goal`,
+                    genre: props.selectedGenre,
+                    customPremise: props.customPremise,
+                    currentValue: currentGoalObj ? `${currentGoalObj.title || ''} - ${currentGoalObj.goal || ''}` : ''
+                })
+            });
+            if (!response.ok) throw new Error('Failed to brainstorm chapter beat');
+            const data = await response.json();
+            const suggestion = data.suggestion || '';
+            
+            let finalTitle = `Chapter Beat ${pageNum}`;
+            let finalGoal = suggestion;
+            if (suggestion.includes(':')) {
+                const idx = suggestion.indexOf(':');
+                finalTitle = suggestion.substring(0, idx).trim();
+                finalGoal = suggestion.substring(idx + 1).trim();
+            } else if (suggestion.includes(' - ')) {
+                const idx = suggestion.indexOf(' - ');
+                finalTitle = suggestion.substring(0, idx).trim();
+                finalGoal = suggestion.substring(idx + 3).trim();
+            }
+            
+            if (finalTitle.length > 50) finalTitle = finalTitle.substring(0, 47) + "...";
+
+            let updated = props.storyBlueprint ? [...props.storyBlueprint] : [];
+            if (updated.length === 0) {
+                updated = Array.from({ length: 10 }, (_, i) => ({
+                    chapterNum: i + 1,
+                    title: `Beat ${i + 1}`,
+                    goal: `Continue the adventure in ${props.selectedGenre} style.`
+                }));
+            }
+            const targetIndex = updated.findIndex((b: any) => b.chapterNum === pageNum);
+            if (targetIndex !== -1) {
+                updated[targetIndex] = {
+                    chapterNum: pageNum,
+                    title: finalTitle,
+                    goal: finalGoal
+                };
+            } else {
+                updated.push({
+                    chapterNum: pageNum,
+                    title: finalTitle,
+                    goal: finalGoal
+                });
+            }
+            props.onStoryBlueprintChange(updated);
+        } catch (e: any) {
+            console.error("Chapter Goal Generate Error:", e);
+            alert(`Error brainstorming chapter: ${e.message}`);
+        } finally {
+            setGeneratingPageGoal(null);
+        }
+    };
+
+    const handleInitializeDefaultBlueprint = () => {
+        const defaults = [
+            { chapterNum: 1, title: "Inciting Incident", goal: "Introduce protagonist & primary catalyst. Disrupt the norm in style." },
+            { chapterNum: 2, title: "Initial Pursuit", goal: "Establish co-star companion. Heroes embark on first milestone target." },
+            { chapterNum: 3, title: "The Crossroads", goal: "Force a high-stakes choice. Showcase primary villain's initial trap." },
+            { chapterNum: 4, title: "Trial of Faith", goal: "A major complication occurs. Protagonists face a significant emotional barrier." },
+            { chapterNum: 5, title: "Unlikely Revelation", goal: "A hidden secret deepens. Uncover clues regarding the key lore or power source." },
+            { chapterNum: 6, title: "The Counter-Offensive", goal: "Heroes execute a dangerous heist or offensive strike directly against the odds." },
+            { chapterNum: 7, title: "Darkest Hour", goal: "A shocking reversal. Villain gains the absolute upper-hand, testing user loyalty." },
+            { chapterNum: 8, title: "Awakened resolve", goal: "protagonist learns or retrieves key wisdom or specialized energy to rebuild." },
+            { chapterNum: 9, title: "Final Confrontation", goal: "The grand climax. Collide face-to-face with the Nemesis in spectacular stakes." },
+            { chapterNum: 10, title: "Karmic Destiny", goal: "Resolve core conflict based on user's choice philosophy. Lock in the epic cliffhanger." }
+        ];
+        props.onStoryBlueprintChange(defaults);
+    };
+
+    // AI Persona Studio States
+    const [personaStudioRole, setPersonaStudioRole] = useState<'Hero' | 'Co-Star' | 'Villain'>('Hero');
+    const [personaStudioName, setPersonaStudioName] = useState('');
+    const [personaStudioConcept, setPersonaStudioConcept] = useState('');
+    const [personaStudioStyle, setPersonaStudioStyle] = useState(props.selectedGenre || 'Superhero Action');
+
+    const [personaStudioSuggestedName, setPersonaStudioSuggestedName] = useState('');
+    const [personaStudioSuggestedBio, setPersonaStudioSuggestedBio] = useState('');
+    const [personaStudioSuggestedVisuals, setPersonaStudioSuggestedVisuals] = useState('');
+    const [personaStudioSuggestedPowers, setPersonaStudioSuggestedPowers] = useState('');
+    const [personaStudioSuggestedNemesisDna, setPersonaStudioSuggestedNemesisDna] = useState<CharacterIdentitySchema | null>(null);
+
+    const [personaStudioSuggesting, setPersonaStudioSuggesting] = useState(false);
+    const [personaStudioPortrait, setPersonaStudioPortrait] = useState<string | null>(null);
+    const [personaStudioGeneratingImg, setPersonaStudioGeneratingImg] = useState(false);
+    const [personaStudioStatusMsg, setPersonaStudioStatusMsg] = useState('');
+
+    // AI Suggestions Field state
+    const [suggestingFields, setSuggestingFields] = useState<Record<string, boolean>>({});
+
+    // Predefined Wardrobe Presets matching specific rendering aesthetics and character role profiles
+    const WARDROBE_PRESETS = {
+        Hero: {
+            Tactical: {
+                name: "Tactical Vanguard Armor",
+                emoji: "🛡️",
+                desc: "A form-fitting dark charcoal Kevlar weave suit with glowing cybernetic blue trim, carbon-fiber shoulder pauldrons, magnetic leg holsters, and heavy-duty steel-toed combat boots.",
+                styleLock: "Modern American Comic, high contrast digital outlines",
+                sartorialStyle: "High-Tech Military Cyber-Vanguard"
+            },
+            Gala: {
+                name: "Gala Elite Splendor",
+                emoji: "✨",
+                desc: "A pristine tailored satin-lapel midnight blue tuxedo with pristine silver silk embroidery pattern, light-up sapphire cufflinks, and a sleek modern smart-watch chronometer.",
+                styleLock: "Classic Noir Chiaroscuro Comic Art",
+                sartorialStyle: "Sophisticated Metahuman High-Society Executive"
+            },
+            Casual: {
+                name: "Metropolitan Casual",
+                emoji: "👕",
+                desc: "An oversized graphite-gray hoodie emblazoned with a faded neon-green graphic, worn-out vintage blue jeans, scuffed leather high-tops, and dark wire-frame spectacles.",
+                styleLock: "Gothic Graphic Novel Ink Hatching",
+                sartorialStyle: "Gritty Urban Streetwear"
+            }
+        },
+        'Co-Star': {
+            Tactical: {
+                name: "Tactical Shadow Recon",
+                emoji: "🕵️",
+                desc: "A flexible matte-black stealth suit with muted violet ambient strips, thermal goggles perched on the head, lightweight utility belt pouches, and silent rubber-soled infiltration footwear.",
+                styleLock: "High-tension espionage manga style",
+                sartorialStyle: "Covert Spec-Ops Scouting Infiltrator"
+            },
+            Gala: {
+                name: "Gala Velvet Phantom",
+                emoji: "👗",
+                desc: "A flowy backless deep violet velvet sheath gown with emerald-accented lace sleeves, a concealed micro-holster under the thigh slit, and a diamond choker communicator.",
+                styleLock: "Retro 1950s Pulp Illustration, rich color gradients",
+                sartorialStyle: "Elegant Classic Dame espionage dress"
+            },
+            Casual: {
+                name: "Casual Decker Lounge",
+                emoji: "🧥",
+                desc: "A cozy distressed olive bomber jacket, soft black cotton cargo joggers with red accents, fingerless wool gloves, and chunky cyber-runner platform sneakers.",
+                styleLock: "Cozy Pastel Anime Comic Frame",
+                sartorialStyle: "Lo-fi Cyberpunk Hacker Lounge"
+            }
+        },
+        Villain: {
+            Tactical: {
+                name: "Nemesis Warmonger Exoskeleton",
+                emoji: "💀",
+                desc: "Reinforced Obsidian titanium-alloy power armor plates, serrated red-energy shoulder conduits, an opaque crimson-tinted skull facade helmet, and heavy-duty hydraulic energy-venting boots.",
+                styleLock: "Brutalist Sci-Fi Cyber-Illustration, thick heavy linework, extreme dark shadows",
+                sartorialStyle: "Over-engineered Militaristic Warmonger Exoskeleton"
+            },
+            Gala: {
+                name: "Nemesis Oligarch Haute-Couture",
+                emoji: "🍷",
+                desc: "An opulent three-piece burgundy velvet suit with gold-gilded baroque lapel patterns, a dark silk cravat, and a heavy ruby-topped metallic mechanical cane weapon.",
+                styleLock: "Sinister Elitist Noir Comic Art, deep focus chiaroscuro with royal red lighting",
+                sartorialStyle: "Arrogant Plutocratic Syndicate Overlord"
+            },
+            Casual: {
+                name: "Nemesis Viper Lounge Suit",
+                emoji: "👓",
+                desc: "A casual tailored black silk shirt unbuttoned at the collar, slate-grey tailored linen pants, designer emerald-skin loafers, and thick gradient-tinted gold-framed aviators.",
+                styleLock: "Neon Noir Comic Art, high shadow contrast",
+                sartorialStyle: "Luxury Rogue Syndicate Underboss"
+            }
+        }
+    };
+
+    // Wardrobe Drawer state tracker
+    const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
+    const [wardrobeTargetRole, setWardrobeTargetRole] = useState<'Hero' | 'Co-Star' | 'Villain'>('Hero');
+    const [activePresets, setActivePresets] = useState<Record<'Hero' | 'Co-Star' | 'Villain', 'Tactical' | 'Gala' | 'Casual' | 'Custom'>>({
+        Hero: 'Custom',
+        'Co-Star': 'Custom',
+        Villain: 'Custom'
+    });
+    const [wardrobeAlert, setWardrobeAlert] = useState<string | null>(null);
+
+    const handleApplyWardrobePreset = (role: 'Hero' | 'Co-Star' | 'Villain', presetKey: 'Tactical' | 'Gala' | 'Casual') => {
+        const pData = WARDROBE_PRESETS[role][presetKey];
+        
+        // Update active preset tracking
+        setActivePresets(prev => ({
+            ...prev,
+            [role]: presetKey
+        }));
+
+        // Set high-visibility alert banner inside drawer
+        setWardrobeAlert(`Wardrobe Dynamic Shift: ${role} casted in '${pData.name}'!`);
+        setTimeout(() => setWardrobeAlert(null), 3000);
+
+        // Instantly synchronises studio inputs if target matches focus
+        if (personaStudioRole === role) {
+            setPersonaStudioSuggestedVisuals(pData.desc);
+            setPersonaStudioStyle(pData.styleLock);
+        }
+
+        // Parent state bindings updated instantly
+        if (role === 'Hero') {
+            props.onHeroVisualsChange(pData.desc);
+            if (props.hero) {
+                props.onSelectHero({
+                    ...props.hero,
+                    desc: pData.desc
+                });
+            }
+        } else if (role === 'Co-Star') {
+            props.onFriendVisualsChange(pData.desc);
+            if (props.friend) {
+                props.onSelectFriend({
+                    ...props.friend,
+                    desc: pData.desc
+                });
+            }
+        } else if (role === 'Villain') {
+            props.onVillainVisualsChange(pData.desc);
+            if (props.villain) {
+                props.onSelectVillain({
+                    ...props.villain,
+                    desc: pData.desc
+                });
+            }
+            
+            const currentDna = props.nemesisDNA || {
+                actor_id: "villain_spy_01",
+                archetype_role: "Nemesis",
+                persistence_layer: {
+                    biometric_backbone: "Striking look, calculated gaze.",
+                    structural_constants: "Defined facial structures, sharp details.",
+                    chromatic_anchor: "Deep shadows, ambient glow."
+                },
+                adaptive_layer: {
+                    sartorial_style: "Standard uniform",
+                    active_wardrobe: "Standard look"
+                },
+                rendering_directives: {
+                    art_style_lock: "Photorealistic Neon Noir Comic Book Style",
+                    continuity_weight: "HIGH"
+                }
+            };
+            
+            const updatedDna: CharacterIdentitySchema = {
+                ...currentDna,
+                adaptive_layer: {
+                    sartorial_style: pData.sartorialStyle,
+                    active_wardrobe: pData.desc
+                },
+                rendering_directives: {
+                    ...currentDna.rendering_directives,
+                    art_style_lock: pData.styleLock
+                }
+            };
+
+            setPersonaStudioSuggestedNemesisDna(updatedDna);
+            props.onNemesisDnaChange(updatedDna);
+            props.onVillainDnaChange(JSON.stringify(updatedDna));
+        }
+    };
+
+    const handlePersonaStudioSelectRole = (role: 'Hero' | 'Co-Star' | 'Villain') => {
+        setPersonaStudioRole(role);
+        setPersonaStudioSuggestedName('');
+        setPersonaStudioSuggestedBio('');
+        setPersonaStudioSuggestedVisuals('');
+        setPersonaStudioSuggestedPowers('');
+        setPersonaStudioSuggestedNemesisDna(null);
+        setPersonaStudioPortrait(null);
+        setPersonaStudioStatusMsg('');
+    };
+
+    const handlePersonaStudioBrainstorm = async () => {
+        setPersonaStudioSuggesting(true);
+        setPersonaStudioStatusMsg('Querying neural creative arrays...');
+        try {
+            const res = await fetch('/api/gemini/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fieldName: 'personaBrainstorm',
+                    genre: personaStudioStyle,
+                    roleType: personaStudioRole,
+                    characterName: personaStudioName,
+                    concept: personaStudioConcept
+                })
+            });
+            const data = await res.json();
+            if (data.name) {
+                setPersonaStudioSuggestedName(data.name);
+                setPersonaStudioSuggestedBio(data.description || '');
+                setPersonaStudioSuggestedVisuals(data.visuals || '');
+                setPersonaStudioSuggestedPowers(data.powers || '');
+
+                if (personaStudioRole === 'Villain') {
+                    if (data.identitySchema) {
+                        setPersonaStudioSuggestedNemesisDna({
+                            actor_id: 'villain_spy_01',
+                            archetype_role: 'Nemesis',
+                            persistence_layer: {
+                                biometric_backbone: data.identitySchema.persistence_layer?.biometric_backbone || data.visuals || 'Deep contrast features.',
+                                structural_constants: data.identitySchema.persistence_layer?.structural_constants || 'Constant dark contours and defining details.',
+                                chromatic_anchor: data.identitySchema.persistence_layer?.chromatic_anchor || 'Deep moody lighting, cold rim light highlights.'
+                            },
+                            adaptive_layer: {
+                                sartorial_style: data.identitySchema.adaptive_layer?.sartorial_style || 'High-fashion elite dark uniform.',
+                                active_wardrobe: data.identitySchema.adaptive_layer?.active_wardrobe || 'Tailored utility suit and heavy trenchcoat cloak.'
+                            },
+                            rendering_directives: {
+                                art_style_lock: data.identitySchema.rendering_directives?.art_style_lock || 'Neon Noir Comic Art, cinematic chiaroscuro.',
+                                continuity_weight: data.identitySchema.rendering_directives?.continuity_weight || 'HIGH'
+                            }
+                        });
+                    } else {
+                        // Fallback
+                        setPersonaStudioSuggestedNemesisDna({
+                            actor_id: 'villain_spy_01',
+                            archetype_role: 'Nemesis',
+                            persistence_layer: {
+                                biometric_backbone: data.visuals || 'Striking looks with heavy contrast locks.',
+                                structural_constants: 'Defined cheekbones and constant dark highlights.',
+                                chromatic_anchor: 'Matte tones, heavy shadows, cinema ambient glow.'
+                            },
+                            adaptive_layer: {
+                                sartorial_style: 'Modern high-fashion dark utility combat threads.',
+                                active_wardrobe: 'Tailored dark armor and matching lightweight tactical cloak.'
+                            },
+                            rendering_directives: {
+                                art_style_lock: 'Photorealistic Neon Noir Comic Book Style, sharp cinematic chiaroscuro',
+                                continuity_weight: 'HIGH'
+                            }
+                        });
+                    }
+                }
+
+                setPersonaStudioStatusMsg('Character profile successfully designed! Ready for art synthesis.');
+            } else {
+                setPersonaStudioStatusMsg('Parsing error: received incomplete response. Please retry.');
+            }
+        } catch (e: any) {
+            console.error("Persona brainstorm failed:", e);
+            setPersonaStudioStatusMsg('Error brainstorming persona profile: ' + e.message);
+        } finally {
+            setPersonaStudioSuggesting(false);
+        }
+    };
+
+    const handlePersonaStudioGeneratePortrait = async () => {
+        setPersonaStudioGeneratingImg(true);
+        setPersonaStudioStatusMsg('Summoning artist portal... Handcrafting dynamic cartoon portrait.');
+
+        const promptDesc = personaStudioSuggestedVisuals || `${personaStudioName || 'Secret agent'} wearing ${personaStudioConcept || 'futuristic clothes'}`;
+
+        try {
+            const res = await fetch('/api/gemini/persona', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    desc: promptDesc,
+                    selectedGenre: personaStudioStyle
+                })
+            });
+            const data = await res.json();
+            if (data.base64) {
+                setPersonaStudioPortrait(data.base64);
+                setPersonaStudioStatusMsg('Avatar summoned successfully! Connect this character below.');
+            } else {
+                setPersonaStudioStatusMsg('Art generation returned blank pixels. Please try again.');
+            }
+        } catch (e: any) {
+            console.error("Portrait generation failed:", e);
+            setPersonaStudioStatusMsg('Ethereal art nexus connection lost: ' + e.message);
+        } finally {
+            setPersonaStudioGeneratingImg(false);
+        }
+    };
+
+    const handlePersonaStudioCastCharacter = async () => {
+        if (!personaStudioPortrait) {
+            alert("Synthesize a portrait before casting this character!");
+            return;
+        }
+
+        const charName = personaStudioSuggestedName || personaStudioName || `${personaStudioRole} Alpha`;
+        const charBio = personaStudioSuggestedBio || personaStudioConcept || `A dynamic ${personaStudioRole}`;
+        const charVisuals = personaStudioSuggestedVisuals || 'Standard visual suit details.';
+        const charPowers = personaStudioSuggestedPowers || 'No visible superpowers';
+
+        setPersonaStudioStatusMsg('Connecting character to timeline & saving to Character Vault...');
+
+        const p: Persona = {
+            base64: personaStudioPortrait,
+            desc: charBio
+        };
+
+        if (personaStudioRole === 'Hero') {
+            props.onSelectHero(p);
+            props.onHeroVisualsChange(charVisuals);
+        } else if (personaStudioRole === 'Co-Star') {
+            props.onSelectFriend(p);
+            props.onFriendVisualsChange(charVisuals);
+        } else {
+            props.onSelectVillain(p);
+            props.onVillainVisualsChange(charVisuals);
+            props.onVillainDnaChange(charPowers);
+            if (personaStudioSuggestedNemesisDna) {
+                props.onNemesisDnaChange(personaStudioSuggestedNemesisDna);
+                props.onVillainDnaChange(JSON.stringify(personaStudioSuggestedNemesisDna));
+            }
+        }
+
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                await saveCharacterToFirestore(props.activeCreator.id, {
+                    userId: props.activeCreator.id,
+                    name: charName,
+                    roleType: personaStudioRole as any,
+                    description: charBio,
+                    imageUrl: personaStudioPortrait
+                });
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore sync fallback inside studio:", fsErr);
+            }
+        } else {
+            try {
+                await fetch('/api/characters', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: props.activeCreator.id,
+                        name: charName,
+                        roleType: personaStudioRole,
+                        description: charBio,
+                        imageUrl: personaStudioPortrait
+                    })
+                });
+            } catch (e) {
+                console.error("Database vault sync failed within studio:", e);
+            }
+        }
+
+        window.dispatchEvent(new Event('refresh-character-vault'));
+        fetchVault();
+
+        alert(`🎉 Success! ${charName} has been cast into the active roster as ${personaStudioRole}!`);
+        setActiveTab('generate');
+    };
+
+    const handleSuggestField = async (fieldName: string, currentValue: string) => {
+        setSuggestingFields(prev => ({ ...prev, [fieldName]: true }));
+        try {
+            const res = await fetch('/api/gemini/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fieldName,
+                    currentValue,
+                    genre: props.selectedGenre
+                })
+            });
+            const data = await res.json();
+            if (data.suggestion) {
+                if (fieldName === 'heroVisuals') props.onHeroVisualsChange(data.suggestion);
+                else if (fieldName === 'friendVisuals') props.onFriendVisualsChange(data.suggestion);
+                else if (fieldName === 'villainVisuals') props.onVillainVisualsChange(data.suggestion);
+                else if (fieldName === 'villainDna') props.onVillainDnaChange(data.suggestion);
+                else if (fieldName === 'customPremise') props.onPremiseChange(data.suggestion);
+                else if (fieldName === 'creativeDirectives') props.onCreativeDirectivesChange(data.suggestion);
+                else if (fieldName === 'soundPrompt') props.onSoundPromptChange(data.suggestion);
+            }
+        } catch (e) {
+            console.error("Field suggestion failed:", e);
+        } finally {
+            setSuggestingFields(prev => ({ ...prev, [fieldName]: false }));
+        }
+    };
+    
+    // Manual comic publisher states
+    const [manualComicTitle, setManualComicTitle] = useState('');
+    const [manualComicGenre, setManualComicGenre] = useState('Sci-Fi');
+    const [manualComicLanguage, setManualComicLanguage] = useState('en-US');
+    const [manualComicCover, setManualComicCover] = useState<string | null>(null);
+    const [isPublishingManual, setIsPublishingManual] = useState(false);
 
     // Dynamic Database URL tester
     const [testConnectionString, setTestConnectionString] = useState('');
@@ -118,12 +900,153 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     // Fetch Character Vault Saved Items
     const fetchVault = async () => {
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                const list = await getCharactersFromFirestore(props.activeCreator.id);
+                const mapped = list.map(c => ({
+                    id: c.id,
+                    user_id: c.userId,
+                    character_name: c.name,
+                    role_type: c.roleType,
+                    description: c.description,
+                    image_url: c.imageUrl,
+                    created_at: c.createdAt
+                }));
+                setSavedCharacters(mapped);
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore characters fetch error, falling back to server api:", fsErr);
+            }
+        }
         try {
             const res = await fetch(`/api/characters?userId=${props.activeCreator.id}`);
             const list = await res.json();
             setSavedCharacters(Array.isArray(list) ? list : []);
         } catch (e) {
             console.error("Failed to load character vault", e);
+        }
+    };
+
+    // Fetch Creator Dynamic Comic Book Projects
+    const fetchProjects = async () => {
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                const list = await getProjectsFromFirestore(props.activeCreator.id);
+                const mapped = list.map(p => ({
+                    id: p.id,
+                    user_id: p.userId,
+                    title: p.title,
+                    genre: p.genre,
+                    language: p.language,
+                    comic_faces: p.comicFaces,
+                    created_at: p.createdAt,
+                    updated_at: p.updatedAt
+                }));
+                setSavedProjects(mapped);
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore projects fetch error, falling back to server api:", fsErr);
+            }
+        }
+        try {
+            const res = await fetch(`/api/projects?userId=${props.activeCreator.id}`);
+            const list = await res.json();
+            setSavedProjects(Array.isArray(list) ? list : []);
+        } catch (e) {
+            console.error("Failed to load creator projects library:", e);
+        }
+    };
+
+    const handleDeleteProject = async (projectId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to shred this comic book completely from your library?")) return;
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                await deleteProjectFromFirestore(props.activeCreator.id, projectId);
+                fetchProjects();
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore project deletion failed, falling back to API:", fsErr);
+            }
+        }
+        try {
+            await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+            fetchProjects();
+        } catch (err) {
+            console.error("Shred error", err);
+        }
+    };
+
+    const handleManualPublish = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualComicTitle.trim()) {
+            alert("Please enter a comic book title.");
+            return;
+        }
+        setIsPublishingManual(true);
+        try {
+            // Pack manual image as cover page-0 inside comicFaces
+            const initialFaces = [
+                {
+                    id: 'page-0',
+                    type: 'cover',
+                    imageUrl: manualComicCover || 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400&auto=format&fit=crop',
+                    pageIndex: 0,
+                    isLoading: false,
+                    narrative: {
+                        scene: "A custom curated published comic book.",
+                        caption: "An original visual epic.",
+                        choices: ["The Beginning"]
+                    }
+                }
+            ];
+
+            const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+            if (isFirebaseUser) {
+                await saveProjectToFirestore(props.activeCreator.id, {
+                    title: manualComicTitle.trim(),
+                    genre: manualComicGenre,
+                    language: manualComicLanguage,
+                    comicFaces: JSON.stringify(initialFaces),
+                    userId: props.activeCreator.id
+                });
+                alert("🎉 Success! Your original comic book has been successfully saved to your cloud library.\n\nLogging you out and returning to the Landing Page as requested...");
+                setManualComicTitle('');
+                setManualComicCover(null);
+                fetchProjects();
+                if (props.onLogOut) {
+                    props.onLogOut();
+                }
+                return;
+            }
+
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: props.activeCreator.id,
+                    title: manualComicTitle.trim(),
+                    genre: manualComicGenre,
+                    language: manualComicLanguage,
+                    comicFaces: JSON.stringify(initialFaces)
+                })
+            });
+            if (res.ok) {
+                alert("🎉 Success! Your original comic book has been successfully published to your creator library.\n\nLogging you out and returning to the Landing Page as requested...");
+                setManualComicTitle('');
+                setManualComicCover(null);
+                fetchProjects();
+                if (props.onLogOut) {
+                    props.onLogOut();
+                }
+            }
+        } catch (err) {
+            console.error("Failed to upload published comic:", err);
+        } finally {
+            setIsPublishingManual(false);
         }
     };
 
@@ -135,6 +1058,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
     useEffect(() => {
         if (props.activeCreator.id) {
             fetchVault();
+            fetchProjects();
+            fetchDrafts();
         }
     }, [props.activeCreator.id]);
 
@@ -142,6 +1067,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
     useEffect(() => {
         const handler = () => {
              fetchVault();
+             fetchProjects();
+             fetchDrafts();
         };
         window.addEventListener('refresh-character-vault', handler);
         return () => {
@@ -175,6 +1102,16 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const handleDeleteFromVault = async (charId: string) => {
         if (!confirm("Are you sure you want to retire this character from the vault?")) return;
+        const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        if (isFirebaseUser) {
+            try {
+                await deleteCharacterFromFirestore(props.activeCreator.id, charId);
+                fetchVault();
+                return;
+            } catch (fsErr) {
+                console.warn("[Setup] Firestore character deletion failed, falling back to API:", fsErr);
+            }
+        }
         try {
             await fetch(`/api/characters/${charId}`, { method: 'DELETE' });
             fetchVault();
@@ -190,10 +1127,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
             if (data.url) {
                 setTestConnectionString(data.url);
             } else {
-                setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@136.116.100.202:5432/comics-v1");
+                setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1");
             }
         } catch (e) {
-            setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@136.116.100.202:5432/comics-v1");
+            setTestConnectionString("postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1");
         }
     };
 
@@ -275,6 +1212,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
         "Wasteland Apocalypse": "☣️",
         "Lighthearted Comedy": "🎭",
         "Teen Drama / Slice of Life": "🎒",
+        "Anime Story": "🌸",
+        "Historical Archeology Tales": "🏺",
         "Custom": "✨"
     };
 
@@ -342,303 +1281,438 @@ export const Setup: React.FC<SetupProps> = (props) => {
              }}>
           
           <div className="min-h-full flex items-center justify-center p-4 pb-36 md:p-8">
-            <div className="max-w-[1100px] w-full bg-slate-900 border-[6px] border-black shadow-[16px_16px_0px_#000] p-6 md:p-8 relative overflow-hidden rounded-2xl">
+            <div className={sOuterContainer}>
                 
                 {/* Comic Halftone texture wrapper behind everything */}
-                <div className="absolute inset-0 opacity-15 retro-halftone pointer-events-none" />
+                {!isEditorial && <div className="absolute inset-0 opacity-15 retro-halftone pointer-events-none" />}
 
                 {/* Aesthetic Top Ribbon */}
-                <div className="absolute top-0 right-0 bg-yellow-400 text-black font-comic text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10">
-                     Issue #01 - Multiverse Reborn
+                <div className={`absolute top-0 right-0 ${isEditorial ? 'bg-stone-200 text-stone-700 border-b border-l border-stone-300 font-sans text-[10px] uppercase font-bold tracking-widest px-4.5 py-1 z-10' : 'bg-yellow-400 text-black font-comic text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10'}`}>
+                     {isEditorial ? "🖋️ Editorial Workspace v3.11" : "Issue #01 - Multiverse Reborn"}
+                </div>
+
+                {/* SKIN COMPILER SELECTOR */}
+                <div className={`flex justify-between items-center mb-6 relative z-10 select-none pb-4 border-b ${isEditorial ? 'border-stone-200 text-stone-900' : 'border-slate-800 text-slate-300'}`}>
+                     <div className="flex items-center gap-2">
+                          <span className="text-xl">🛠️</span>
+                          <span className={`${isEditorial ? 'text-xs uppercase tracking-widest text-[#5c5449] font-black font-sans' : 'text-xs uppercase tracking-widest text-yellow-400 font-comic font-black'}`}>STUDIO SKIN WORKSPACE</span>
+                     </div>
+                     <div className={`flex items-center gap-1.5 p-1 rounded-lg text-xs ${isEditorial ? 'bg-stone-200/65' : 'bg-black/40 border border-white/5'}`}>
+                          <button
+                               type="button"
+                               onClick={() => setAppSkin('comic')}
+                               className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'comic' ? 'bg-amber-500 text-black font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
+                          >
+                               ⚡ Comic Studio
+                          </button>
+                          <button
+                               type="button"
+                               onClick={() => setAppSkin('editorial')}
+                               className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'editorial' ? 'bg-[#3c3730] text-stone-50 font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
+                          >
+                               🖋️ Writer's Journal
+                          </button>
+                     </div>
                 </div>
 
                 {/* Dashboard Title Block */}
                 <div className="text-center mb-8 relative z-10 select-none">
-                    <span className="block font-comic text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">INTELLIGENT DYNAMIC COMICS</span>
-                    <div className="inline-flex items-center justify-center gap-3 bg-red-600 border-4 border-black px-6 py-2 shadow-[4px_4px_0px_#000] transform -rotate-1">
-                        <span className="font-comic text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>INFINITE</span>
-                        <span className="font-comic text-4xl md:text-6xl text-yellow-300 tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>HEROES</span>
-                        <span className="font-comic text-xl md:text-2xl bg-black text-white px-2.5 py-0.5 rounded ml-2 border border-yellow-300">REMIX</span>
-                    </div>
-                </div>
-
-                {/* ADVANCED FULL-STACK DATABASE CONTROLLER GRID */}
-                <div className="mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 bg-slate-950 border-4 border-black p-4 rounded-lg shadow-[4px_4px_0px_#000] text-gray-200">
-                    <div className="md:col-span-4 flex flex-col justify-center border-b-2 border-dashed border-slate-800 pb-3 md:pb-0 md:border-b-0 md:border-r-2 md:border-slate-800 pr-0 md:pr-4">
-                         <div className="flex items-center gap-2">
-                             <div className={`w-3.5 h-3.5 rounded-full border-2 border-black ${dbConnection.status === 'ok' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500 animate-pulse'}`} />
-                             <span className="font-comic font-bold uppercase tracking-wider text-xs">
-                                  {dbConnection.status === 'ok' ? '● POSTGRES CONNECTION LIVE' : '● SANDBOX EMULATION ONLINE'}
-                             </span>
+                    {isEditorial ? (
+                         <div className="py-2">
+                              <span className="block font-sans text-[#786c5f] text-xs font-black tracking-widest uppercase mb-1">PROFESSIONAL COGNITIVE NARRATIVE CREATOR</span>
+                              <h1 className="font-serif text-4xl md:text-5xl text-stone-900 font-extrabold tracking-tight leading-none">
+                                   Story<span className="text-[#92400e]">.Menu</span>
+                              </h1>
+                              <p className="text-stone-500 text-xs mt-2 font-serif max-w-lg mx-auto leading-relaxed">
+                                   Designed for writers, authors, and narrative designers seeking smart procedural story arcs and high-fidelity speech narration.
+                              </p>
                          </div>
-                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                              Storage Model: {dbConnection.mode || 'Local Fallback Core'}
-                         </p>
-                         <div className="mt-2 flex flex-col gap-1">
-                              <button 
-                                   type="button" 
-                                   disabled={isReconnecting}
-                                   onClick={handleForceReconnect}
-                                   className="w-fit bg-slate-900 hover:bg-slate-800 border-2 border-black hover:border-yellow-400 px-2 py-1 text-[9px] font-mono rounded tracking-wider uppercase text-yellow-300 active:translate-y-0.5 select-none disabled:opacity-40 font-bold"
-                              >
-                                   {isReconnecting ? 'RECONNECTING...' : '🔄 FORCE POOL RECONNECT'}
-                              </button>
-                              {reconnectResultMessage && (
-                                   <span className={`text-[10px] font-mono leading-tight block truncate ${reconnectResultMessage.startsWith('✓') ? 'text-green-400' : 'text-red-400'}`}>
-                                        {reconnectResultMessage}
-                                   </span>
-                              )}
-                         </div>
-                    </div>
-
-                    <div className="md:col-span-8">
-                         <form onSubmit={handleEmailSubmit} className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
-                              <div className="flex-1 text-left">
-                                   <label className="block text-slate-400 font-mono text-[10px] uppercase mb-1">Creator Identity Network (Email)</label>
-                                   <input 
-                                        type="email" 
-                                        className="w-full bg-slate-900 border-2 border-black p-1.5 px-3 rounded font-mono text-xs text-yellow-300 focus:outline-none focus:border-red-500"
-                                        placeholder="enter-creator-identity@multiverse.com"
-                                        value={creatorEmailInput}
-                                        onChange={(e) => setCreatorEmailInput(e.target.value)}
-                                   />
-                              </div>
-                              <button 
-                                   type="submit" 
-                                   disabled={isUpdatingEmail}
-                                   className="bg-zinc-800 hover:bg-zinc-700 border-2 border-black hover:border-yellow-400 px-4 py-1.5 font-comic text-xs uppercase font-bold tracking-wider text-white select-none whitespace-nowrap active:translate-y-0.5"
-                              >
-                                   {isUpdatingEmail ? 'SYNCING...' : 'CONNECT ACCOUNT'}
-                              </button>
-                         </form>
-                    </div>
-                </div>
-
-                {/* INTERACTIVE MULTIVERSE DATABASE DIAGNOSTIC TOOL */}
-                <div id="db-diagnostic-terminal" className="mb-6 relative z-10 bg-slate-950 border-4 border-black p-4 rounded-lg shadow-[4px_4px_0px_#000] text-gray-200 text-left">
-                    <span className="block font-comic text-yellow-300 font-bold uppercase tracking-wider text-xs mb-2">
-                        📢 LIVE DATABASE TESTER & PORT CHECKER
-                    </span>
-                    <p className="text-[11px] text-slate-400 font-mono mb-3 leading-relaxed">
-                        Test database routing and firewall status instantly. Paste a PostgreSQL connection URI, or load your custom parameters to trace active network tunnels.
-                        <strong className="text-yellow-400 block mt-1.5 uppercase">⚡ CONTAINER NETWORK WARNING:</strong>
-                        Your application runs in a containerized Cloud Run environment. Inside a container, <code className="text-white bg-slate-800 px-1 py-0.5 rounded">localhost</code> or <code className="text-white bg-slate-800 px-1 py-0.5 rounded">127.0.0.1</code> refers to the web container itself, NOT your local computer or external database server! To link custom databases, you <strong className="text-cyan-300">MUST specify your database's Public IP Address</strong> or <strong className="text-cyan-300">External Hostname</strong>.
-                    </p>
-
-                    {dbConnection.hasUrlEnv ? (
-                        <div className="mb-3 p-2.5 bg-slate-900/80 border-2 border-slate-700/60 rounded font-mono text-[11px] text-gray-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-inner">
-                             <div>
-                                  <span className="text-cyan-400 font-bold uppercase tracking-wider text-[10px] block sm:inline mr-1">📄 Active Server-side .env Config:</span>
-                                  <code className="text-yellow-300 font-bold selection:bg-yellow-500/30 text-xs">{dbConnection.dbUrlMasked}</code>
-                             </div>
-                             <button
-                                 type="button"
-                                 onClick={() => handleTestConnection(null, true)}
-                                 disabled={isTestingConnection}
-                                 className="px-2.5 py-1 bg-yellow-500 hover:bg-yellow-400 text-black font-comic font-extrabold rounded uppercase text-[10px] tracking-wide shadow-md active:translate-y-0.5 whitespace-nowrap self-end sm:self-auto disabled:opacity-40"
-                             >
-                                 ⚡ Check Active .env URL
-                             </button>
-                        </div>
                     ) : (
-                        <div className="mb-3 p-2.5 bg-red-950/20 border-2 border-red-900/40 rounded font-mono text-[11px] text-red-400 flex flex-col gap-1">
-                             <span className="font-bold uppercase tracking-wider text-[10px]">⚠️ NO DATABASE_URL DETECTED IN SERVER ENV</span>
-                             <span>Your app is currently running in "Safe Offline Sandboxed memory mode". To link a persistent database, provide a DATABASE_URL secret in the application Settings.</span>
-                        </div>
+                         <>
+                              <span className="block font-comic text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">INTELLIGENT DYNAMIC COMICS</span>
+                              <div className="inline-flex items-center justify-center gap-1.5 bg-red-600 border-4 border-black px-6 py-2 shadow-[4px_4px_0px_#000] transform -rotate-1">
+                                  <span className="font-comic text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>STORY</span>
+                                  <span className="font-comic text-4xl md:text-6xl text-yellow-300 tracking-wider font-extrabold" style={{ textShadow: '3px 3px 0px black' }}>.MENU</span>
+                              </div>
+                         </>
                     )}
+                </div>
 
-                    <form onSubmit={(e) => handleTestConnection(e)} className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
-                        <div className="flex-1">
-                            <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">PostgreSQL URL Connection String</label>
-                            <input 
-                                type="text"
-                                className="w-full bg-slate-900 border-2 border-black p-1.5 px-3 rounded font-mono text-xs text-yellow-300 focus:outline-none focus:border-cyan-400"
-                                placeholder="postgresql://username:password@hostname:port/database"
-                                value={testConnectionString}
-                                onChange={(e) => setTestConnectionString(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={handleLoadMyUrl}
-                                className="bg-zinc-800 hover:bg-zinc-700 text-slate-300 border-2 border-black px-2.5 py-1.5 font-mono text-[10px] uppercase rounded active:translate-y-0.5 whitespace-nowrap"
-                                title="Load server-side secret URL or template with placeholder"
-                            >
-                                LOAD MY URL
-                            </button>
-                            <button
-                                type="submit"
-                                id="test-conn-btn"
-                                disabled={isTestingConnection}
-                                className="bg-cyan-600 hover:bg-cyan-500 border-2 border-black hover:border-yellow-300 px-5 py-1.5 font-comic text-xs uppercase font-bold tracking-wider text-white whitespace-nowrap active:translate-y-0.5 disabled:opacity-40"
-                            >
-                                {isTestingConnection ? 'TESTING...' : 'TEST CONNECTION'}
-                            </button>
-                        </div>
-                    </form>
-
-                    {testResult && (
-                        <div className={`mt-3 p-3 border-2 border-dashed rounded font-mono text-xs ${
-                            testResult.success 
-                                ? 'bg-green-950/60 border-green-500/80 text-green-300' 
-                                : 'bg-red-950/60 border-red-500/80 text-red-300'
-                        }`}>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-[10px] uppercase px-1.5 py-0.5 rounded border inline-block select-none bg-black/40">
-                                    {testResult.success ? '✓ VERIFICATION SUCCESSFUL' : '⚡ DIAGNOSTIC ERROR REPORT'}
-                                </span>
-                            </div>
-                            <p className="whitespace-pre-wrap font-mono mt-0.5 leading-tight">{testResult.message}</p>
-                            {testResult.success && (
-                                <p className="text-[10px] text-green-400 mt-2">
-                                    💡 Connection is active and healthy! High-speed schema structures, user indexes, and characters maps can now be synchronized.
+                {/* COMMERCIAL STATUS & INTRODUCTION BANNER */}
+                <div className={sPanel}>
+                    <div className="md:col-span-12 text-left font-sans">
+                        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 ${isEditorial ? 'border-stone-200 pb-4 mb-4' : 'border-slate-800 pb-4 mb-4'}`}>
+                            <div>
+                                <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-comic font-black text-xl text-yellow-400 tracking-wider uppercase"}>
+                                     ⚡ CLOUD CREATIVE WORKSPACE ACTIVE
+                                </h3>
+                                <p className={isEditorial ? "text-stone-500 font-sans text-xs mt-1" : "text-slate-400 font-mono text-xs mt-1"}>
+                                     Fully Integrated Cloud Storage via Google Firestore. Your characters and epic progress are synchronized live!
                                 </p>
-                            )}
-                            {!testResult.success && (
-                                <div className="text-[10px] text-red-400 mt-2 leading-relaxed">
-                                    💡 <strong className="uppercase">Troubleshooting Checklist:</strong>
-                                    <ul className="list-disc pl-4 mt-1 space-y-1">
-                                        <li>Double-check username, password, target database name, or port settings.</li>
-                                        <li>Ensure port <span className="text-yellow-400 font-bold">5432</span> (or your custom port) on your PG host allows outside ingress connections.</li>
-                                        <li>Ensure Postgres <code>pg_hba.conf</code> accepts connection scopes dynamically.</li>
-                                    </ul>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                 <button
+                                      type="button"
+                                      disabled={isSavingDraft}
+                                      onClick={handleSaveDraft}
+                                      className={sPrimaryBtn}
+                                 >
+                                      {isSavingDraft ? "SNAPSHOT-SAVING..." : "💾 Save WIP Draft"}
+                                 </button>
+                                 {props.onLogOut && (
+                                      <button
+                                           type="button"
+                                           onClick={props.onLogOut}
+                                           className={sRedBtn}
+                                      >
+                                           🚪 Sign Out & Landing Page
+                                      </button>
+                                 )}
+                                 <div className={isEditorial ? "flex items-center gap-2 bg-stone-200/60 p-2 rounded-lg text-xs font-semibold" : "flex items-center gap-2 bg-slate-900 border-2 border-black/80 px-3 py-2 rounded text-xs select-none"}>
+                                     <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                                     <span className={isEditorial ? "font-sans text-stone-600 uppercase tracking-wider text-[11px]" : "font-mono text-slate-300 uppercase tracking-widest text-[11px] font-bold"}>
+                                          FIRESTORE CLUSTER LIVE
+                                     </span>
+                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm font-sans mt-2">
+                            <div className="flex gap-3">
+                                <span className="text-3xl select-none">🌌</span>
+                                <div>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>AI STORY ENGINE</h4>
+                                    <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
+                                         Guided by state-of-the-art multimodal context windows to synthesize adaptive scenario dialogues, actions, and captions.
+                                    </p>
                                 </div>
-                            )}
+                            </div>
+                            <div className="flex gap-3">
+                                <span className="text-3xl select-none">🎭</span>
+                                <div>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>CHARACTER PERSISTENCE</h4>
+                                    <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
+                                         Cast recurring characters from your Vault. Upload portrait templates to propagate coherent visual traits.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <span className="text-3xl select-none">📚</span>
+                                <div>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>SHARED MULTIVERSE</h4>
+                                    <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
+                                         Publish, preview, review, and organize custom dynamic comic issues in your personal cloud studio library.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    )}
-                </div>
-
-                {/* CLOUD RUN CONFIGURATION STATUS GRID */}
-                <div className="mb-6 relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-900 border-4 border-black p-4 rounded-lg shadow-[4px_4px_0px_#000] text-gray-200">
-                    <div className="flex flex-col text-left">
-                        <span className="text-slate-400 font-mono text-[10px] uppercase">⚡ HOSTING ENVIRONMENT</span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                            <span className="text-xs font-comic font-bold uppercase tracking-wide text-cyan-400">GCP CLOUD RUN CONTAINER</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col text-left">
-                        <span className="text-slate-400 font-mono text-[10px] uppercase">📁 PROJECT ID</span>
-                        <span className="text-xs font-mono text-yellow-300 truncate mt-1">{cloudRunConfig.project || 'detecting-project-id...'}</span>
-                    </div>
-                    <div className="flex flex-col text-left">
-                        <span className="text-slate-400 font-mono text-[10px] uppercase">🏷️ DEPLOYED SERVICE</span>
-                        <span className="text-xs font-mono text-white truncate mt-1">{cloudRunConfig.service || 'infinite-heroes-service'}</span>
-                    </div>
-                    <div className="flex flex-col text-left">
-                        <span className="text-slate-400 font-mono text-[10px] uppercase">🔧 INGRESS / REVISION</span>
-                        <span className="text-[10px] font-mono text-slate-400 truncate mt-1 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700/60 inline-block w-fit">
-                            Revision: <span className="text-green-400 font-bold">{cloudRunConfig.revision || 'n/a'}</span> @ Port {cloudRunConfig.port}
-                        </span>
                     </div>
                 </div>
 
-                {/* Main Config Workspace split in 2 bold frames */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 relative z-10">
+                {/* TAB NAVIGATION: Generator vs Library */}
+                <div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border-4 border-black rounded-lg overflow-hidden bg-slate-950 p-1.5 gap-2 shadow-[4px_4px_0px_#000]"}>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('generate')}
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
+                            isEditorial 
+                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'generate' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'generate' ? 'bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                        }`}
+                    >
+                        🌌 {isEditorial ? "NARRATIVE CREATOR" : "Spark Multiverse Generator"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('blueprint')}
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
+                            isEditorial 
+                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'blueprint' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-cyan-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                        }`}
+                    >
+                        🔮 {isEditorial ? "STORY BLUEPRINTS" : "Story Blueprint Manager"}
+                        {props.storyBlueprint && props.storyBlueprint.length > 0 && (
+                            <span className={isEditorial ? "absolute -top-1 right-2 bg-emerald-600 text-white text-[8px] font-sans font-black px-1.5 py-0.5 rounded-full border border-emerald-500 animate-pulse" : "absolute -top-1 right-2 bg-green-500 text-black text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-black animate-pulse"}>
+                                ACTIVE
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('persona')}
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
+                            isEditorial 
+                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'persona' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-purple-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                        }`}
+                    >
+                        🎭 {isEditorial ? "AI PERSONA ENGINE" : "AI Persona Tuning Studio"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('library')}
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
+                            isEditorial 
+                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'library' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'library' ? 'bg-yellow-500 text-black border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                        }`}
+                    >
+                        📚 {isEditorial ? "STORY ARCHIVE" : "My Studio Comic Library"}
+                        {savedProjects.length > 0 && (
+                            <span className={isEditorial ? "absolute -top-1 right-2 bg-red-600 text-white text-[8px] font-sans px-1.5 py-0.5 rounded-full animate-bounce" : "absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-black animate-bounce"}>
+                                {savedProjects.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {activeTab === 'generate' ? (
+                    <>
+                        {/* Main Config Workspace split in 2 bold frames */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 relative z-10">
                     
                     {/* Section 1: The Cast Grid (7 cols) */}
-                    <div className="lg:col-span-7 flex flex-col p-5 bg-slate-800 border-4 border-black rounded-lg shadow-[6px_6px_0px_#000] relative">
-                        <div className="absolute -top-4 left-6 bg-blue-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[-1.5deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide">
-                             1. CHOOSE YOUR CAST
+                    <div className={`lg:col-span-7 flex flex-col ${sCard}`}>
+                        <div className={sHeaderBadge}>
+                             {isEditorial ? "1. CAST REGISTRY" : "1. CHOOSE YOUR CAST"}
                         </div>
                         
-                        <p className="text-xs text-gray-300 font-medium mb-5 mt-2">
-                             Upload custom character images to create coherent comic likenesses throughout the adventure. Include a Villain for high-stakes conflicts!
+                        <p className={`text-xs ${isEditorial ? 'text-stone-505 font-sans leading-relaxed' : 'text-gray-300 font-medium'} mb-5 mt-2`}>
+                             {isEditorial 
+                                  ? "Identify characters to participate in the narrative arc. Upload images of your characters to synchronize consistent physical traits recursively during scenario drafts."
+                                  : "Upload custom character images to create coherent comic likenesses throughout the adventure. Include a Villain for high-stakes conflicts!"}
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             
                             {/* HERO CARD (BLUE THEME) */}
-                            <div className={`relative group h-80 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] ${props.hero ? 'border-green-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.85)] hover:border-blue-500' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.85)] hover:border-blue-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'} cursor-pointer`}>
                                  <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onHeroUpload(e.target.files[0])} />
-                                 <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-10">
-                                      <span className="sr-only">Upload Hero</span>
-                                 </label>
-
+                                 
                                  {props.hero ? (
                                       <>
-                                          {/* Full Bleed Image */}
-                                          <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                          
-                                          {/* Top Tag */}
-                                          <div className="absolute top-2 left-2 bg-blue-600 text-white border border-black font-comic text-xs uppercase px-2 py-0.5 rotate-[-2deg] z-20">
-                                               HERO ACTIVE
-                                          </div>
-
-                                          <div className="p-3 relative z-20 flex flex-col justify-end h-full">
-                                               <span className="text-green-400 text-[10px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">⚡ IDENTITY SCANNED</span>
-                                               <p className="text-white font-comic text-xl leading-none uppercase tracking-wide truncate">MAIN AVATAR</p>
-                                               <p className="text-gray-300 text-[10px] line-clamp-1 mt-1 font-sans">{props.hero.desc || "Ready for battle"}</p>
+                                          {/* Upper portion: Card Artwork with hover overlay */}
+                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                               <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">Upload Hero</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               {/* Dark Hover Replacement Overlay */}
-                                               <div className="absolute inset-0 bg-blue-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                    <span className="text-yellow-400 font-comic text-lg">CHANGE HERO</span>
-                                                    <span className="text-gray-300 text-[10px] mt-1 font-mono">JPG / PNG / WEBP</span>
+                                               <div className="absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]">
+                                                    HERO ACTIVE
+                                               </div>
+
+                                               <div className="absolute inset-0 bg-blue-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
+                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className="text-green-400 text-[9px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">⚡ IDENTITY SCANNED</span>
+                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">MAIN HERO</p>
+                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.hero.desc || "Ready for battle"}</p>
+                                               </div>
+
+                                               {/* Sub-visual layout triggers */}
+                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
+                                                    <span className="text-[9px] text-blue-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                         {/* Hair/Head suggestion box */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-blue-500 rounded p-1 transition-all">
+                                                              {props.hero.headBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.hero.headBase64}`} alt="Hero Hair Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onHeroHeadClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">💇</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onHeroHeadUpload) props.onHeroHeadUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+
+                                                         {/* Clothe suggestion box */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-blue-500 rounded p-1 transition-all">
+                                                              {props.hero.clothesBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.hero.clothesBase64}`} alt="Hero Clothing Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onHeroClothesClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">👕</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onHeroClothesUpload) props.onHeroClothesUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+                                                    </div>
                                                </div>
                                           </div>
                                       </>
                                  ) : (
-                                      <div className="flex flex-col justify-between h-full p-4 relative z-20">
+                                      <label htmlFor="hero-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            {/* Emblem representation */}
                                            <div className="flex justify-between items-center">
                                                 <span className="bg-blue-600 text-white font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]">REQUIRED</span>
                                                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" />
                                            </div>
 
-                                           <div className="flex flex-col items-center my-auto py-2 text-center">
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
                                                 <div className="text-blue-400 mb-2 transform group-hover:scale-110 transition-transform duration-300">
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                      </svg>
                                                 </div>
-                                                <span className="font-comic text-lg text-blue-300 tracking-wide">HERO CYLINDER</span>
+                                                <span className="font-comic text-lg text-blue-300 tracking-wide">HERO AVATAR</span>
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO SCAN</span>
                                            </div>
 
-                                           <div className="bg-blue-950/80 border border-blue-800 text-center py-1.5 rounded font-comic text-xs text-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                           <div className="bg-blue-950/80 border border-blue-800 text-center py-1.5 rounded font-comic text-xs text-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-all cursor-pointer">
                                                 UPLOAD IMAGE
                                            </div>
-                                      </div>
+                                      </label>
                                  )}
                             </div>
 
                             {/* CO-STAR CARD (PURPLE THEME) */}
-                            <div className={`relative group h-80 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] ${props.friend ? 'border-green-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.85)] hover:border-purple-500' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.85)] hover:border-purple-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.friend ? 'border-purple-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.5)]' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.3)] hover:border-purple-500'} cursor-pointer`}>
                                  <input type="file" accept="image/*" id="friend-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onFriendUpload(e.target.files[0])} />
-                                 <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-10">
-                                      <span className="sr-only">Upload Co-Star</span>
-                                 </label>
-
+                                 
                                  {props.friend ? (
                                       <>
-                                          <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                          
-                                          <div className="absolute top-2 left-2 bg-purple-600 text-white border border-black font-comic text-xs uppercase px-2 py-0.5 rotate-[2deg] z-20">
-                                               CO-STAR READY
-                                          </div>
-
-                                          <div className="p-3 relative z-20 flex flex-col justify-end h-full">
-                                               <span className="text-green-400 text-[10px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">🌟 ALLY DISCOVERED</span>
-                                               <p className="text-white font-comic text-xl leading-none uppercase tracking-wide truncate">SOCIUS / SIDEKICK</p>
-                                               <p className="text-gray-300 text-[10px] line-clamp-1 mt-1 font-sans">{props.friend.desc || "Ready for combat support"}</p>
+                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                               <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">Upload Co-Star</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               <div className="absolute inset-0 bg-purple-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                    <span className="text-yellow-400 font-comic text-lg">CHANGE CO-STAR</span>
-                                                    <span className="text-gray-300 text-[10px] mt-1 font-mono">JPG / PNG / WEBP</span>
+                                               <div className="absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]">
+                                                    CO-STAR READY
+                                               </div>
+
+                                               <div className="absolute inset-0 bg-purple-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
+                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className="text-green-400 text-[9px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">🌟 ALLY DISCOVERED</span>
+                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">SOCIUS / SIDEKICK</p>
+                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.friend.desc || "Ready for combat support"}</p>
+                                               </div>
+
+                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
+                                                    <span className="text-[9px] text-purple-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                         {/* Hair/Head detail */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-purple-500 rounded p-1 transition-all">
+                                                              {props.friend.headBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.friend.headBase64}`} alt="CoStar Hair Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onFriendHeadClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">💇</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onFriendHeadUpload) props.onFriendHeadUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+
+                                                         {/* Clothing reference */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-purple-500 rounded p-1 transition-all">
+                                                              {props.friend.clothesBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.friend.clothesBase64}`} alt="CoStar Clothing Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onFriendClothesClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">👕</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onFriendClothesUpload) props.onFriendClothesUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+                                                    </div>
                                                </div>
                                           </div>
                                       </>
                                  ) : (
-                                      <div className="flex flex-col justify-between h-full p-4 relative z-20">
+                                      <label htmlFor="friend-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
                                                 <span className="bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full">OPTIONAL</span>
                                                 <span className="w-2 h-2 rounded-full bg-purple-500" />
                                            </div>
 
-                                           <div className="flex flex-col items-center my-auto py-2 text-center">
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
                                                 <div className="text-purple-400 mb-2 transform group-hover:scale-110 transition-transform duration-300">
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94-3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
@@ -648,48 +1722,117 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO JOIN</span>
                                            </div>
 
-                                           <div className="bg-purple-950/80 border border-purple-800 text-center py-1.5 rounded font-comic text-xs text-purple-200 group-hover:bg-purple-600 group-hover:text-white transition-all">
+                                           <div className="bg-purple-950/80 border border-purple-800 text-center py-1.5 rounded font-comic text-xs text-purple-200 group-hover:bg-purple-600 group-hover:text-white transition-all cursor-pointer">
                                                 UPLOAD PHOTO
                                            </div>
-                                      </div>
+                                      </label>
                                  )}
                             </div>
 
                             {/* VILLAIN CARD (RED THEME) */}
-                            <div className={`relative group h-80 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] ${props.villain ? 'border-green-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.85)] hover:border-red-500' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.85)] hover:border-red-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.villain ? 'border-red-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:border-red-500'} cursor-pointer`}>
                                  <input type="file" accept="image/*" id="villain-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onVillainUpload(e.target.files[0])} />
-                                 <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-10">
-                                      <span className="sr-only">Upload Villain</span>
-                                 </label>
-
+                                 
                                  {props.villain ? (
                                       <>
-                                          <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                          
-                                          <div className="absolute top-2 left-2 bg-red-600 text-white border border-black font-comic text-xs uppercase px-2 py-0.5 rotate-[-1deg] z-20 animate-pulse">
-                                               NEMESIS ACTIVE
-                                          </div>
-
-                                          <div className="p-3 relative z-20 flex flex-col justify-end h-full">
-                                               <span className="text-red-500 text-[10px] font-mono tracking-wider font-bold block mb-0.5">⚠️ MENACE UNLEASHED</span>
-                                               <p className="text-white font-comic text-xl leading-none uppercase tracking-wide truncate">ARC-RIVAL</p>
-                                               <p className="text-gray-300 text-[10px] line-clamp-1 mt-1 font-sans">{props.villain.desc || "Plotting doom..."}</p>
+                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                               <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">Upload Villain</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               <div className="absolute inset-0 bg-red-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                    <span className="text-yellow-400 font-comic text-lg">CHANGE VILLAIN</span>
-                                                    <span className="text-gray-300 text-[10px] mt-1 font-mono">JPG / PNG / WEBP</span>
+                                               <div className="absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse">
+                                                    NEMESIS ACTIVE
+                                               </div>
+
+                                               <div className="absolute inset-0 bg-red-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
+                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className="text-red-500 text-[9px] font-mono tracking-wider font-bold block mb-0.5">⚠️ MENACE UNLEASHED</span>
+                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">ARC-RIVAL</p>
+                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.villain.desc || "Plotting doom..."}</p>
+                                               </div>
+
+                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
+                                                    <span className="text-[9px] text-red-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                         {/* Hair/Head detail */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-red-500 rounded p-1 transition-all">
+                                                              {props.villain.headBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.villain.headBase64}`} alt="Villain Hair Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onVillainHeadClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">💇</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onVillainHeadUpload) props.onVillainHeadUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+
+                                                         {/* Clothing reference */}
+                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-red-500 rounded p-1 transition-all">
+                                                              {props.villain.clothesBase64 ? (
+                                                                   <div className="relative w-full h-12 rounded overflow-hidden">
+                                                                        <img src={`data:image/jpeg;base64,${props.villain.clothesBase64}`} alt="Villain Clothing Detail" className="w-full h-full object-cover" />
+                                                                        <button 
+                                                                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); props.onVillainClothesClear?.(); }}
+                                                                             className="absolute top-0 right-0 bg-red-600 text-white font-bold text-[8px] w-3.5 h-3.5 flex items-center justify-center hover:bg-red-500 rounded-bl z-40"
+                                                                             title="Clear detail"
+                                                                        >
+                                                                             ✕
+                                                                        </button>
+                                                                   </div>
+                                                              ) : (
+                                                                   <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                                                        <span className="text-xs">👕</span>
+                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <input 
+                                                                             type="file" 
+                                                                             accept="image/*" 
+                                                                             className="hidden" 
+                                                                             onChange={async (e) => {
+                                                                                  const file = e.target.files?.[0];
+                                                                                  if (file && props.onVillainClothesUpload) props.onVillainClothesUpload(file);
+                                                                             }}
+                                                                        />
+                                                                   </label>
+                                                              )}
+                                                         </div>
+                                                    </div>
                                                </div>
                                           </div>
                                       </>
                                  ) : (
-                                      <div className="flex flex-col justify-between h-full p-4 relative z-20">
+                                      <label htmlFor="villain-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
                                                 <span className="bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full">OPTIONAL</span>
                                                 <span className="w-2 h-2 rounded-full bg-red-600" />
                                            </div>
 
-                                           <div className="flex flex-col items-center my-auto py-2 text-center">
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
                                                 <div className="text-red-500 mb-2 transform group-hover:scale-110 transition-transform duration-300">
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M112.236 10.97a9.236 9.236 0 11-18.472 0 9.236 9.236 0 0118.472 0zm-1.89 12.394A4.484 4.484 0 0012 10.5a4.484 4.484 0 00-1.654-3.464M18.364 5.636a9 9 0 010 12.728m-1.414-1.414a7 7 0 000-9.9" />
@@ -700,10 +1843,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO ENGAGE</span>
                                            </div>
 
-                                           <div className="bg-red-950/80 border border-red-900 text-center py-1.5 rounded font-comic text-xs text-red-200 group-hover:bg-red-600 group-hover:text-white transition-all">
-                                                UPLOAD BOSS
+                                           <div className="bg-red-950/80 border border-red-900 text-center py-1.5 rounded font-comic text-xs text-red-200 group-hover:bg-red-600 group-hover:text-white transition-all cursor-pointer">
+                                                UPLOAD PHOTO
                                            </div>
-                                      </div>
+                                      </label>
                                  )}
                             </div>
 
@@ -780,23 +1923,398 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             </div>
                         )}
 
-                        {/* Terms Guardrails disclaimer style */}
+                        {/* CHARACTER VISUAL COHESION CONTROLS (HAIR & OUTIFT STYLING) */}
+                        <div className="mt-4 bg-slate-900 border-4 border-black p-5 rounded-lg text-left shadow-[4px_4px_0px_#000]">
+                             <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xl">💈</span>
+                                  <span className="font-comic text-sm uppercase text-green-400 font-extrabold tracking-wider animate-pulse">
+                                       Character Visual Cohesion & Design Coordinates
+                                  </span>
+                             </div>
+                             <p className="text-xs text-gray-300 mb-4 font-sans leading-relaxed">
+                                  Specify matching hairstyles, garments, and distinctive accessories below. To guarantee absolute design consistency across generated panels, our AI engines enforce these descriptors recursively into every scene's prompt layout.
+                             </p>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-blue-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                       <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-[10.5px] font-mono text-blue-400 uppercase font-bold tracking-wide">
+                                                 Hero Dress & Hair Design
+                                            </label>
+                                            <button
+                                                 type="button"
+                                                 onClick={() => handleSuggestField('heroVisuals', props.heroVisuals)}
+                                                 disabled={suggestingFields['heroVisuals']}
+                                                 className="text-[9.5px] bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                            >
+                                                 {suggestingFields['heroVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
+                                            </button>
+                                       </div>
+                                       <textarea 
+                                            rows={4}
+                                            value={props.heroVisuals} 
+                                            onChange={(e) => props.onHeroVisualsChange(e.target.value)} 
+                                            placeholder="e.g. silver messy hair, glowing neon superhero nanosuit with silver shoulder plates" 
+                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-blue-500 font-sans"
+                                       />
+                                       <div className="mt-1.5 flex flex-col gap-0.5">
+                                            <span className="text-[9px] text-blue-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
+                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
+                                                 "charcoal combat gi, spiky crimson hair, gold gauntlets"
+                                            </span>
+                                       </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-purple-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                       <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-[10.5px] font-mono text-purple-400 uppercase font-bold tracking-wide">
+                                                 Co-Star Dress & Hair Design
+                                            </label>
+                                            <button
+                                                 type="button"
+                                                 onClick={() => handleSuggestField('friendVisuals', props.friendVisuals)}
+                                                 disabled={suggestingFields['friendVisuals'] || !props.friend}
+                                                 className="text-[9.5px] bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                            >
+                                                 {suggestingFields['friendVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
+                                            </button>
+                                       </div>
+                                       <textarea 
+                                            rows={4}
+                                            value={props.friendVisuals} 
+                                            onChange={(e) => props.onFriendVisualsChange(e.target.value)} 
+                                            disabled={!props.friend}
+                                            placeholder={props.friend ? "e.g. auburn ponytail, leather bomber jacket" : "Upload Co-Star character layout first."} 
+                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-purple-500 disabled:opacity-40 font-sans"
+                                       />
+                                       <div className="mt-1.5 flex flex-col gap-0.5">
+                                            <span className="text-[9px] text-purple-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
+                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
+                                                 "green aviator jumpsuit, short brunette bob hair"
+                                            </span>
+                                       </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-red-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                       <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-[10.5px] font-mono text-red-400 uppercase font-bold tracking-wide">
+                                                 Nemesis Dress & Hair Design
+                                            </label>
+                                            <button
+                                                 type="button"
+                                                 onClick={() => handleSuggestField('villainVisuals', props.villainVisuals)}
+                                                 disabled={suggestingFields['villainVisuals'] || !props.villain}
+                                                 className="text-[9.5px] bg-red-900/60 hover:bg-red-850 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                            >
+                                                 {suggestingFields['villainVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
+                                            </button>
+                                       </div>
+                                       <textarea 
+                                            rows={4}
+                                            value={props.villainVisuals} 
+                                            onChange={(e) => props.onVillainVisualsChange(e.target.value)} 
+                                            disabled={!props.villain}
+                                            placeholder={props.villain ? "e.g. slick black hair, dark high-collar robe" : "Upload Nemesis character layout first."} 
+                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-red-500 disabled:opacity-40 font-sans"
+                                       />
+                                       <div className="mt-1.5 flex flex-col gap-0.5">
+                                            <span className="text-[9px] text-red-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
+                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
+                                                 "regal dark obsidian heavy mantle, white slicked hair"
+                                             </span>
+                                        </div>
+                                   </div>
+                                                                      {/* Structured Nemesis Identity Schema (Commercial Grade) */}
+                                   <div className="md:col-span-3 mt-4 border-2 border-red-500/30 bg-slate-950 p-4 rounded shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-red-500/20 pb-3 mb-3 gap-2">
+                                             <div className="flex flex-col text-left">
+                                                  <span className="text-xs font-comic font-black text-red-400 uppercase tracking-wide flex items-center gap-1.5 leading-tight select-none">
+                                                       🔒 Nemesis Identity Schema (Google Firestore Sync Layer)
+                                                  </span>
+                                                  <span className="text-[10px] text-gray-400 font-mono">
+                                                       Decoupled Persistence & Adaptive Layers • Attention Weights Matrix
+                                                  </span>
+                                             </div>
+                                             <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                       const defaultSchema: CharacterIdentitySchema = {
+                                                            actor_id: "villain_spy_01",
+                                                            archetype_role: "Nemesis",
+                                                            persistence_layer: {
+                                                                 biometric_backbone: "Striking youthful female in early 20s, sharp calculating hazel eyes, subtle freckles, long dark wavy hair flowing past shoulders",
+                                                                 structural_constants: "High defined cheekbones, a sharp angular jawline, a tiny distinct silver snake ear-cuff on left cartilage",
+                                                                 chromatic_anchor: "Pale matte complexion, deep contrast shadows, crisp cold highlights cutting background lighting"
+                                                            },
+                                                            adaptive_layer: {
+                                                                 sartorial_style: "Elegant high-society sophistication blended with covert tactical-stealth armor",
+                                                                 active_wardrobe: "A tailored charcoal evening dress with hidden utility structural seams and a concealed thigh-holster line"
+                                                            },
+                                                            rendering_directives: {
+                                                                 art_style_lock: "Photorealistic Neon Noir Comic Book Style, sharp cinematic chiaroscuro",
+                                                                 continuity_weight: "HIGH"
+                                                            }
+                                                       };
+                                                       props.onNemesisDnaChange(defaultSchema);
+                                                       props.onVillainDnaChange(JSON.stringify(defaultSchema));
+                                                  }}
+                                                  className="self-start sm:self-center text-[9.5px] bg-red-950/65 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2.5 py-1 font-comic font-bold uppercase transition-all tracking-wide disabled:opacity-40"
+                                                  disabled={!props.villain}
+                                             >
+                                                  ✨ RESET SCHEMA CONSTANTS
+                                             </button>
+                                        </div>
+
+                                        {/* Persistence Layer inputs */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
+                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
+                                                       🧬 Biometric Backbone (Likeness)
+                                                  </label>
+                                                  <textarea
+                                                       value={props.nemesisDNA?.persistence_layer?.biometric_backbone || ""}
+                                                       onChange={(e) => {
+                                                            const updated = {
+                                                                 ...props.nemesisDNA,
+                                                                 persistence_layer: {
+                                                                      ...props.nemesisDNA.persistence_layer,
+                                                                      biometric_backbone: e.target.value
+                                                                 }
+                                                            };
+                                                            props.onNemesisDnaChange(updated);
+                                                            props.onVillainDnaChange(JSON.stringify(updated));
+                                                       }}
+                                                       disabled={!props.villain}
+                                                       rows={3}
+                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       placeholder="Core physical features and likeness anchors..."
+                                                  />
+                                             </div>
+
+                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
+                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
+                                                       🔩 Structural Constants (Anchors)
+                                                  </label>
+                                                  <textarea
+                                                       value={props.nemesisDNA?.persistence_layer?.structural_constants || ""}
+                                                       onChange={(e) => {
+                                                            const updated = {
+                                                                 ...props.nemesisDNA,
+                                                                 persistence_layer: {
+                                                                      ...props.nemesisDNA.persistence_layer,
+                                                                      structural_constants: e.target.value
+                                                                 }
+                                                            };
+                                                            props.onNemesisDnaChange(updated);
+                                                            props.onVillainDnaChange(JSON.stringify(updated));
+                                                       }}
+                                                       disabled={!props.villain}
+                                                       rows={3}
+                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       placeholder="Piercings, scars, jewelry, micro-anchors..."
+                                                  />
+                                             </div>
+
+                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
+                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
+                                                       🎨 Chromatic Anchor (Lighting)
+                                                  </label>
+                                                  <textarea
+                                                       value={props.nemesisDNA?.persistence_layer?.chromatic_anchor || ""}
+                                                       onChange={(e) => {
+                                                            const updated = {
+                                                                 ...props.nemesisDNA,
+                                                                 persistence_layer: {
+                                                                      ...props.nemesisDNA.persistence_layer,
+                                                                      chromatic_anchor: e.target.value
+                                                                 }
+                                                            };
+                                                            props.onNemesisDnaChange(updated);
+                                                            props.onVillainDnaChange(JSON.stringify(updated));
+                                                       }}
+                                                       disabled={!props.villain}
+                                                       rows={3}
+                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       placeholder="Contrast parameters, spotlight anchors, tones..."
+                                                  />
+                                             </div>
+                                        </div>
+
+                                        {/* Adaptive Layer inputs */}
+                                        <div className="border-t border-slate-800/80 pt-3 mb-4 text-left font-sans">
+                                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+                                                  <span className="text-[11px] font-mono text-cyan-400 uppercase font-bold tracking-wide">
+                                                       🕶️ Adaptive Dressing (Active Wardrobe Closet)
+                                                  </span>
+                                                  <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
+                                                       <span className="text-[10px] text-gray-400 font-sans">Presets:</span>
+                                                       <select
+                                                            onChange={(e) => {
+                                                                 const updated = {
+                                                                      ...props.nemesisDNA,
+                                                                      adaptive_layer: {
+                                                                           ...props.nemesisDNA.adaptive_layer,
+                                                                           active_wardrobe: e.target.value
+                                                                      }
+                                                                 };
+                                                                 props.onNemesisDnaChange(updated);
+                                                                 props.onVillainDnaChange(JSON.stringify(updated));
+                                                            }}
+                                                            disabled={!props.villain}
+                                                            className="bg-slate-900 text-gray-300 border border-slate-700/60 rounded text-[10px] px-2 py-0.5"
+                                                       >
+                                                            <option value="A tailored charcoal evening dress with hidden utility structural seams and a concealed thigh-holster line">
+                                                                 👗 Evening Gown: High-Society Couture
+                                                            </option>
+                                                            <option value="A high-mobility cybernetic stealth bodysuit with integrated cooling lines and lightweight carbon-fiber plating">
+                                                                 🥷 Stealth Armor: Shadow-OPS Nanosuit
+                                                            </option>
+                                                            <option value="A heavy charcoal leather duster coat over high-collar tactical body Kevlar mesh with holographic communications cuff">
+                                                                 🌋 Post-Apocalyptic: Obsidian Combat Trenchcoat
+                                                            </option>
+                                                       </select>
+                                                  </div>
+                                             </div>
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                  <div className="flex flex-col gap-1">
+                                                       <label className="text-[9.5px] text-gray-400 uppercase font-semibold">Sartorial Style Theme</label>
+                                                       <input
+                                                            type="text"
+                                                            value={props.nemesisDNA?.adaptive_layer?.sartorial_style || ""}
+                                                            onChange={(e) => {
+                                                                 const updated = {
+                                                                      ...props.nemesisDNA,
+                                                                      adaptive_layer: {
+                                                                           ...props.nemesisDNA.adaptive_layer,
+                                                                           sartorial_style: e.target.value
+                                                                      }
+                                                                 };
+                                                                 props.onNemesisDnaChange(updated);
+                                                                 props.onVillainDnaChange(JSON.stringify(updated));
+                                                            }}
+                                                            disabled={!props.villain}
+                                                            className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-2 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                       />
+                                                  </div>
+                                                  <div className="flex flex-col gap-1">
+                                                       <label className="text-[9.5px] text-gray-400 uppercase font-semibold">Current Scene Combat Closet</label>
+                                                       <input
+                                                            type="text"
+                                                            value={props.nemesisDNA?.adaptive_layer?.active_wardrobe || ""}
+                                                            onChange={(e) => {
+                                                                 const updated = {
+                                                                      ...props.nemesisDNA,
+                                                                      adaptive_layer: {
+                                                                           ...props.nemesisDNA.adaptive_layer,
+                                                                           active_wardrobe: e.target.value
+                                                                      }
+                                                                 };
+                                                                 props.onNemesisDnaChange(updated);
+                                                                 props.onVillainDnaChange(JSON.stringify(updated));
+                                                            }}
+                                                            disabled={!props.villain}
+                                                            className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-2 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                       />
+                                                  </div>
+                                             </div>
+                                        </div>
+
+                                        {/* Coordinate Attention Weighting Details */}
+                                        <div className="border-t border-slate-800/80 pt-3 mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-left">
+                                             <div className="flex flex-col gap-1 w-full md:w-auto">
+                                                  <label className="text-[10px] font-mono text-yellow-400 uppercase font-bold tracking-wide flex items-center gap-1">
+                                                       🔒 Attention Matrix Descriptors Locked:
+                                                  </label>
+                                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                            <span>wavy hair</span>
+                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                       </span>
+                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                            <span>calculating hazel eyes</span>
+                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                       </span>
+                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                            <span>snake ear-cuff</span>
+                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                       </span>
+                                                       <span className="text-[9px] font-mono bg-blue-950 border border-blue-500/30 text-blue-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                            <span>evening dress</span>
+                                                            <span className="text-[7.5px] bg-blue-600 text-white px-1 font-bold rounded-sm">1.1 Adapt</span>
+                                                       </span>
+                                                  </div>
+                                             </div>
+                                             <div className="flex gap-3 items-center w-full md:w-auto mt-2 md:mt-0">
+                                                  <div className="flex flex-col gap-1 w-1/2 md:w-32">
+                                                       <label className="text-[9px] text-gray-400 uppercase">Cohesion Weight</label>
+                                                       <div className="flex border border-slate-700 rounded overflow-hidden">
+                                                            {(['LOW', 'MEDIUM', 'HIGH'] as const).map((w) => (
+                                                                 <button
+                                                                      key={w}
+                                                                      type="button"
+                                                                      onClick={() => {
+                                                                           const updated = {
+                                                                                ...props.nemesisDNA,
+                                                                                rendering_directives: {
+                                                                                     ...props.nemesisDNA.rendering_directives,
+                                                                                     continuity_weight: w
+                                                                                }
+                                                                           };
+                                                                           props.onNemesisDnaChange(updated);
+                                                                           props.onVillainDnaChange(JSON.stringify(updated));
+                                                                      }}
+                                                                      disabled={!props.villain}
+                                                                      className={`flex-1 text-[8.5px] py-1 font-mono uppercase font-black transition-colors ${
+                                                                           props.nemesisDNA?.rendering_directives?.continuity_weight === w
+                                                                                ? 'bg-red-600 text-white'
+                                                                                : 'bg-slate-900 text-gray-400 hover:text-white'
+                                                                      }`}
+                                                                 >
+                                                                      {w}
+                                                                 </button>
+                                                            ))}
+                                                       </div>
+                                                  </div>
+                                                  <div className="flex flex-col gap-1 w-1/2 md:w-44">
+                                                       <label className="text-[9px] text-gray-400 uppercase">Art Style Lock</label>
+                                                            <input
+                                                                 type="text"
+                                                                 value={props.nemesisDNA?.rendering_directives?.art_style_lock || ""}
+                                                                 onChange={(e) => {
+                                                                      const updated = {
+                                                                           ...props.nemesisDNA,
+                                                                           rendering_directives: {
+                                                                                ...props.nemesisDNA.rendering_directives,
+                                                                                art_style_lock: e.target.value
+                                                                           }
+                                                                      };
+                                                                      props.onNemesisDnaChange(updated);
+                                                                      props.onVillainDnaChange(JSON.stringify(updated));
+                                                                 }}
+                                                                 disabled={!props.villain}
+                                                                 className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-1 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                            />
+                                                       </div>
+                                                  </div>
+                                             </div>
+                                        </div>
+                                   </div>
+                              </div>
+
+                         {/* Terms Guardrails/* Terms Guardrails disclaimer style */}
                         <div className="mt-4 p-2.5 bg-slate-900/60 border border-slate-700 rounded text-[11px] text-gray-400 leading-tight">
                              <span className="text-yellow-400 font-bold uppercase tracking-wider">🔒 MULTIVERSE SECURITY:</span> Pictures are parsed server-side to extract spatial vectors for coherent layout synthesis. No files are stored or kept. Build guidelines apply.
                         </div>
                     </div>
 
                     {/* Section 2: Config Console (5 cols) */}
-                    <div className="lg:col-span-5 flex flex-col p-5 bg-slate-800 border-4 border-black rounded-lg shadow-[6px_6px_0px_#000] relative">
-                        <div className="absolute -top-4 left-6 bg-yellow-500 text-black font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[1deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide">
-                             2. ENVIRONMENT SYNAPSE
+                    <div className={`lg:col-span-5 flex flex-col ${sCard}`}>
+                        <div className={sHeaderBadgeRed}>
+                             {isEditorial ? "2. SCENARIO DESIGN" : "2. ENVIRONMENT SYNAPSE"}
                         </div>
 
                         <div className="flex flex-col gap-5 mt-4 flex-1">
                             
                             {/* Visual Genre Selection (Grid of Custom Chips) */}
                             <div>
-                                <p className="font-comic text-base tracking-wide text-yellow-300 uppercase mb-2">Select Story Path (Genre)</p>
+                                <p className={sLabel}>{isEditorial ? "Select Narrative Direction (Genre)" : "Select Story Path (Genre)"}</p>
                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                     {GENRES.map((g) => {
                                         const isSelected = props.selectedGenre === g;
@@ -869,7 +2387,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             {/* Dynamic Textarea prompt for Custom Genre */}
                             {props.selectedGenre === 'Custom' && (
                                 <div className="animate-fadeIn">
-                                    <p className="font-comic text-xs tracking-wide text-red-400 uppercase mb-1">Enter Your Unique Multiverse Concept</p>
+                                    <div className="flex items-center justify-between mb-1">
+                                         <p className="font-comic text-xs tracking-wide text-red-400 uppercase">Enter Your Unique Multiverse Concept</p>
+                                         <button
+                                              type="button"
+                                              onClick={() => handleSuggestField('customPremise', props.customPremise)}
+                                              disabled={suggestingFields['customPremise']}
+                                              className="text-[9.5px] bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase"
+                                         >
+                                              {suggestingFields['customPremise'] ? '✨ THINKING...' : '✨ AI SUGGEST'}
+                                         </button>
+                                    </div>
                                     <textarea 
                                         value={props.customPremise} 
                                         onChange={(e) => props.onPremiseChange(e.target.value)} 
@@ -879,8 +2407,245 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
+                            {/* ADVANCED STORY DIRECTIONS & NARRATIVE DIRECTIVES */}
+                            <div className="border-t border-slate-700/60 pt-4 mt-2 font-comic text-left">
+                                {/* Header with neon elements */}
+                                <div className="flex flex-col mb-2.5">
+                                     <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1.5 animate-pulse">
+                                               <span className="text-base">🔮</span>
+                                               <span className="font-comic text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider" style={{ textShadow: '1px 1px 0px black' }}>
+                                                    Saga Blueprint Console
+                                               </span>
+                                          </div>
+                                          <button
+                                               type="button"
+                                               onClick={() => handleSuggestField('creativeDirectives', props.creativeDirectives)}
+                                               disabled={suggestingFields['creativeDirectives']}
+                                               className="text-[9px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/40 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-bold uppercase hover:text-white"
+                                          >
+                                               {suggestingFields['creativeDirectives'] ? '⚡ AI THINKING...' : '✨ AI GENERATE BLUEPRINT'}
+                                          </button>
+                                     </div>
+                                     <span className="text-[10px] text-slate-400 mt-1 leading-normal font-sans">
+                                          Specify plot outlines, milestones, customer spotlights, or custom narrative formulas.
+                                     </span>
+                                </div>
+
+                                {/* PRESETS CONTAINER WITH ACCORDION / CONTAINER CARDS */}
+                                <div className="bg-slate-900/60 border-2 border-black rounded p-3.5 mb-4 shadow-[inner_0px_2px_8px_rgba(0,0,0,0.5)]">
+                                     <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold font-mono block mb-2">
+                                          ⚡ Choose Predefined Narrative Blueprint
+                                     </span>
+
+                                     {/* Horizontal Scroll of presets cards */}
+                                     <div className="flex gap-2.5 overflow-x-auto pb-2 mb-3.5 custom-scrollbar snap-x">
+                                          {[
+                                               {
+                                                    name: "Episodic Campaign",
+                                                    emoji: "📺",
+                                                    desc: "Spotlight milestones & problem solving.",
+                                                    prompt: "BLUEPRINT: CUSTOMER SPOTLIGHT SERIES\n[CAMPAIGN GOAL]: Highlight collaborative problem-solving and joint success.\n[GENRE INTEGRATION]: Blend real-world success smoothly into the active genre.\n[PLOT CONSTRAINT]: Start with a setback representing past legacy, introduce an allied character with advice, and retrieve a golden emblem."
+                                               },
+                                               {
+                                                    name: "Shonen Anime Battle",
+                                                    emoji: "🌀",
+                                                    desc: "High-energy tournaments & ultimate techniques.",
+                                                    prompt: "BLUEPRINT: SHONEN ANIME TOURNAMENT ARC\n[GENRE INTEGRATION]: High-octane battle-shonen anime aesthetic.\n[SCENESTART]: Initiate in a glittering dust-streaked martial arena.\n[ACTION CLIMAX]: Characters must declare their ultimate superpower techniques in ALL CAPS with dramatic energy signatures.\n[LORE BEAT]: Insert a quick mental flashback about partner loyalty."
+                                               },
+                                               {
+                                                    name: "Archaeology Expedition",
+                                                    emoji: "🏺",
+                                                    desc: "Decoding glyphs, solving tomb traps.",
+                                                    prompt: "BLUEPRINT: ARCHAEOLOGICAL TOMB EXTRACTION\n[THEME]: High-tension historical mystery and artifacts.\n[SCENESTART]: Navigating deep, structural sandstone passageways.\n[NARRATIVE CLIMAX]: Decoding pre-modern glyphs on a monolithic gate, dodging a dart/block trap, and retrieving a crystalline ancient crown."
+                                               },
+                                               {
+                                                    name: "Dramatic Redemption",
+                                                    emoji: "🎭",
+                                                    desc: "Setback, heart-to-heart, high stakes.",
+                                                    prompt: "BLUEPRINT: DRAMATIC REDEMPTION CRISIS\n[NARRATIVE CONSTRAINTS]: Setback / Trial of Faith.\n[SCENESTART]: Dimly-lit rain-slicked neon street corner with high shadow contrasts.\n[EMOTIONAL PEAK]: protagonist admits an old fear. protagonist gets a sudden, vibrant power rejuvenation."
+                                               },
+                                               {
+                                                    name: "Temporal Loop Paradox",
+                                                    emoji: "🚀",
+                                                    desc: "Déjà-vu, cosmic countdowns, quantum anomalies.",
+                                                    prompt: "BLUEPRINT: TEMPORAL MATRIX PARADOX\n[GENRE INTEGRATION]: High-tech retro-futurism.\n[SCENESTART]: Temporal lab inside a raging celestial solar storm.\n[NARRATIVE CONSTRAINT]: Every character has slight déjà-vu, noticing identical recurring audio ticks. The clock displays a countdown sequence that matches their heartbeats."
+                                               }
+                                          ].map((item) => (
+                                               <button
+                                                    key={item.name}
+                                                    type="button"
+                                                    onClick={() => props.onCreativeDirectivesChange(item.prompt)}
+                                                    className="flex-shrink-0 w-36 bg-slate-950 border border-slate-700/60 hover:border-yellow-400 p-2 text-left rounded-md transition-all snap-start"
+                                               >
+                                                    <div className="flex items-center gap-1 mb-1">
+                                                         <span className="text-sm">{item.emoji}</span>
+                                                         <span className="text-[10px] font-black text-white uppercase tracking-wider truncate block w-full">{item.name}</span>
+                                                    </div>
+                                                    <p className="text-[9px] text-gray-400 font-sans leading-tight line-clamp-2 h-6">
+                                                         {item.desc}
+                                                    </p>
+                                                    <span className="text-[8px] bg-cyan-950 text-cyan-300 px-1 py-0.5 rounded font-black tracking-wide uppercase font-mono block text-center mt-1.5 border border-cyan-800/30">
+                                                         APPLY SETUP
+                                                    </span>
+                                               </button>
+                                          ))}
+                                     </div>
+
+                                     {/* Quick formatting Insert Tags */}
+                                     <div>
+                                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 font-mono">
+                                               ➕ Click To Insert Story anchors / tags
+                                          </span>
+                                          <div className="flex flex-wrap gap-1">
+                                               {[
+                                                    { label: "Plot Constraint", tag: "[PLOT CONSTRAINT]: " },
+                                                    { label: "Key Artifact", tag: "[KEY ARTIFACT]: " },
+                                                    { label: "Dialogue Style", tag: "[DIALOGUE STYLE]: " },
+                                                    { label: "Saga Milestone", tag: "[SAGA MILESTONE]: " },
+                                                    { label: "Client Monument", tag: "[CLIENT MONUMENT]: " },
+                                                    { label: "CliffHanger", tag: "[CLIFFHANGER]: " }
+                                               ].map((tagObj) => (
+                                                    <button
+                                                         key={tagObj.label}
+                                                         type="button"
+                                                         onClick={() => {
+                                                              const currentVal = props.creativeDirectives || "";
+                                                              const spacing = currentVal ? (currentVal.endsWith("\n") ? "" : "\n") : "";
+                                                              props.onCreativeDirectivesChange(currentVal + spacing + tagObj.tag);
+                                                         }}
+                                                         className="text-[8.5px] bg-slate-950 hover:bg-slate-800 text-gray-300 font-sans tracking-wide px-1.5 py-0.5 rounded border border-slate-800 hover:border-cyan-500/50 transition-colors uppercase font-bold"
+                                                    >
+                                                         + {tagObj.label}
+                                                    </button>
+                                               ))}
+                                          </div>
+                                     </div>
+                                </div>
+
+                                {/* Deep Textarea layout */}
+                                <div className="space-y-1 mb-4">
+                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                                          GUIDELINES FIELD (AI or Author Prompts)
+                                     </label>
+                                     <textarea 
+                                         value={props.creativeDirectives} 
+                                         onChange={(e) => props.onCreativeDirectivesChange(e.target.value)} 
+                                         placeholder="e.g., Weave in a client spotlight where they discover a transformative artifact, start the scene in a futuristic solar storm, highlight values of perseverance, or ensure a specific golden emblem is found..." 
+                                         className="w-full p-3 bg-slate-950 border-2 border-black text-white text-xs font-sans h-32 resize-y rounded shadow-[inset_0px_2px_6px_rgba(0,0,0,0.8)] focus:outline-none focus:border-cyan-400 transition-colors" 
+                                     />
+                                     <div className="flex items-center justify-between text-[9px] text-gray-500 font-mono">
+                                          <span>Characters: {(props.creativeDirectives || "").length}</span>
+                                          <span>Fully compatible with server custom story synthesis</span>
+                                     </div>
+                                </div>
+
+                                {/* COMPELLING COHESIVE SYSTEM STORY SUMMARY - "GUIDELINE DOSSIER" */}
+                                <div className="border border-slate-800 hover:border-cyan-900/60 transition-colors bg-slate-950/70 rounded-md p-3 font-comic text-left relative overflow-hidden">
+                                     <div className="absolute top-0 right-0 h-10 w-10 bg-cyan-500/5 blur-2xl rounded-full" />
+                                     
+                                     <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+                                          <div className="flex items-center gap-1.5 font-comic">
+                                               <span className="text-yellow-400">📋</span>
+                                               <span className="text-[10px] font-black tracking-wider text-yellow-400 uppercase">
+                                                    COMPILED GUIDELINE DOSSIER
+                                               </span>
+                                          </div>
+                                          <span className="text-[8px] bg-emerald-950 text-emerald-400 font-mono border border-emerald-800/40 uppercase font-bold px-1.5 rounded tracking-widest animate-pulse">
+                                               ● READY FOR CHAPTER GEN
+                                          </span>
+                                     </div>
+
+                                     <p className="text-[10.5px] text-gray-300 leading-normal mb-3 leading-relaxed font-sans">
+                                          This compiles the full context of the active chapter script guidelines, merging selected paths, lexicon systems, custom-authored concepts, and active narrations before submitting to the Multiverse story story generation.
+                                     </p>
+
+                                     {/* Guideline parameter pills */}
+                                     <div className="grid grid-cols-2 md:grid-cols-1 xl:grid-cols-2 gap-1.5 font-sans">
+                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
+                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">STORY PATH (GENRE)</span>
+                                               <span className="text-[10.5px] text-white font-extrabold font-comic">
+                                                    {genreIcons[props.selectedGenre] || "📖"} {props.selectedGenre || "Custom"}
+                                               </span>
+                                          </div>
+
+                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
+                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">LEXICON SYSTEM</span>
+                                               <span className="text-[10.5px] text-cyan-300 font-bold uppercase font-mono">
+                                                    🌐 {LANGUAGES.find(l => l.code === props.selectedLanguage)?.name || props.selectedLanguage}
+                                               </span>
+                                          </div>
+
+                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
+                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">AUDITORY SOUNDTRACK</span>
+                                               <span className="text-[10.5px] text-yellow-300 font-semibold truncate block">
+                                                    🎵 {props.soundPrompt || "Standard Cinematic Soundtrack"}
+                                               </span>
+                                          </div>
+
+                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded font-sans">
+                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">STORY OUTLINE TYPE</span>
+                                               <span className="text-[10.5px] text-purple-300 font-medium font-comic block">
+                                                    {props.creativeDirectives ? "📝 Author Blueprint Customised" : "🤖 Standard Co-Creative Formula"}
+                                               </span>
+                                          </div>
+                                     </div>
+
+                                     {props.creativeDirectives && (
+                                          <div className="mt-2 text-[9px] bg-slate-900/40 p-2 border border-slate-800 rounded font-sans leading-relaxed text-slate-400">
+                                               <span className="font-bold text-slate-300 uppercase block mb-1">🔍 ACTIVE AUTHOR OUTLINE CAPTIONS:</span>
+                                               <p className="line-clamp-2 italic">
+                                                    "{props.creativeDirectives}"
+                                               </p>
+                                          </div>
+                                     )}
+                                </div>
+                            </div>
+
                             {/* Beautiful Slider Toggles for soundtrack & Mode */}
                             <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-700 mt-2">
+                                {props.soundtrackEnabled && (
+                                     <div className="flex flex-col gap-1.5 mb-2 bg-slate-950 p-2.5 rounded border border-yellow-500/30 animate-fadeIn text-left">
+                                         <div className="flex items-center justify-between">
+                                              <span className="text-[10.5px] font-mono text-yellow-500 uppercase font-bold tracking-wide">
+                                                   🎵 Generative Auditory Bibles & Sound Prompts
+                                              </span>
+                                              <button
+                                                   type="button"
+                                                   onClick={() => handleSuggestField('soundPrompt', props.soundPrompt)}
+                                                   disabled={suggestingFields['soundPrompt']}
+                                                   className="text-[9.5px] bg-yellow-950/60 hover:bg-yellow-900 text-yellow-200 border border-yellow-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase"
+                                              >
+                                                   {suggestingFields['soundPrompt'] ? '✨ THINKING...' : '✨ AI SUGGEST'}
+                                              </button>
+                                         </div>
+                                         <input 
+                                             type="text"
+                                             value={props.soundPrompt} 
+                                             onChange={(e) => props.onSoundPromptChange(e.target.value)} 
+                                             placeholder="e.g. 80s arcade synthesizer, cosmic cyberbass, retro spooky pipe organ" 
+                                             className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-yellow-400 font-sans"
+                                         />
+                                         {/* Clickable Sound Presets */}
+                                         <div className="mt-2 flex flex-wrap gap-1.5">
+                                              {[
+                                                   { label: "⚡ J-Rock Anime", value: "High-octane energetic J-Rock Anime OST with driving electric guitars and heavy synthesizer lead" },
+                                                   { label: "🏺 Tomb Flute", value: "Eerie ancient wooden flute melody echoed inside a deep sandstone tomb with heavy orchestral drone chords" },
+                                                   { label: "🌌 Cyberbass", value: "Low-frequency cosmic cyberbass rumble, retro hardware sequencer patterns and mechanical synth soundscapes" },
+                                                   { label: "🎻 Cathedral", value: "Chilling, gothic pipe organ progressions with rain and distant low thunder ambience" }
+                                              ].map((snd) => (
+                                                   <button
+                                                        key={snd.label}
+                                                        type="button"
+                                                        onClick={() => props.onSoundPromptChange(snd.value)}
+                                                        className="text-[8.5px] bg-slate-900 hover:bg-slate-800 text-yellow-500 font-mono tracking-wide px-2 py-0.5 rounded border border-slate-700/60 hover:border-yellow-400 transition-colors uppercase font-bold"
+                                                   >
+                                                        {snd.label}
+                                                   </button>
+                                              ))}
+                                         </div>
+                                     </div>
+                                 )}
                                 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
@@ -920,12 +2685,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 {/* Overhauled, pulsating, shimmering call-to-action button */}
                 <div className="relative group select-none">
                      {/* Pulsing button shadow */}
-                     <div className={`absolute -inset-1 rounded-lg blur opacity-75 group-hover:opacity-100 transition-opacity duration-300 ${props.hero ? 'bg-red-500 animate-pulse-glow' : 'bg-gray-700'}`} />
+                     {!isEditorial && (
+                          <div className={`absolute -inset-1 rounded-lg blur opacity-75 group-hover:opacity-100 transition-opacity duration-300 ${props.hero ? 'bg-red-500 animate-pulse-glow' : 'bg-gray-700'}`} />
+                     )}
                      
                      <button 
                           onClick={props.onLaunch} 
                           disabled={!props.hero || props.isTransitioning} 
-                          className={`shiny-btn relative comic-btn w-full py-4 text-2xl md:text-4xl text-white font-comic uppercase tracking-widest border-4 border-black disabled:grayscale disabled:opacity-50 disabled:cursor-not-allowed shadow-[6px_6px_0px_#000] hover:scale-[1.01] active:translate-y-1 active:shadow-[2px_2px_0px_#000] transition-all`}
+                          className={isEditorial
+                               ? "relative w-full py-4 text-base md:text-lg text-stone-50 bg-stone-900 hover:bg-stone-850 font-sans font-black uppercase tracking-widest rounded-xl shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center border border-stone-800"
+                               : "shiny-btn relative comic-btn w-full py-4 text-2xl md:text-4xl text-white font-comic uppercase tracking-widest border-4 border-black disabled:grayscale disabled:opacity-50 disabled:cursor-not-allowed shadow-[6px_6px_0px_#000] hover:scale-[1.01] active:translate-y-1 active:shadow-[2px_2px_0px_#000] transition-all"
+                          }
                      >
                           {props.isTransitioning ? (
                                <span className="flex items-center justify-center gap-3">
@@ -933,15 +2703,1132 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                     </svg>
-                                    CRAFTING DIVERSE REALITY...
+                                    {isEditorial ? "COMPILING COGNITIVE BLUEPRINT..." : "CRAFTING DIVERSE REALITY..."}
                                </span>
                           ) : props.hero ? (
-                               '🔥 START ADVENTURE !'
+                               isEditorial ? "🖋️ LAUNCH STORY ENVIRONMENTS" : "🔥 START ADVENTURE !"
                           ) : (
-                               '⚠️ AWAITING HERO INITIATION...'
+                               isEditorial ? "⚠️ HERO CAST REQUIRED TO BEGIN" : "⚠️ AWAITING HERO INITIATION..."
                           )}
                      </button>
                 </div>
+            </>
+        ) : activeTab === 'persona' ? (
+             <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
+                  {/* MULTIVERSE WARDROBE DRAWER COMPONENT */}
+                  <AnimatePresence>
+                       {isWardrobeOpen && (
+                            <>
+                                 {/* Dark Frosted Backdrop */}
+                                 <motion.div
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      onClick={() => setIsWardrobeOpen(false)}
+                                      className="absolute inset-0 bg-black/75 backdrop-blur-sm z-[140] rounded-xl flex items-center justify-center p-4 cursor-pointer"
+                                 />
+
+                                 {/* Drawer Sliding Body */}
+                                 <motion.div
+                                      initial={{ x: '100%', opacity: 0.5 }}
+                                      animate={{ x: 0, opacity: 1 }}
+                                      exit={{ x: '100%', opacity: 0.5 }}
+                                      transition={{ type: 'spring', damping: 26, stiffness: 190 }}
+                                      className="absolute top-0 right-0 h-full w-full sm:w-[460px] bg-slate-950 border-l-4 border-black z-[150] shadow-[-10px_0px_0px_rgba(0,0,0,0.8)] rounded-r-lg p-6 flex flex-col font-comic select-none overflow-y-auto cursor-default"
+                                 >
+                                      {/* Drawer Header */}
+                                      <div className="flex items-start justify-between border-b-4 border-black pb-3.5 mb-5 font-comic">
+                                           <div>
+                                                <div className="flex items-center gap-2">
+                                                     <span className="text-2xl">🛍️</span>
+                                                     <span className="text-lg font-black uppercase text-yellow-300 tracking-wider animate-pulse" style={{ textShadow: '1px 1px 0px black' }}>
+                                                          WARDROBE CABINET
+                                                     </span>
+                                                </div>
+                                                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mt-1 block font-bold">
+                                                     SAGA DESIGN UNIFORM PRESETS
+                                                </span>
+                                           </div>
+                                           <button
+                                                type="button"
+                                                onClick={() => setIsWardrobeOpen(false)}
+                                                className="w-8 h-8 rounded border-2 border-black bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all text-xs"
+                                           >
+                                                ✕
+                                           </button>
+                                      </div>
+
+                                      {/* Target Character Tabs */}
+                                      <div className="mb-4 font-comic">
+                                           <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2 font-mono">
+                                                Select Active Character Target
+                                           </label>
+                                           <div className="grid grid-cols-3 gap-1.5 bg-slate-900/80 p-1 border-2 border-black rounded">
+                                                {(['Hero', 'Co-Star', 'Villain'] as const).map((role) => {
+                                                     const isActive = wardrobeTargetRole === role;
+                                                     let label = '🦸 HERO';
+                                                     if (role === 'Co-Star') label = '👥 CO-STAR';
+                                                     if (role === 'Villain') label = '🦹 NEMESIS';
+                                                     
+                                                     return (
+                                                          <button
+                                                               key={role}
+                                                               type="button"
+                                                               onClick={() => setWardrobeTargetRole(role)}
+                                                               className={`py-1.5 text-center font-bold text-[10px] uppercase rounded transition-all ${
+                                                                    isActive
+                                                                         ? role === 'Hero'
+                                                                              ? 'bg-blue-600 border border-black text-white shadow-[1px_1px_0px_black]'
+                                                                              : role === 'Co-Star'
+                                                                                   ? 'bg-purple-600 border border-black text-white shadow-[1px_1px_0px_black]'
+                                                                                   : 'bg-red-600 border border-black text-white shadow-[1px_1px_0px_black]'
+                                                                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                                                               }`}
+                                                          >
+                                                               {label}
+                                                          </button>
+                                                     );
+                                                })}
+                                           </div>
+                                      </div>
+
+                                      {/* Alert Notification inside Drawer */}
+                                      {wardrobeAlert && (
+                                           <div className="bg-yellow-500 border-2 border-black text-black font-extrabold text-[10px] p-2 rounded mb-4 animate-bounce text-center uppercase tracking-wide font-comic">
+                                                ⚡ {wardrobeAlert}
+                                           </div>
+                                      )}
+
+                                      {/* Presets Selection Column */}
+                                      <div className="flex-1 space-y-4 font-comic">
+                                           <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold font-mono block mb-1">
+                                                Choose Predefined Sg-Aesthetic
+                                           </span>
+                                           
+                                           {(['Tactical', 'Gala', 'Casual'] as const).map((presetKey) => {
+                                                const pData = WARDROBE_PRESETS[wardrobeTargetRole][presetKey];
+                                                const isActive = activePresets[wardrobeTargetRole] === presetKey;
+                                                
+                                                return (
+                                                     <div
+                                                          key={presetKey}
+                                                          onClick={() => handleApplyWardrobePreset(wardrobeTargetRole, presetKey)}
+                                                          className={`group relative p-3.5 border-2 border-black rounded-lg text-left transition-all cursor-pointer shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px hover:shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] ${
+                                                               isActive 
+                                                                    ? 'bg-slate-900 border-yellow-400 ring-2 ring-yellow-400/20' 
+                                                                    : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
+                                                          }`}
+                                                     >
+                                                          {/* Active Tag */}
+                                                          {isActive && (
+                                                               <span className="absolute top-2 right-2 bg-yellow-400 text-black text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-[1px_1px_0px_black]">
+                                                                    ACTIVE WEAR
+                                                               </span>
+                                                          )}
+
+                                                          <div className="flex items-center gap-2 mb-1.5">
+                                                               <span className="text-xl">{pData.emoji}</span>
+                                                               <span className="text-xs font-extrabold uppercase text-white tracking-wide group-hover:text-yellow-300 transition-colors">
+                                                                    {pData.name} ({presetKey})
+                                                               </span>
+                                                          </div>
+                                                          
+                                                          <div className="space-y-1.5 font-sans">
+                                                               <div>
+                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">GARMENT & HAIR DESCRIPTION</span>
+                                                                    <p className="text-[11px] text-slate-200 leading-relaxed italic pr-4 bg-slate-950/30 p-1.5 rounded">
+                                                                         "{pData.desc}"
+                                                                    </p>
+                                                               </div>
+                                                               <div>
+                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">RENDERING ART STYLE DIRECTIVE</span>
+                                                                    <p className="text-[10px] text-yellow-300 mt-0.5 font-semibold font-sans">
+                                                                         ⚔️ {pData.styleLock}
+                                                                    </p>
+                                                               </div>
+                                                          </div>
+                                                     </div>
+                                                );
+                                           })}
+                                      </div>
+
+                                      {/* Drawer Footer controls */}
+                                      <div className="mt-6 border-t-2 border-slate-800 pt-4 text-center font-comic">
+                                           <span className="text-[9.5px] text-slate-400 font-mono uppercase tracking-tight block">
+                                                Updates dynamic rendering directives instantly.
+                                           </span>
+                                           <button
+                                                type="button"
+                                                onClick={() => setIsWardrobeOpen(false)}
+                                                className="w-full mt-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-xs py-2 uppercase border-2 border-black shadow-[2px_2px_0px_black] active:translate-y-px transition-all font-comic"
+                                           >
+                                                🔐 LOCK SARTORIAL MATRIX
+                                           </button>
+                                      </div>
+                                 </motion.div>
+                            </>
+                       )}
+                  </AnimatePresence>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b-4 border-black pb-4 mb-6 gap-4">
+                       <div>
+                            <span className="block font-comic text-purple-400 font-extrabold text-2xl md:text-3xl uppercase tracking-wider mb-1" style={{ textShadow: '2px 2px 0px black' }}>
+                                 🎭 THE MULTIVERSE AI PERSONA TUNING STUDIO
+                            </span>
+                            <p className="text-xs text-slate-400 font-mono max-w-2xl leading-relaxed">
+                                 Assists you in developing, designing, and brainstorming rich characters. Specify a name, a role type, and select a visual direction. Let the AI brainstorm complete custom coordinates (including hair, garment design, and superpowers), generate detailed character graphic art sheets, and cast them straight into the active comic saga series!
+                            </p>
+                       </div>
+                       <button
+                            type="button"
+                            onClick={() => {
+                                 setWardrobeTargetRole(personaStudioRole);
+                                 setIsWardrobeOpen(true);
+                            }}
+                            className="self-start md:self-center flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-comic font-black text-xs uppercase px-4 py-3 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] tracking-wide transition-all"
+                       >
+                            🛍️ CHOOSE WARDROBE
+                       </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                      {/* Left Panel: Creator Workspace */}
+                      <div className="lg:col-span-7 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000]">
+                           <div>
+                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2">1. Select Character Role</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                     <button
+                                          type="button"
+                                          onClick={() => handlePersonaStudioSelectRole('Hero')}
+                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                               personaStudioRole === 'Hero'
+                                                    ? 'bg-blue-600 border-black text-white shadow-[2px_2px_0px_black]'
+                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+                                          }`}
+                                     >
+                                          🦸 HERO
+                                     </button>
+                                     <button
+                                          type="button"
+                                          onClick={() => handlePersonaStudioSelectRole('Co-Star')}
+                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                               personaStudioRole === 'Co-Star'
+                                                    ? 'bg-purple-600 border-black text-white shadow-[2px_2px_0px_black]'
+                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+                                          }`}
+                                     >
+                                          👥 CO-STAR
+                                     </button>
+                                     <button
+                                          type="button"
+                                          onClick={() => handlePersonaStudioSelectRole('Villain')}
+                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                               personaStudioRole === 'Villain'
+                                                    ? 'bg-red-600 border-black text-white shadow-[2px_2px_0px_black]'
+                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+                                          }`}
+                                     >
+                                          🦹 NEMESIS
+                                     </button>
+                                </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                     <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">Character Name Input</label>
+                                     <input
+                                          type="text"
+                                          value={personaStudioName}
+                                          onChange={(e) => setPersonaStudioName(e.target.value)}
+                                          placeholder="e.g. Captain Volt, Chrono..."
+                                          className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans"
+                                     />
+                                </div>
+                                <div>
+                                     <div className="flex justify-between items-center mb-1">
+                                          <label className="block text-xs font-comic text-gray-350 uppercase font-semibold">Creative Art Style</label>
+                                          {props.selectedGenre !== personaStudioStyle && (
+                                               <button
+                                                    type="button"
+                                                    onClick={() => setPersonaStudioStyle(props.selectedGenre)}
+                                                    className="text-[8.5px] bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-500/30 rounded px-1.5 py-0.5 font-comic tracking-wide transition-all uppercase font-bold"
+                                                    title={`Sync with selected story: ${props.selectedGenre}`}
+                                               >
+                                                    🔗 Sync to {props.selectedGenre || "Selected Story"}
+                                               </button>
+                                          )}
+                                     </div>
+                                     <select
+                                          value={personaStudioStyle}
+                                          onChange={(e) => setPersonaStudioStyle(e.target.value)}
+                                          className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
+                                     >
+                                          {GENRES.map((g) => (
+                                                <option key={g} value={g}>{genreIcons[g] || "🎨"} {g}</option>
+                                           ))}
+                                     </select>
+                                </div>
+                           </div>
+
+                           <div>
+                                <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">Persona Concept Hint / Keywords</label>
+                                <textarea
+                                     rows={2}
+                                     value={personaStudioConcept}
+                                     onChange={(e) => setPersonaStudioConcept(e.target.value)}
+                                     placeholder="e.g. cyberpunk hacktivist with electro-kinesis, hot-headed ninja, mysterious shadow commander"
+                                     className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
+                                />
+                                {/* Custom Style Description Templates */}
+                                <div className="mt-2 text-[10px] text-gray-400">
+                                     <span className="font-mono text-[9px] uppercase font-bold text-purple-400 mr-1.5 block mb-1">💡 Custom Style Presets (Click to insert):</span>
+                                     <div className="flex flex-wrap gap-1">
+                                          {(() => {
+                                               const templatesMap: Record<string, string[]> = {
+                                                    'Anime Story': [
+                                                         "Spiky blue hair, fierce eyes, cosmic energy aura",
+                                                         "Academy school uniform, spellbook, gentle silver gaze"
+                                                    ],
+                                                    'Historical Archeology Tales': [
+                                                         "Tomb explorer, leather bomber vest, dust-smudged cheeks",
+                                                         "Decipherer, gold brass spectacles, ancient stone tablet"
+                                                    ],
+                                                    'Superhero Action': [
+                                                         "High-tech carbon armored nanosuit with glowing lines",
+                                                         "Midnight stealth cowl, long flowing heavy cape"
+                                                    ],
+                                                    'Dark Sci-Fi': [
+                                                         "Cybernetic plates, glowing visor, chrome left arm",
+                                                         "Tactical spacer suit, oxygen tube mask, stellar badges"
+                                                    ],
+                                                    'Classic Horror': [
+                                                         "Camp guide holding a flickering lantern, muddy knees",
+                                                         "Gothic attire, pale porcelain skin, hollow dark expression"
+                                                    ]
+                                               };
+                                               const rawPresets = templatesMap[personaStudioStyle] || [
+                                                    "Rugged futuristic jacket, carbon plating, glowing eyes",
+                                                    "Tailored leather high-collar coat, fingerless gloves"
+                                               ];
+                                               return rawPresets.map((txt, index) => (
+                                                    <button
+                                                         key={index}
+                                                         type="button"
+                                                         onClick={() => setPersonaStudioConcept(txt)}
+                                                         className="text-[9px] bg-slate-950 hover:bg-slate-800 text-gray-300 font-sans tracking-wide px-2 py-0.5 rounded border border-purple-900 hover:border-purple-400 transition-colors truncate max-w-[200px]"
+                                                    >
+                                                         + {txt}
+                                                    </button>
+                                               ));
+                                          })()}
+                                     </div>
+                                </div>
+                           </div>
+
+                           <button
+                                type="button"
+                                onClick={handlePersonaStudioBrainstorm}
+                                disabled={personaStudioSuggesting}
+                                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold font-comic uppercase text-xs py-3.5 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
+                           >
+                                {personaStudioSuggesting ? (
+                                     <>
+                                          <svg className="animate-spin h-4 w-4 text-black" viewBox="0 0 24 24" fill="none">
+                                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                          </svg>
+                                          TRANSCENDING REALITY PLANES...
+                                     </>
+                                ) : (
+                                     "🔮 BRAINSTORM FULL PERSONA PROFILE WITH AI"
+                                )}
+                           </button>
+
+                           {/* Output of AI Suggestion */}
+                           {(personaStudioSuggestedName || personaStudioSuggestedBio || personaStudioSuggestedVisuals) && (
+                                <div className="mt-2 p-4 bg-slate-950 border-2 border-dashed border-purple-500/50 rounded-lg animate-fadeIn text-left">
+                                     <div className="flex justify-between border-b border-slate-700 pb-1.5 mb-2">
+                                          <span className="font-comic text-xs uppercase text-purple-300 font-bold">✨ Designed Persona Profile Specs</span>
+                                          <span className="bg-purple-900 text-purple-200 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">GEMINI GENERATED</span>
+                                     </div>
+                                     <div className="space-y-2.5 text-xs text-gray-300">
+                                          <div>
+                                               <strong className="text-white font-semibold">Brainstormed Name:</strong>
+                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 text-yellow-300 font-comic uppercase text-[12px]">{personaStudioSuggestedName}</p>
+                                          </div>
+                                          <div>
+                                               <strong className="text-white font-semibold flex items-center">Story Backstory / Bio:</strong>
+                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 leading-relaxed font-sans">{personaStudioSuggestedBio}</p>
+                                          </div>
+                                          <div>
+                                               <strong className="text-white font-semibold">Dressing & Hairstyle Prompt Descriptors:</strong>
+                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 italic font-sans">{personaStudioSuggestedVisuals}</p>
+                                          </div>
+                                          {personaStudioRole === 'Villain' && (
+                                               <div>
+                                                    <strong className="text-white font-semibold text-red-400">Nemesis DNA & Core Powers Source:</strong>
+                                                    <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 font-sans font-semibold text-red-300">{personaStudioSuggestedPowers}</p>
+                                               </div>
+                                          )}
+                                     </div>
+                                </div>
+                           )}
+
+                            {/* Nemesis Identity Schema Coordination Matrix */}
+                            {personaStudioRole === 'Villain' && (
+                                 <div className="mt-4 p-4 bg-slate-950 border-4 border-black border-red-500/30 rounded-lg text-left shadow-[4px_4px_0px_rgba(0,0,0,1)] animate-fadeIn">
+                                      <div className="flex flex-col border-b border-red-500/25 pb-2.5 mb-4 font-comic">
+                                           <span className="font-comic text-sm uppercase text-red-400 font-extrabold flex items-center gap-1.5 select-none tracking-wide" style={{ textShadow: '1px 1px 0px black' }}>
+                                                💀 Nemesis Cosmic Identity Schema Editor
+                                           </span>
+                                           <span className="text-[10px] text-gray-400 font-mono tracking-wider">
+                                                Fine-tune multi-layer coordinates before committing to catalog & series memory
+                                           </span>
+                                      </div>
+
+                                      <div className="space-y-4 text-xs font-sans">
+                                           {/* Biometric Backbone */}
+                                           <div className="flex flex-col gap-1.5 text-left font-sans">
+                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                                     <span>🧬 1. Biometric Backbone (Faces, Eyes, Likeness Core)</span>
+                                                </label>
+                                                <textarea
+                                                     rows={2}
+                                                     value={
+                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.biometric_backbone ?? 
+                                                          props.nemesisDNA?.persistence_layer?.biometric_backbone ?? 
+                                                          ''
+                                                     }
+                                                     onChange={(e) => {
+                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                          const updated = {
+                                                               ...base,
+                                                               persistence_layer: {
+                                                                    ...base.persistence_layer,
+                                                                    biometric_backbone: e.target.value
+                                                               }
+                                                          };
+                                                          setPersonaStudioSuggestedNemesisDna(updated);
+                                                     }}
+                                                     placeholder="Physical appearance elements (e.g. razor sharp facial features, deep-set jade green eyes, long silk black hair)..."
+                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
+                                                />
+                                           </div>
+
+                                           {/* Structural Constants */}
+                                           <div className="flex flex-col gap-1.5 text-left font-sans">
+                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                                     <span>🔩 2. Structural Constants (Identity Marks & Accessories)</span>
+                                                </label>
+                                                <textarea
+                                                     rows={2}
+                                                     value={
+                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.structural_constants ?? 
+                                                          props.nemesisDNA?.persistence_layer?.structural_constants ?? 
+                                                          ''
+                                                     }
+                                                     onChange={(e) => {
+                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                          const updated = {
+                                                               ...base,
+                                                               persistence_layer: {
+                                                                    ...base.persistence_layer,
+                                                                    structural_constants: e.target.value
+                                                               }
+                                                          };
+                                                          setPersonaStudioSuggestedNemesisDna(updated);
+                                                     }}
+                                                     placeholder="Identity marks that never change (e.g., discrete dual silver piercings on her left brow, cybernetic skull implant)..."
+                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
+                                                />
+                                           </div>
+
+                                           {/* Chromatic Anchor */}
+                                           <div className="flex flex-col gap-1.5 text-left font-sans">
+                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                                     <span>🎨 3. Chromatic Anchor (Visual Atmosphere, Palettes, Rim-light)</span>
+                                                </label>
+                                                <textarea
+                                                     rows={2}
+                                                     value={
+                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.chromatic_anchor ?? 
+                                                          props.nemesisDNA?.persistence_layer?.chromatic_anchor ?? 
+                                                          ''
+                                                     }
+                                                     onChange={(e) => {
+                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                          const updated = {
+                                                               ...base,
+                                                               persistence_layer: {
+                                                                    ...base.persistence_layer,
+                                                                    chromatic_anchor: e.target.value
+                                                               }
+                                                          };
+                                                          setPersonaStudioSuggestedNemesisDna(updated);
+                                                     }}
+                                                     placeholder="Atmospheric tone & lighting (e.g. heavy shadow depth contrast, radiant purple halo backlighting, cold noir tints)..."
+                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
+                                                />
+                                           </div>
+
+                                           {/* Adaptive Layer */}
+                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans">
+                                                <div className="flex flex-col gap-1.5">
+                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
+                                                          🧥 4. Sartorial Style
+                                                     </label>
+                                                     <input
+                                                          type="text"
+                                                          value={
+                                                               personaStudioSuggestedNemesisDna?.adaptive_layer?.sartorial_style ?? 
+                                                               props.nemesisDNA?.adaptive_layer?.sartorial_style ?? 
+                                                               ''
+                                                          }
+                                                          onChange={(e) => {
+                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                               const updated = {
+                                                                    ...base,
+                                                                    adaptive_layer: {
+                                                                         ...base.adaptive_layer,
+                                                                         sartorial_style: e.target.value
+                                                                    }
+                                                               };
+                                                               setPersonaStudioSuggestedNemesisDna(updated);
+                                                          }}
+                                                          placeholder="e.g. Avant-garde tactical assassin"
+                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
+                                                     />
+                                                </div>
+                                                <div className="flex flex-col gap-1.5">
+                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
+                                                          👗 5. Active Wardrobe
+                                                     </label>
+                                                     <input
+                                                          type="text"
+                                                          value={
+                                                               personaStudioSuggestedNemesisDna?.adaptive_layer?.active_wardrobe ?? 
+                                                               props.nemesisDNA?.adaptive_layer?.active_wardrobe ?? 
+                                                               ''
+                                                          }
+                                                          onChange={(e) => {
+                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                               const updated = {
+                                                                    ...base,
+                                                                    adaptive_layer: {
+                                                                         ...base.adaptive_layer,
+                                                                         active_wardrobe: e.target.value
+                                                                    }
+                                                               };
+                                                               setPersonaStudioSuggestedNemesisDna(updated);
+                                                          }}
+                                                          placeholder="e.g. Tailored matte kevlar suit with silk red sash"
+                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
+                                                     />
+                                                </div>
+                                           </div>
+
+                                           {/* Rendering Directives split */}
+                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans">
+                                                <div className="flex flex-col gap-1.5">
+                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
+                                                          🔒 6. Art Style Lock
+                                                     </label>
+                                                     <input
+                                                          type="text"
+                                                          value={
+                                                               personaStudioSuggestedNemesisDna?.rendering_directives?.art_style_lock ?? 
+                                                               props.nemesisDNA?.rendering_directives?.art_style_lock ?? 
+                                                               ''
+                                                          }
+                                                          onChange={(e) => {
+                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                               const updated = {
+                                                                    ...base,
+                                                                    rendering_directives: {
+                                                                         ...base.rendering_directives,
+                                                                         art_style_lock: e.target.value
+                                                                    }
+                                                               };
+                                                               setPersonaStudioSuggestedNemesisDna(updated);
+                                                          }}
+                                                          placeholder="e.g. Deep comic noir, heavy outline vectors"
+                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
+                                                     />
+                                                </div>
+                                                <div className="flex flex-col gap-1.5">
+                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
+                                                          ⚖️ 7. Continuity Weight
+                                                     </label>
+                                                     <div className="flex border border-slate-700 rounded overflow-hidden">
+                                                          {['LOW', 'MEDIUM', 'HIGH'].map((w) => {
+                                                               const activeDna = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                               const isCurrent = activeDna?.rendering_directives?.continuity_weight === w;
+                                                               return (
+                                                                    <button
+                                                                         key={w}
+                                                                         type="button"
+                                                                         onClick={() => {
+                                                                              const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
+                                                                              const updated = {
+                                                                                   ...base,
+                                                                                   rendering_directives: {
+                                                                                        ...base.rendering_directives,
+                                                                                        continuity_weight: w as any
+                                                                                   }
+                                                                              };
+                                                                              setPersonaStudioSuggestedNemesisDna(updated);
+                                                                         }}
+                                                                         className={`flex-1 text-[10px] py-1.5 text-center font-mono font-bold transition-colors ${
+                                                                              isCurrent 
+                                                                                   ? 'bg-red-650 text-white font-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]' 
+                                                                                   : 'bg-slate-900 text-slate-400 hover:text-white font-normal'
+                                                                         }`}
+                                                                    >
+                                                                         {w}
+                                                                    </button>
+                                                               );
+                                                          })}
+                                                     </div>
+                                                </div>
+                                           </div>
+                                      </div>
+                                 </div>
+                            )}
+
+                      </div>
+
+                      {/* Right Panel: Portrait and Casting Panel */}
+                      <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000] text-center min-h-[450px] justify-between font-comic font-bold">
+                           <div>
+                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2 text-left">2. Character Avatar Portrait</label>
+                                <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-950 border-4 border-black rounded-lg overflow-hidden group shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                     {personaStudioPortrait ? (
+                                          <img
+                                               src={personaStudioPortrait.startsWith('data:') ? personaStudioPortrait : `data:image/jpeg;base64,${personaStudioPortrait}`}
+                                               alt="Summoned Avatar"
+                                               className="w-full h-full object-cover select-none"
+                                               referrerPolicy="no-referrer"
+                                          />
+                                     ) : (
+                                          <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                                               <span className="text-5xl mb-2 select-none">🎭</span>
+                                               <span className="font-comic text-sm text-purple-300 uppercase font-extrabold pb-1">AWAITING SUMMONS</span>
+                                               <span className="text-[10px] text-gray-400 uppercase font-mono tracking-widest mt-1">SAGA PORTRAIT PORTAL</span>
+                                          </div>
+                                     )}
+
+                                     {personaStudioGeneratingImg && (
+                                          <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-4">
+                                               <div className="w-12 h-12 border-4 border-t-purple-500 border-r-purple-500 border-b-transparent border-l-transparent rounded-full animate-spin mb-3" />
+                                               <span className="font-comic text-xs uppercase text-purple-400 tracking-wider">SUMMONING VISUAL CORES</span>
+                                               <span className="text-[9px] font-mono text-gray-400 uppercase mt-1 animate-pulse">GENERATING COMIC PORTRAIT...</span>
+                                          </div>
+                                     )}
+                                </div>
+
+                                <p className="text-[10.5px] mt-3 font-mono text-yellow-405/90 leading-tight">
+                                     {personaStudioStatusMsg || "Define character specs & run brainstorm to prepare artistic portrait generation."}
+                                 </p>
+                           </div>
+
+                           <div className="flex flex-col gap-2">
+                                <button
+                                     type="button"
+                                     onClick={handlePersonaStudioGeneratePortrait}
+                                     disabled={personaStudioGeneratingImg || (!personaStudioSuggestedVisuals && !personaStudioConcept)}
+                                     className="w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:pointer-events-none text-black font-semibold font-comic uppercase text-xs py-3 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all"
+                                >
+                                     🎨 CONJURE AI CARTOON PORTRAIT MAP
+                                </button>
+                                <button
+                                     type="button"
+                                     onClick={handlePersonaStudioCastCharacter}
+                                     disabled={!personaStudioPortrait}
+                                     className="w-full bg-red-656 hover:bg-red-600 disabled:opacity-40 disabled:pointer-events-none text-white font-comic uppercase text-sm font-bold py-3.5 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all"
+                                >
+                                     🔥 COMMIT PERSONA & CAST AS {personaStudioRole.toUpperCase()}
+                                </button>
+                           </div>
+                      </div>
+                  </div>
+             </div>
+        ) : activeTab === 'blueprint' ? (
+             <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
+                  {/* HEADER BANNER */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-black pb-4 mb-6">
+                       <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                 <span className="text-3xl">🔮</span>
+                                 <span className="font-comic text-xl lg:text-2xl font-black uppercase text-cyan-300 tracking-wider" style={{ textShadow: '2px 2px 0px black' }}>
+                                      Story Blueprint Manager
+                                 </span>
+                            </div>
+                            <p className="text-xs text-slate-400 font-mono max-w-xl">
+                                 Draft or AI-generate detailed chapter-level goals and guidelines. This full layout is sent to the Gemini generator to maintain robust narrative cohesion.
+                            </p>
+                       </div>
+                       
+                       <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
+                            <button
+                                 type="button"
+                                 onClick={handleGenerateStoryBlueprint}
+                                 disabled={generatingBlueprint}
+                                 className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold font-comic uppercase text-xs px-3.5 py-2.5 rounded border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
+                            >
+                                 {generatingBlueprint ? (
+                                      <>
+                                           <div className="w-3.5 h-3.5 border-2 border-slate-955 border-t-transparent rounded-full animate-spin" />
+                                           Saga Thinking...
+                                      </>
+                                 ) : (
+                                      <>✨ AI Brainstorm Saga Path</>
+                                 )}
+                            </button>
+                            <button
+                                 type="button"
+                                 onClick={handleInitializeDefaultBlueprint}
+                                 className="bg-purple-600 hover:bg-purple-500 text-white font-semibold font-comic uppercase text-xs px-3.5 py-2.5 rounded border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
+                            >
+                                 📋 Load Default Template
+                            </button>
+                            <button
+                                 type="button"
+                                 onClick={() => props.onStoryBlueprintChange([])}
+                                 className="bg-slate-950 hover:bg-slate-900 text-red-450 border-2 border-black font-semibold font-comic uppercase text-xs px-3 py-2 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                            >
+                                 ❌ Clear Blueprint
+                            </button>
+                       </div>
+                  </div>
+
+                  {/* ACTIVE SAGA CONTEXT FEED */}
+                  <div className="bg-slate-950/80 p-3 rounded-lg border-2 border-black mb-6 flex flex-wrap gap-x-6 gap-y-2 text-xs font-mono">
+                       <div>
+                            <span className="text-cyan-400 font-bold uppercase">Active Genre:</span> {props.selectedGenre || "Custom"}
+                       </div>
+                       {props.customPremise && (
+                            <div className="max-w-md truncate">
+                                 <span className="text-cyan-400 font-bold uppercase">Premise:</span> {props.customPremise}
+                            </div>
+                       )}
+                       <div>
+                            <span className="text-cyan-400 font-bold uppercase">Language:</span> {props.selectedLanguage || "English"}
+                       </div>
+                  </div>
+
+                  {/* MAIN CHAPTER CARD LIST / GRID */}
+                  {!props.storyBlueprint || props.storyBlueprint.length === 0 ? (
+                       <div className="text-center py-16 px-4 bg-slate-950/40 rounded-xl border-4 border-dashed border-slate-800">
+                            <span className="text-5xl block mb-3">🔮</span>
+                            <h3 className="font-comic text-base font-extrabold text-yellow-500 uppercase mb-2">Saga Blueprint Blank</h3>
+                            <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed mb-4">
+                                 Your blueprint configuration is currently empty. Click above to auto-generate a custom plot-line tailored to your active genre and characters, or load a default template structure to write goals manually!
+                            </p>
+                            <div className="flex justify-center gap-3">
+                                 <button
+                                      type="button"
+                                      onClick={handleGenerateStoryBlueprint}
+                                      disabled={generatingBlueprint}
+                                      className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 text-black font-semibold font-comic uppercase text-xs rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]"
+                                 >
+                                      {generatingBlueprint ? "⚡ Brainstorming Saga..." : "✨ Generate AI Saga Path"}
+                                 </button>
+                                 <button
+                                      type="button"
+                                      onClick={handleInitializeDefaultBlueprint}
+                                      className="bg-purple-700 hover:bg-purple-600 px-4 py-2 text-white font-semibold font-comic uppercase text-xs rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]"
+                                 >
+                                      📋 Load Default Structure
+                                 </button>
+                            </div>
+                       </div>
+                  ) : (
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[580px] overflow-y-auto pr-2 custom-scrollbar">
+                            {Array.from({ length: 10 }).map((_, idx) => {
+                                 const pageNum = idx + 1;
+                                 const node = props.storyBlueprint.find((b: any) => b.chapterNum === pageNum) || {
+                                      chapterNum: pageNum,
+                                      title: `Chapter Beat ${pageNum}`,
+                                      goal: ""
+                                 };
+
+                                 // Unique visual identifier theme per Chapter slot
+                                 let themeClasses = "border-slate-800 focus-within:border-cyan-500";
+                                 let tagColor = "bg-slate-950 text-slate-300";
+                                 let emoji = "📖";
+
+                                 if (pageNum === 1) {
+                                      themeClasses = "border-emerald-950 bg-emerald-950/10 focus-within:border-emerald-500";
+                                      tagColor = "bg-emerald-950 text-emerald-400 border-emerald-800/40";
+                                      emoji = "🎬";
+                                 } else if (pageNum === 3) {
+                                      themeClasses = "border-amber-950 bg-amber-950/10 focus-within:border-amber-500";
+                                      tagColor = "bg-amber-950 text-amber-400 border-amber-800/40";
+                                      emoji = "⚖️";
+                                 } else if (pageNum === 9) {
+                                      themeClasses = "border-red-950 bg-red-955/10 focus-within:border-red-500";
+                                      tagColor = "bg-red-950 text-red-200 border-red-800/40";
+                                      emoji = "⚔️";
+                                 } else if (pageNum === 10) {
+                                      themeClasses = "border-purple-950 bg-purple-950/10 focus-within:border-purple-500";
+                                      tagColor = "bg-purple-950 text-purple-300 border-purple-800/40";
+                                      emoji = "🏁";
+                                 }
+
+                                 return (
+                                      <div 
+                                           key={pageNum}
+                                           className={`p-4 rounded-xl border-2 transition-all bg-slate-950/60 flex flex-col gap-3 shadow-[inset_0px_2px_8px_rgba(255,255,255,0.02)] ${themeClasses}`}
+                                      >
+                                           {/* Slot Header */}
+                                           <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                     <span className={`text-[10px] font-mono uppercase font-black px-2.5 py-1 rounded border ${tagColor}`}>
+                                                          {emoji} Page {pageNum} Beat
+                                                     </span>
+                                                     {pageNum === 1 && (
+                                                          <span className="text-[8.5px] font-comic font-semibold text-emerald-400 animate-pulse">INCITING</span>
+                                                     )}
+                                                     {pageNum === 3 && (
+                                                          <span className="text-[8.5px] font-comic font-semibold text-amber-400 animate-pulse">DECISION POINT</span>
+                                                     )}
+                                                     {pageNum === 9 && (
+                                                          <span className="text-[8.5px] font-comic font-semibold text-red-405 animate-pulse">CLIMAX CONFLICT</span>
+                                                     )}
+                                                     {pageNum === 10 && (
+                                                          <span className="text-[8.5px] font-comic font-semibold text-purple-400 animate-pulse">FINALE RESOLVE</span>
+                                                     )}
+                                                </div>
+                                                
+                                                <button
+                                                     type="button"
+                                                     onClick={() => handleGeneratePageGoal(pageNum)}
+                                                     disabled={generatingPageGoal !== null}
+                                                     className="text-[9.5px] bg-cyan-955 hover:bg-cyan-900 border border-cyan-800/60 hover:border-cyan-500 text-cyan-305 px-2 py-0.5 rounded font-comic transition-all disabled:opacity-40"
+                                                     title="AI Suggest / Dream details for this specific chapter goal."
+                                                >
+                                                     {generatingPageGoal === pageNum ? "🧠 Thinking..." : "✨ AI Suggest"}
+                                                </button>
+                                           </div>
+
+                                           {/* Title Input field */}
+                                           <div className="flex flex-col gap-1 text-left">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">Beat Title</label>
+                                                <input 
+                                                     type="text"
+                                                     value={node.title || ""}
+                                                     onChange={(e) => {
+                                                          const val = e.target.value;
+                                                          const updated = props.storyBlueprint ? [...props.storyBlueprint] : [];
+                                                          const targetIndex = updated.findIndex((b: any) => b.chapterNum === pageNum);
+                                                          if (targetIndex !== -1) {
+                                                               updated[targetIndex] = { ...updated[targetIndex], title: val };
+                                                          } else {
+                                                               updated.push({ chapterNum: pageNum, title: val, goal: "" });
+                                                          }
+                                                          props.onStoryBlueprintChange(updated);
+                                                     }}
+                                                     placeholder="Provide an intriguing Scene focus name..."
+                                                     className="w-full bg-slate-950 border-2 border-black rounded text-xs p-1.5 focus:outline-none focus:border-cyan-500 text-slate-100"
+                                                />
+                                           </div>
+
+                                           {/* Goal Textarea */}
+                                           <div className="flex flex-col gap-1 text-left">
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">Focal Goal & Narrative Guidelines</label>
+                                                <textarea 
+                                                     rows={2}
+                                                     value={node.goal || ""}
+                                                     onChange={(e) => {
+                                                          const val = e.target.value;
+                                                          const updated = props.storyBlueprint ? [...props.storyBlueprint] : [];
+                                                          const targetIndex = updated.findIndex((b: any) => b.chapterNum === pageNum);
+                                                          if (targetIndex !== -1) {
+                                                               updated[targetIndex] = { ...updated[targetIndex], goal: val };
+                                                          } else {
+                                                               updated.push({ chapterNum: pageNum, title: `Beat ${pageNum}`, goal: val });
+                                                          }
+                                                          props.onStoryBlueprintChange(updated);
+                                                     }}
+                                                     placeholder="Flesh out specific guidelines, obstacles, or plot milestones for this beat..."
+                                                     className="w-full bg-slate-950 border-2 border-black rounded text-xs p-2 h-16 resize-none focus:outline-none focus:border-cyan-500 text-slate-100 font-sans shadow-inner leading-relaxed"
+                                                />
+                                           </div>
+                                      </div>
+                                 );
+                            })}
+                       </div>
+                  )}
+             </div>
+        ) : (
+            <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none">
+                 <span className="block font-comic text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2" style={{ textShadow: '2px 2px 0px black' }}>
+                     📚 THE MULTIVERSE STUDIO LIBRARY
+                 </span>
+                 <p className="text-xs text-slate-400 font-mono mb-6 max-w-2xl leading-relaxed">
+                     Welcome to your central comic storage vault! Below are your saved dynamic publications and chapters. Open any creation to load it instantly into the immersive 3D book binder reader. You can also self-publish a custom graphic layout to compile it under your active creator identity profile.
+                 </p>
+
+                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                     
+                     {/* LEFT SECTION: Comic Library List (8 cols) */}
+                     <div className="lg:col-span-8 flex flex-col gap-4">
+                          <span className="text-xs font-comic text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block">
+                              📚 Active Publications Archive ({savedProjects.length})
+                          </span>
+
+                          {savedProjects.length === 0 ? (
+                               <div className="p-12 border-4 border-dashed border-slate-800 rounded bg-slate-950/40 text-center text-slate-500 font-mono my-4">
+                                    <p className="text-sm font-bold text-slate-400">No publications detected in your creator catalog.</p>
+                                    <p className="text-[11px] mt-1.5 text-yellow-500">Initiate an adventure, create comic stories, or self-publish on the right to populate your inventory!</p>
+                               </div>
+                          ) : (
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {savedProjects.map((project) => {
+                                         // Try to find cover image from comic_faces if present
+                                         let coverUrl = 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400&auto=format&fit=crop';
+                                         let pageCount = 0;
+                                         if (project.comic_faces) {
+                                              try {
+                                                   const parsed = JSON.parse(project.comic_faces);
+                                                   if (Array.isArray(parsed)) {
+                                                        pageCount = parsed.length;
+                                                        const cv = parsed.find(f => f.type === 'cover' || f.pageIndex === 0);
+                                                        if (cv && cv.imageUrl) {
+                                                             coverUrl = cv.imageUrl;
+                                                        } else if (parsed[0] && parsed[0].imageUrl) {
+                                                             coverUrl = parsed[0].imageUrl;
+                                                        }
+                                                   }
+                                              } catch (e) {}
+                                         }
+
+                                         return (
+                                              <div 
+                                                   key={project.id}
+                                                   className="group flex gap-3.5 bg-slate-950 border-4 border-black p-3.5 rounded-lg hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all cursor-pointer relative text-left"
+                                                   onClick={() => props.onLoadProject(project)}
+                                              >
+                                                   {/* Cover thumbnail */}
+                                                   <div className="w-16 h-24 bg-slate-900 border-2 border-slate-700 rounded overflow-hidden flex-shrink-0 relative">
+                                                        <img 
+                                                             src={coverUrl.startsWith('data:') ? coverUrl : coverUrl}
+                                                             alt="Cover" 
+                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                             referrerPolicy="no-referrer"
+                                                        />
+                                                        <div className="absolute top-1 left-1 bg-black/80 text-[8px] font-mono text-white px-1 py-0.2 rounded border border-slate-600/50">
+                                                             {project.language || 'en-US'}
+                                                        </div>
+                                                   </div>
+
+                                                   {/* Narrative details */}
+                                                   <div className="flex-1 flex flex-col justify-between min-w-0">
+                                                        <div>
+                                                             <span className="block font-comic font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors">
+                                                                  {project.title}
+                                                             </span>
+                                                             <span className="inline-block mt-1 bg-blue-600/40 border border-blue-500 rounded text-[9px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase tracking-wider font-bold">
+                                                                  {project.genre}
+                                                             </span>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between text-[10px] font-mono mt-3 text-slate-400">
+                                                             <span>📖 {pageCount} {pageCount === 1 ? 'Page' : 'Pages'}</span>
+                                                             <button
+                                                                  type="button"
+                                                                  onClick={(e) => handleDeleteProject(project.id, e)}
+                                                                  className="text-red-400 hover:text-red-500 px-1.5 py-0.5 bg-red-950/20 rounded border border-red-900/40 font-bold hover:bg-red-900/30 transition-colors"
+                                                                  title="Shred Publication"
+                                                             >
+                                                                  SHRED
+                                                             </button>
+                                                        </div>
+                                                   </div>
+                                              </div>
+                                         );
+                                    })}
+                               </div>
+                          )}
+                     </div>
+
+                     {/* RIGHT SECTION: Manual Publish Form (4 cols) */}
+                     <div className="lg:col-span-4 bg-slate-950 border-4 border-black p-4 rounded-lg relative text-left">
+                          <span className="block font-comic text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2">
+                               🚀 SELF-PUBLISH COMIC
+                          </span>
+                          <p className="text-[10.5px] text-slate-400 font-mono mb-4 leading-normal">
+                               Already generated or sketched a comic layout? Publish it under your profile to host your visual achievements permanently.
+                          </p>
+
+                          <form onSubmit={handleManualPublish} className="flex flex-col gap-3">
+                               <div className="text-left">
+                                    <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Comic Book Title</label>
+                                    <input 
+                                         type="text"
+                                         required
+                                         placeholder="e.g. Captain Nebula: Deep Space"
+                                         value={manualComicTitle}
+                                         onChange={(e) => setManualComicTitle(e.target.value)}
+                                         className="w-full bg-slate-900 border-2 border-black p-1.5 px-2.5 rounded font-mono text-xs text-yellow-300 focus:outline-none focus:border-orange-500"
+                                    />
+                               </div>
+
+                               <div className="grid grid-cols-2 gap-2 text-left">
+                                    <div>
+                                         <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Genre</label>
+                                         <select
+                                              value={manualComicGenre}
+                                              onChange={(e) => setManualComicGenre(e.target.value)}
+                                              className="w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"
+                                         >
+                                              {GENRES.map((g) => (
+                                                   <option key={g} value={g}>{g}</option>
+                                              ))}
+                                         </select>
+                                    </div>
+                                    <div>
+                                         <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Language</label>
+                                         <select
+                                              value={manualComicLanguage}
+                                              onChange={(e) => setManualComicLanguage(e.target.value)}
+                                              className="w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"
+                                         >
+                                              {LANGUAGES.map((l) => (
+                                                   <option key={l.code} value={l.code}>{l.name}</option>
+                                              ))}
+                                         </select>
+                                    </div>
+                                </div>
+
+                               <div className="text-left">
+                                    <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Cover Graphic Upload</label>
+                                    <div className="relative border-2 border-dashed border-slate-700 hover:border-orange-500 rounded bg-slate-900/60 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24">
+                                         <input 
+                                              type="file" 
+                                              accept="image/*" 
+                                              id="manual-cover-upload"
+                                              className="hidden" 
+                                              onChange={async (e) => {
+                                                   const file = e.target.files?.[0];
+                                                   if (file) {
+                                                        const base64 = await fileToBase64(file);
+                                                        setManualComicCover(base64);
+                                                   }
+                                              }}
+                                         />
+                                         <label htmlFor="manual-cover-upload" className="absolute inset-0 cursor-pointer z-10" />
+
+                                         {manualComicCover ? (
+                                              <div className="flex items-center gap-2">
+                                                   <div className="w-10 h-14 border border-slate-600 rounded overflow-hidden flex-shrink-0">
+                                                        <img 
+                                                             src={`data:image/jpeg;base64,${manualComicCover}`} 
+                                                             alt="Cover" 
+                                                             className="w-full h-full object-cover" 
+                                                             referrerPolicy="no-referrer"
+                                                        />
+                                                   </div>
+                                                   <span className="text-[10px] font-mono text-green-400 line-clamp-1">✓ File Loaded</span>
+                                              </div>
+                                         ) : (
+                                              <>
+                                                   <span className="text-[10px] font-mono text-slate-500">Click or drag cover file</span>
+                                                   <span className="text-[8px] font-mono text-slate-600 mt-1 uppercase">JPEG, PNG Max 5MB</span>
+                                              </>
+                                         )}
+                                    </div>
+                               </div>
+
+                               <button 
+                                    type="submit"
+                                    disabled={isPublishingManual}
+                                    className="mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-comic text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40"
+                               >
+                                    {isPublishingManual ? 'PUBLISHING...' : '🔔 SELF-PUBLISH COMIC'}
+                               </button>
+                          </form>
+                     </div>
+
+                 </div>
+
+                 {/* DRAFTS HORIZONTAL ARCHIVE SNAPSHOTS */}
+                 <div className="border-t-4 border-dashed border-slate-800 pt-6 mt-8">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-1">
+                           <div>
+                                <span className="block font-comic text-cyan-400 font-extrabold text-sm uppercase tracking-wider">
+                                    💾 UNFINISHED CREATIVE WORKSPACE DRAFTS ({savedDrafts.length})
+                                </span>
+                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                     Restore serialized panels, custom guides, and Gemini context objectives straight back to your canvas.
+                                </p>
+                           </div>
+                           <button
+                                type="button"
+                                disabled={isSavingDraft}
+                                onClick={handleSaveDraft}
+                                className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                           >
+                                {isSavingDraft ? "SNAPSHOT-SAVING..." : "+ SNAPSHOT CURRENT WIP"}
+                           </button>
+                      </div>
+
+                      {savedDrafts.length === 0 ? (
+                           <div className="p-8 border-4 border-dashed border-slate-800 rounded bg-slate-950/20 text-center text-slate-500 font-mono">
+                                <p className="text-xs font-bold text-slate-400">No active snapshots or WIP sketches found.</p>
+                                <p className="text-[10px] mt-1 text-slate-400">Save your story character personas and comic progress to load them here dynamic and intact!</p>
+                           </div>
+                      ) : (
+                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {savedDrafts.map((draft) => {
+                                     let draftPageCount = 0;
+                                     if (draft.comicFaces) {
+                                          try {
+                                               const parsed = typeof draft.comicFaces === 'string' ? JSON.parse(draft.comicFaces) : draft.comicFaces;
+                                               if (Array.isArray(parsed)) draftPageCount = parsed.length;
+                                          } catch (e) {}
+                                     }
+                                     return (
+                                          <div 
+                                               key={draft.id}
+                                               className="group flex gap-3.5 bg-slate-950/90 border-4 border-slate-800 p-3.5 rounded-lg hover:border-cyan-400 hover:shadow-[0_0_12px_rgba(6,182,212,0.15)] transition-all cursor-pointer relative text-left"
+                                               onClick={() => props.onLoadDraft?.(draft)}
+                                          >
+                                               {/* Mini draft layout identity */}
+                                               <div className="w-12 h-16 bg-slate-900 border-2 border-slate-700 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0">
+                                                    <span className="text-xl">💾</span>
+                                                    <span className="text-[8px] font-mono text-cyan-400 tracking-wider font-bold">SNAPSHOT</span>
+                                               </div>
+
+                                               {/* Details */}
+                                               <div className="flex-1 flex flex-col justify-between min-w-0">
+                                                    <div>
+                                                         <span className="block font-comic font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors">
+                                                              {draft.title}
+                                                         </span>
+                                                         <span className="inline-block mt-1 bg-cyan-950 border border-cyan-800 rounded text-[8px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase font-bold">
+                                                              {draft.genre || 'Classic Horror'}
+                                                         </span>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between text-[9px] font-mono mt-2 text-slate-400">
+                                                         <span>🧬 Pages: {draftPageCount}</span>
+                                                         <button
+                                                              type="button"
+                                                              onClick={(e) => handleDeleteDraft(draft.id, e)}
+                                                              className="text-red-400 hover:text-red-500 font-bold hover:bg-slate-900/60 px-1.5 py-0.5 rounded transition-all"
+                                                         >
+                                                              SHRED
+                                                         </button>
+                                                    </div>
+                                               </div>
+                                          </div>
+                                     );
+                                })}
+                           </div>
+                      )}
+                 </div>
+            </div>
+        )}
 
             </div>
           </div>

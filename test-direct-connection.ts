@@ -2,10 +2,10 @@ import pg from 'pg';
 import net from 'net';
 
 const { Pool } = pg;
-const connectionString = "postgresql://angelburgosrosado:75727572Ab%21@136.116.100.202:5432/comics-v1";
+const connectionString = "postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1";
 
 console.log("🔍 Direct Connection Diagnostics Script Started");
-console.log(`📡 URL target: postgresql://angelburgosrosado:******@136.116.100.202:5432/comics-v1`);
+console.log(`📡 URL target: postgresql://angelburgosrosado:******@34.148.244.49:5432/comics-v1`);
 
 async function run() {
     // 1. Parse URL manually
@@ -61,7 +61,7 @@ async function run() {
         const tcpResult = await tcpPromise;
         if (!tcpResult.ok) {
             console.error(`❌ TCP connection failed: ${tcpResult.error}`);
-            console.error("\n💡 ANALYSIS: This indicates a network or firewall block. The host 136.116.100.202 is either offline, not accepting connection requests on port 5432, or its firewall/security lists have not whitelisted the Cloud Run container.");
+            console.error("\n💡 ANALYSIS: This indicates a network or firewall block. The host 34.148.244.49 is either offline, not accepting connection requests on port 5432, or its firewall/security lists have not whitelisted the Cloud Run container.");
             process.exit(1);
         }
         console.log("✅ TCP network socket successfully CONNECTED! Port is open and reachable.");

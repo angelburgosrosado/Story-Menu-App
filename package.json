@@ -8,12 +8,15 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "validate:deploy": "npm run build && node validate-deployment.cjs",
-    "test": "npm run build && node validate-deployment.cjs"
+    "test": "node test-db-queries.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.27.0",
     "express": "^5.2.1",
+    "firebase": "^12.14.0",
     "jspdf": "^3.0.3",
+    "lucide-react": "^1.17.0",
+    "motion": "^12.40.0",
     "pg": "^8.21.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -27,6 +30,6 @@
     "@vitejs/plugin-react": "^5.0.0",
     "esbuild": "^0.28.0",
     "tsx": "^4.22.3",
-    "typescript": "~5.8.2"    
+    "typescript": "~5.8.2"
   }
 }

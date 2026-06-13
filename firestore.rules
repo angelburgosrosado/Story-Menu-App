@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net (Strict Default Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Primitives & Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- 2. Users Collection Rules ---
+    match /users/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) 
+        && incoming().id == userId
+        && incoming().email is string
+        && incoming().email.size() <= 256;
+    }
+
+    // --- 3. Projects Collection Rules ---
+    match /users/{userId}/projects/{projectId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidId(projectId)
+        && incoming().id == projectId
+        && incoming().userId == userId
+        && incoming().title is string
+        && incoming().title.size() <= 120;
+      allow update: if isOwner(userId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().title is string
+        && incoming().title.size() <= 120;
+    }
+
+    // --- 4. Characters Collection Rules ---
+    match /users/{userId}/characters/{characterId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidId(characterId)
+        && incoming().id == characterId
+        && incoming().userId == userId
+        && incoming().name is string
+        && incoming().name.size() <= 80
+        && incoming().roleType in ['Hero', 'Co-Star', 'Villain'];
+      allow update: if isOwner(userId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().name is string
+        && incoming().name.size() <= 80
+        && incoming().roleType in ['Hero', 'Co-Star', 'Villain'];
+    }
+
+    // --- 5. Drafts Collection Rules ---
+    match /users/{userId}/drafts/{draftId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidId(draftId)
+        && incoming().id == draftId
+        && incoming().userId == userId
+        && incoming().title is string
+        && incoming().title.size() <= 120;
+      allow update: if isOwner(userId)
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().title is string
+        && incoming().title.size() <= 120;
+    }
+  }
+}

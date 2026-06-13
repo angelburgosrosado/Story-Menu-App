@@ -11,7 +11,7 @@ export const GATE_PAGE = 2;
 export const BATCH_SIZE = 6;
 export const DECISION_PAGES = [3];
 
-export const GENRES = ["Classic Horror", "Superhero Action", "Dark Sci-Fi", "High Fantasy", "Neon Noir Detective", "Wasteland Apocalypse", "Lighthearted Comedy", "Teen Drama / Slice of Life", "Custom"];
+export const GENRES = ["Classic Horror", "Superhero Action", "Dark Sci-Fi", "High Fantasy", "Neon Noir Detective", "Wasteland Apocalypse", "Lighthearted Comedy", "Teen Drama / Slice of Life", "Anime Story", "Historical Archeology Tales", "Custom"];
 export const TONES = [
     "ACTION-HEAVY (Short, punchy dialogue. Focus on kinetics.)",
     "INNER-MONOLOGUE (Heavy captions revealing thoughts.)",
@@ -70,4 +70,30 @@ export const VOICES = [
 export interface Persona {
   base64: string;
   desc: string;
+  headBase64?: string;
+  clothesBase64?: string;
+}
+
+export interface CharacterIdentitySchema {
+  actor_id: string;
+  archetype_role: 'Hero' | 'Co-Star' | 'Nemesis';
+  persistence_layer: {
+    biometric_backbone: string;
+    structural_constants: string;
+    chromatic_anchor: string;
+  };
+  adaptive_layer: {
+    sartorial_style: string;
+    active_wardrobe: string;
+  };
+  rendering_directives: {
+    art_style_lock: string;
+    continuity_weight: 'LOW' | 'MEDIUM' | 'HIGH';
+  };
+}
+
+export interface ChapterGoal {
+  chapterNum: number;
+  title: string;
+  goal: string;
 }

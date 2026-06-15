@@ -1,20 +1,12 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+import { MainLayout } from './MainLayout';
+import './index.css';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+const container = document.getElementById('root');
+if (container) {
+    const root = createRoot(container);
+    // Wrap your existing App inside the new MainLayout
+    root.render(<MainLayout StudioComponent={<App />} />);
 }
-
-const root = ReactDOM.createRoot(rootElement); 
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);

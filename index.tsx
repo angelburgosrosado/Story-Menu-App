@@ -1,12 +1,12 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
+import App from './App'; // <--- Removed the curly braces here!
 import { MainLayout } from './MainLayout';
 import './index.css';
 
 const container = document.getElementById('root');
 if (container) {
     const root = createRoot(container);
-    // Wrap your existing App inside the new MainLayout
+    // Render the new MainLayout, passing the original App as the StudioComponent
     root.render(<MainLayout StudioComponent={<App />} />);
 }

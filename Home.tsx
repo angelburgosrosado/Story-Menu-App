@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles, Layers, Flame, BookOpen, Star, GitMerge, ArrowRight, PenTool, Globe, Zap } from 'lucide-react';
 
-export const Home = ({ onNavigate }: { onNavigate: (view: string) => void }) => {
+export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
     // Extended mock data to fill out the grid
     const trendingStories = [
         { id: 1, title: "Neon Nights", creator: "CyberPunk_99", type: "Comic", likes: 342, tags: ["Sci-Fi", "Cyberpunk"], cover: "https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?auto=format&fit=crop&w=400&q=80" },
@@ -99,7 +99,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string) => void }) => 
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {trendingStories.map(story => (
-                    <div key={story.id} className="bg-gray-900 rounded-[1.5rem] border border-gray-800 overflow-hidden hover:border-gray-600 transition-all group cursor-pointer hover:shadow-2xl hover:-translate-y-1">
+                    <div 
+                        key={story.id} 
+                        onClick={() => onNavigate('reader', { id: story.id })}
+                        className="bg-gray-900 rounded-[1.5rem] border border-gray-800 overflow-hidden hover:border-gray-600 transition-all group cursor-pointer hover:shadow-2xl hover:-translate-y-1"
+                    >
                         <div className="h-72 overflow-hidden relative">
                             <img src={story.cover} alt={story.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-80"></div>
@@ -136,7 +140,13 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string) => void }) => 
                                 <div className="flex items-center gap-1.5 text-gray-300">
                                     <Star size={16} className="text-yellow-500" /> {story.likes}
                                 </div>
-                                <button className="flex items-center gap-1.5 text-blue-400 hover:text-white bg-blue-900/20 hover:bg-blue-600 px-4 py-2 rounded-xl transition-all">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigate('remix', { id: story.id });
+                                    }}
+                                    className="flex items-center gap-1.5 text-blue-400 hover:text-white bg-blue-900/20 hover:bg-blue-600 px-4 py-2 rounded-xl transition-all"
+                                >
                                     <GitMerge size={16} /> Remix
                                 </button>
                             </div>

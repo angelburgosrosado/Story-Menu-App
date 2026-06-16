@@ -79,37 +79,6 @@ interface SetupProps {
     onLogOut?: () => void;
 }
 
-const Footer = () => {
-  const [remixIndex, setRemixIndex] = useState(0);
-  const remixes = [
-    "Overhauled visual card selection logic",
-    "Animated retro arcade cabinet layout",
-    "Cinematic real-time ambient soundtrack",
-    "Interactive customized universe presets",
-    "Premium voice narrators with dynamic equalizer feedback",
-    "Generative comic multiverse engine"
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRemixIndex(prev => (prev + 1) % remixes.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-black text-white py-3 px-6 flex flex-col md:flex-row justify-between items-center z-[300] border-t-4 border-red-500 font-comic shadow-[0_-4px_20px_rgba(0,0,0,0.8)]">
-        <div className="flex items-center gap-2 text-base md:text-lg">
-            <span className="text-yellow-400 font-bold tracking-wider animate-pulse uppercase">REMIX LOGIC ACTIVE:</span>
-            <span className="text-gray-100">{remixes[remixIndex]}</span>
-        </div>
-        <div className="flex items-center gap-4 mt-2 md:mt-0 text-sm">
-            <span className="text-gray-400 font-mono">Gemini Multimodal Framework</span>
-            <span className="text-yellow-400 font-bold tracking-wide">Created by @MyIAD-Apps</span>
-        </div>
-    </div>
-  );
-};
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -4182,8 +4151,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
           </div>
         </div>
 
-        {/* Footer is only visible when setup is active */}
-        <Footer />
+
         </>
     );
 }

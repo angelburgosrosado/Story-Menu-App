@@ -183,11 +183,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
                     {/* Desktop Navigation links */}
                     <nav className="hidden md:flex items-center gap-8 text-sm font-semibold">
-                        <a href="#showcase" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Artistic Showcase</a>
-                        <a href="#soundscapes" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Soundscapes</a>
-                        <a href="#capabilities" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Capabilities</a>
-                        <a href="#pricing" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Pricing</a>
-                        <a href="#trending" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Trending</a>
+                        <a href="#showcase" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.showcase', 'Artistic Showcase')}</a>
+                        <a href="#soundscapes" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.soundscapes', 'Soundscapes')}</a>
+                        <a href="#capabilities" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.capabilities', 'Capabilities')}</a>
+                        <a href="#pricing" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.pricing', 'Pricing')}</a>
+                        <a href="#trending" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.trending', 'Trending')}</a>
                     </nav>
 
                     {/* Right side items */}
@@ -235,7 +235,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                             onClick={handleActionUnlockCloud}
                             className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:scale-[1.03] transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:shadow-[0_0_35px_rgba(168,85,247,0.4)] cursor-pointer"
                         >
-                            Launch Studio
+                            {t('home.nav.launchStudio', 'Launch Studio')}
                         </button>
                     </div>
 
@@ -298,11 +298,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         : 'bg-gray-950 border-white/10'
                     }`}>
                         <div className="flex flex-col gap-4 text-sm font-semibold text-left">
-                            <a href="#showcase" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Artistic Showcase</a>
-                            <a href="#soundscapes" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Soundscapes</a>
-                            <a href="#capabilities" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Capabilities</a>
-                            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Pricing</a>
-                            <a href="#trending" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Trending</a>
+                            <a href="#showcase" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.showcase', 'Artistic Showcase')}</a>
+                            <a href="#soundscapes" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.soundscapes', 'Soundscapes')}</a>
+                            <a href="#capabilities" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.capabilities', 'Capabilities')}</a>
+                            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.pricing', 'Pricing')}</a>
+                            <a href="#trending" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.trending', 'Trending')}</a>
                         </div>
                         <div className="pt-4 border-t border-dashed border-indigo-500/20">
                             <button 
@@ -312,7 +312,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 }}
                                 className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white py-3 rounded-xl text-sm font-bold shadow-md cursor-pointer"
                             >
-                                Launch Studio
+                                {t('home.nav.launchStudio', 'Launch Studio')}
                             </button>
                         </div>
                     </div>
@@ -339,18 +339,18 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <div className="lg:col-span-7 space-y-8 text-left">
                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                                 <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
-                                <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>Live SaaS Production Ready at Story.Menu</span>
+                                <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{t('home.hero.badge', 'Live SaaS Production Ready at Story.Menu')}</span>
                             </div>
 
                             <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
-                              What universe are you <br />
+                              {t('home.hero.title1', 'What universe are you ')}<br />
                               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
-                                Craving Today?
+                                {t('home.hero.title2', 'Craving Today?')}
                               </span>
                             </h1>
 
                             <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                              Welcome to <strong className="text-indigo-500">Story.Menu</strong>—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.
+                              {t('home.hero.subtitle', 'Welcome to Story.Menu—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.')}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -359,7 +359,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:scale-[1.03] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] cursor-pointer"
                                 >
                                     <Sparkles size={20} />
-                                    Unlock Cloud Studio Sync
+                                    {t('home.hero.unlockCloud', 'Unlock Cloud Studio Sync')}
                                 </button>
                                 <button 
                                     onClick={handleActionLaunchSandbox}
@@ -370,7 +370,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     }`}
                                 >
                                     <Play size={20} className="text-indigo-400" />
-                                    Try sandbox offline
+                                    {t('home.hero.trySandbox', 'Try sandbox offline')}
                                 </button>
                             </div>
 

@@ -2430,7 +2430,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             
                             {/* Visual Genre Selection (Grid of Custom Chips) */}
                             <div>
-                                <p className={sLabel}>{isEditorial ? "Select Narrative Direction (Genre)" : "Select Story Path (Genre)"}</p>
+                                <p className={sLabel}>{isEditorial ? "Narrative Direction (Genre)" : "Select Story Path (Genre)"}</p>
                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                     {GENRES.map((g) => {
                                         const isSelected = props.selectedGenre === g;
@@ -2461,7 +2461,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 <p className={isEditorial
                                     ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
                                     : 'font-comic text-base tracking-wide text-cyan-400 uppercase mb-2'}>
-                                    {isEditorial ? 'Output Language' : 'Multilingual Lexicon (Language)'}
+                                    {isEditorial ? 'Multilingual Lexicon (Output)' : 'Multilingual Lexicon (Language)'}
                                 </p>
                                 <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
                                      {LANGUAGES.map((l) => {
@@ -2492,7 +2492,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 <p className={isEditorial
                                     ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
                                     : 'font-comic text-base tracking-wide text-purple-300 uppercase mb-2'}>
-                                    {isEditorial ? 'Narration Voice' : 'Voice Narrator (Gemini Audio)'}
+                                    {isEditorial ? 'Voice Narrator Persona' : 'Voice Narrator (Gemini Audio)'}
                                 </p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
                                      {VOICES.map((v) => {
@@ -2527,7 +2527,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                          <p className={isEditorial
                                              ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase'
                                              : 'font-comic text-xs tracking-wide text-red-400 uppercase'}>
-                                             {isEditorial ? 'Describe Your Custom Genre' : 'Enter Your Unique Multiverse Concept'}
+                                             {isEditorial ? 'Author\'s Premise (Optional)' : 'Enter Your Unique Multiverse Concept'}
                                          </p>
                                          <button
                                               type="button"
@@ -2564,7 +2564,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                    ? 'font-sans text-[13px] font-bold uppercase text-stone-700 tracking-wider'
                                                    : 'font-comic text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider'}
                                                    style={isEditorial ? {} : { textShadow: '1px 1px 0px black' }}>
-                                                    {isEditorial ? 'Story Blueprint & Guidelines' : 'Saga Blueprint Console'}
+                                                    {isEditorial ? 'Saga Blueprint & Author Guidelines' : 'Saga Blueprint Console'}
                                                </span>
                                           </div>
                                           <button

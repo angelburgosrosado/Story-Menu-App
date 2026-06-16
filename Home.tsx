@@ -11,8 +11,12 @@ import {
   playExplosionSFX, 
   playPageTurnSFX 
 } from './audio';
+import { useTranslation } from 'react-i18next';
+import { LANGUAGES } from './types';
 
 export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
+    const { i18n } = useTranslation();
+    
     // Soundtrack state
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     const [selectedAudioGenre, setSelectedAudioGenre] = useState('Sci-Fi Cyberpunk');
@@ -188,6 +192,30 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
                     {/* Right side items */}
                     <div className="hidden md:flex items-center gap-4">
+                        {/* Language Selector */}
+                        <select
+                            value={i18n.language || 'en'}
+                            onChange={(e) => {
+                                const shortCode = e.target.value;
+                                const newPath = shortCode === 'en' ? '/' : `/${shortCode}/`;
+                                window.history.pushState(null, '', newPath);
+                                i18n.changeLanguage(shortCode);
+                            }}
+                            className={`px-3 py-2.5 rounded-xl border outline-none font-semibold text-sm transition-all cursor-pointer ${
+                                isLightMode
+                                ? 'bg-white text-slate-800 border-slate-200 hover:bg-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.05)]'
+                                : 'bg-gray-900 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
+                            }`}
+                        >
+                            {LANGUAGES.map(l => {
+                                const langPrefix = l.code.split('-')[0].toLowerCase();
+                                // We use a short display to save space
+                                const shortDisplay = l.name.split(' ')[0];
+                                return (
+                                    <option key={l.code} value={langPrefix}>{shortDisplay}</option>
+                                );
+                            })}
+                        </select>
                         {/* Theme Switcher Toggle */}
                         <button
                             onClick={() => {
@@ -213,6 +241,25 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
                     {/* Mobile Menu Button */}
                     <div className="flex items-center gap-2 md:hidden">
+                        {/* Language Selector Mobile */}
+                        <select
+                            value={i18n.language || 'en'}
+                            onChange={(e) => {
+                                const shortCode = e.target.value;
+                                const newPath = shortCode === 'en' ? '/' : `/${shortCode}/`;
+                                window.history.pushState(null, '', newPath);
+                                i18n.changeLanguage(shortCode);
+                            }}
+                            className={`p-2 rounded-xl border outline-none font-semibold text-sm transition-all cursor-pointer ${
+                                isLightMode
+                                ? 'bg-white text-slate-800 border-slate-200'
+                                : 'bg-gray-900 text-gray-300 border-white/10'
+                            }`}
+                        >
+                            {LANGUAGES.map(l => (
+                                <option key={l.code} value={l.code.split('-')[0].toLowerCase()}>{l.code.split('-')[0].toUpperCase()}</option>
+                            ))}
+                        </select>
                         {/* Theme Switcher Toggle Mobile */}
                         <button
                             onClick={() => {

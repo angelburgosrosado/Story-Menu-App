@@ -408,7 +408,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           type="text"
                           required
                           placeholder="3-4 Digits"
-                          value={cvv}
+                          value={cvc}
                           onChange={handleCvcChange}
                           className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
                         />

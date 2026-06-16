@@ -1,164 +1,1106 @@
-import React from 'react';
-import { Sparkles, Layers, Flame, BookOpen, Star, GitMerge, ArrowRight, PenTool, Globe, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Sparkles, Layers, Flame, BookOpen, Star, GitMerge, 
+  ArrowRight, PenTool, Globe, Zap, Play, Pause, Volume2, 
+  Music, Eye, RotateCw, AlertTriangle, UserCheck, ShieldCheck, Cpu, Sun, Moon, Menu, X
+} from 'lucide-react';
+import { 
+  startProceduralSoundtrack, 
+  stopProceduralSoundtrack, 
+  playLaserSFX, 
+  playExplosionSFX, 
+  playPageTurnSFX 
+} from './audio';
 
 export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
-    // Extended mock data to fill out the grid
+    // Soundtrack state
+    const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+    const [selectedAudioGenre, setSelectedAudioGenre] = useState('Sci-Fi Cyberpunk');
+
+    // Mock simulator states
+    const [customPromptInput, setCustomPromptInput] = useState('');
+    const [isGeneratingMock, setIsGeneratingMock] = useState(false);
+    const [mockResult, setMockResult] = useState<any>(null);
+
+    // Style selector state
+    const [selectedStyleTab, setSelectedStyleTab] = useState('anime');
+    const [isLightMode, setIsLightMode] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const samplePrompts = [
+        "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.",
+        "An astronaut discovering an ancient mystical stone temple on Mars.",
+        "A cute wizard apprentice accidentally setting their spellbook on fire."
+    ];
+
+    const stylePreviews = {
+        anime: {
+            title: "Retro Anime 90s",
+            desc: "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay.",
+            cover: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80",
+            badge: "Trending"
+        },
+        noir: {
+            title: "Noir Graphic Novel",
+            desc: "Heavy shadows, high contrast inks, ink-wash textures, retro comic newsprint halftones.",
+            cover: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=800&q=80",
+            badge: "Classic"
+        },
+        pixar: {
+            title: "Pixar 3D Adventure",
+            desc: "Subtle clay shaders, rich global illumination, colorful and expressive caricature models, high depth of field.",
+            cover: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80",
+            badge: "Kids"
+        },
+        handdrawn: {
+            title: "Artisanal Sketch & Watercolor",
+            desc: "Warm textures, sketch lines, watercolor bleeding, personal hand-crafted storytelling ambiance.",
+            cover: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
+            badge: "Artisanal"
+        }
+    };
+
+    // Extended mock data for trending stories
     const trendingStories = [
         { id: 1, title: "Neon Nights", creator: "CyberPunk_99", type: "Comic", likes: 342, tags: ["Sci-Fi", "Cyberpunk"], cover: "https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?auto=format&fit=crop&w=400&q=80" },
         { id: 2, title: "The Last Wizard", creator: "FantasyScribe", type: "Ebook", likes: 289, tags: ["Fantasy", "Magic"], cover: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80" },
         { id: 3, title: "Mars Colony", creator: "RedPlanet", type: "Comic", likes: 512, tags: ["Sci-Fi", "Space"], cover: "https://images.unsplash.com/photo-1614729939124-03290b5609ce?auto=format&fit=crop&w=400&q=80" },
-        { id: 4, title: "Detective's Shadow", creator: "NoirTales", type: "Comic", likes: 156, tags: ["Mystery", "Noir"], cover: "https://images.unsplash.com/photo-1584351583369-6baf055b51a7?auto=format&fit=crop&w=400&q=80" },
-        { id: 5, title: "Echoes of Time", creator: "TimeWeaver", type: "Ebook", likes: 421, tags: ["Historical", "Drama"], cover: "https://images.unsplash.com/photo-1461360370896-922624d12aa1?auto=format&fit=crop&w=400&q=80" },
-        { id: 6, title: "Mecha Rumble", creator: "IronGiant", type: "Comic", likes: 892, tags: ["Action", "Mecha"], cover: "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?auto=format&fit=crop&w=400&q=80" },
-        { id: 7, title: "Whispering Woods", creator: "FairyTale", type: "Ebook", likes: 204, tags: ["Fantasy", "Nature"], cover: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=80" },
-        { id: 8, title: "Urban Legends", creator: "CityMyth", type: "Comic", likes: 377, tags: ["Horror", "Urban"], cover: "https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?auto=format&fit=crop&w=400&q=80" }
+        { id: 4, title: "Detective's Shadow", creator: "NoirTales", type: "Comic", likes: 156, tags: ["Mystery", "Noir"], cover: "https://images.unsplash.com/photo-1584351583369-6baf055b51a7?auto=format&fit=crop&w=400&q=80" }
     ];
 
-    return (
-        <div className="max-w-7xl mx-auto px-6 py-12 text-white">
-            {/* Hero Section */}
-            <div className="relative rounded-[2rem] overflow-hidden bg-gray-900 border border-gray-800 shadow-2xl mb-24 group">
-                {/* Animated Background Mesh */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/40 via-gray-900 to-pink-900/20 z-0 opacity-80 group-hover:opacity-100 transition-opacity duration-700"></div>
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px] -translate-y-1/2 translate-x-1/3"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/10 rounded-full blur-[128px] translate-y-1/3 -translate-x-1/3"></div>
-                
-                <div className="relative z-10 py-32 px-8 flex flex-col items-center text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800/80 border border-gray-700 backdrop-blur-md mb-8">
-                        <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                        <span className="text-sm font-medium text-gray-300">Gemini 3 Pro Generation Now Live</span>
+    // Handle Soundtrack synthesis
+    const handleAudioToggle = () => {
+        if (isPlayingAudio) {
+            stopProceduralSoundtrack();
+            setIsPlayingAudio(false);
+        } else {
+            startProceduralSoundtrack(selectedAudioGenre);
+            setIsPlayingAudio(true);
+        }
+    };
+
+    const handleGenreChange = (genre: string) => {
+        setSelectedAudioGenre(genre);
+        if (isPlayingAudio) {
+            startProceduralSoundtrack(genre);
+        }
+    };
+
+    // Clean up audio on unmount
+    useEffect(() => {
+        return () => {
+            stopProceduralSoundtrack();
+        };
+    }, []);
+
+    // Actions triggering state changes inside App.tsx
+    const handleActionUnlockCloud = () => {
+        window.dispatchEvent(new Event('trigger-auth-dialog'));
+        onNavigate('studio');
+    };
+
+    const handleActionLaunchSandbox = () => {
+        window.dispatchEvent(new Event('trigger-sandbox-mode'));
+        onNavigate('studio');
+    };
+
+    const handleActionCheckout = (tier: 'Pro' | 'Enterprise') => {
+        window.dispatchEvent(new CustomEvent('trigger-checkout-dialog', { detail: tier }));
+        onNavigate('studio');
+    };
+
+    // Simulated sandbox generator run
+    const triggerMockGeneration = (promptText: string) => {
+        const query = promptText || customPromptInput || "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.";
+        setIsGeneratingMock(true);
+        setMockResult(null);
+
+        setTimeout(() => {
+            setIsGeneratingMock(false);
+            
+            let title = "Procedural Universe Draft";
+            let panel1 = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=500&q=80";
+            let caption = "The system synthesized a new narrative vector for the requested coordinates.";
+            let character = "Prototypal Agent";
+            let soundtrack = "Cinematic Ambient - Track #04";
+            
+            const lowQuery = query.toLowerCase();
+            if (lowQuery.includes("cyberpunk") || lowQuery.includes("detective") || lowQuery.includes("rainy") || lowQuery.includes("neon")) {
+                title = "Neon Rain Chronicles";
+                panel1 = "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=500&q=80";
+                caption = "The hologram flickered. The coordinates pointed straight into the deep Sector 9 slums.";
+                character = "Detective Kaelen";
+                soundtrack = "Synthwave Beats - 110 BPM";
+            } else if (lowQuery.includes("astronaut") || lowQuery.includes("mars") || lowQuery.includes("temple") || lowQuery.includes("space")) {
+                title = "The Red Threshold";
+                panel1 = "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?auto=format&fit=crop&w=500&q=80";
+                caption = "Amidst the dust storms of Mars, the monolith stood undisturbed for a million years.";
+                character = "Commander Sarah Vance";
+                soundtrack = "Dark Ambient Cosmos - Track #09";
+            } else if (lowQuery.includes("wizard") || lowQuery.includes("spellbook") || lowQuery.includes("apprentice") || lowQuery.includes("fire")) {
+                title = "Arcane Mishaps";
+                panel1 = "https://images.unsplash.com/photo-1519074069444-1ba4e566370c?auto=format&fit=crop&w=500&q=80";
+                caption = "'Oops!'—the sparks ignited the ancient parchment before he could recite the counter-spell.";
+                character = "Leo the Novice";
+                soundtrack = "Whimsical Forest Chords - Track #01";
+            }
+
+            setMockResult({
+                title,
+                prompt: query,
+                panel1,
+                caption,
+                character,
+                soundtrack
+            });
+            playPageTurnSFX();
+        }, 2000);
+    };    return (
+        <div className={`min-h-screen w-full transition-colors duration-500 relative ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-gray-950 text-white'}`}>
+            
+            {/* Main Header / Navigation Bar */}
+            <header className={`sticky top-0 z-45 w-full backdrop-blur-md border-b transition-all ${
+                isLightMode 
+                ? 'bg-white/80 border-slate-200/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)]' 
+                : 'bg-gray-950/80 border-white/10 shadow-[0_2px_15px_rgba(0,0,0,0.2)]'
+            }`}>
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                    {/* Logo */}
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src="logo.png" 
+                            alt="Story.Menu Logo" 
+                            className="w-10 h-10 object-contain rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-1 shadow-md shadow-indigo-500/10"
+                        />
+                        <span className={`text-xl font-extrabold tracking-tight font-sans bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500`}>
+                            Story.Menu
+                        </span>
                     </div>
 
-                    <h1 className="text-6xl md:text-8xl font-black mb-8 tracking-tighter leading-tight">
-                        Stories, <br className="md:hidden" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">Visualized.</span>
-                    </h1>
-                    
-                    <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl font-light leading-relaxed">
-                        The ultimate creator studio for AI-assisted comics and ebooks. Generate entire universes from a single prompt, share with the community, and remix the multiverse.
-                    </p>
-                    
-                    <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
-                        <button 
-                            onClick={() => onNavigate('studio')} 
-                            className="flex items-center justify-center gap-3 bg-white text-gray-950 px-10 py-5 rounded-full text-lg font-bold hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] group"
-                        >
-                            <Sparkles size={22} className="text-pink-600 group-hover:rotate-12 transition-transform" /> 
-                            Start Creating Free
-                        </button>
-                        <button 
+                    {/* Desktop Navigation links */}
+                    <nav className="hidden md:flex items-center gap-8 text-sm font-semibold">
+                        <a href="#showcase" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Artistic Showcase</a>
+                        <a href="#soundscapes" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Soundscapes</a>
+                        <a href="#capabilities" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Capabilities</a>
+                        <a href="#pricing" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Pricing</a>
+                        <a href="#trending" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Trending</a>
+                    </nav>
+
+                    {/* Right side items */}
+                    <div className="hidden md:flex items-center gap-4">
+                        {/* Theme Switcher Toggle */}
+                        <button
                             onClick={() => {
-                                document.getElementById('trending')?.scrollIntoView({ behavior: 'smooth' });
+                                setIsLightMode(!isLightMode);
+                                playPageTurnSFX();
                             }}
-                            className="flex items-center justify-center gap-3 bg-gray-800/80 hover:bg-gray-700 backdrop-blur-md border border-gray-700 px-10 py-5 rounded-full text-lg font-bold transition-all"
+                            className={`flex items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                isLightMode 
+                                ? 'bg-white text-slate-800 border-slate-200 hover:bg-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.05)]' 
+                                : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
+                            }`}
+                            aria-label="Toggle Theme"
                         >
-                            <Globe size={22} className="text-blue-400" /> 
-                            Browse Community
+                            {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+                        </button>
+                        <button 
+                            onClick={handleActionUnlockCloud}
+                            className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:scale-[1.03] transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:shadow-[0_0_35px_rgba(168,85,247,0.4)] cursor-pointer"
+                        >
+                            Launch Studio
+                        </button>
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <div className="flex items-center gap-2 md:hidden">
+                        {/* Theme Switcher Toggle Mobile */}
+                        <button
+                            onClick={() => {
+                                setIsLightMode(!isLightMode);
+                                playPageTurnSFX();
+                            }}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                isLightMode 
+                                ? 'bg-white text-slate-800 border-slate-200' 
+                                : 'bg-white/5 text-gray-300 border-white/10'
+                            }`}
+                        >
+                            {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsMobileMenuOpen(!isMobileMenuOpen);
+                                playPageTurnSFX();
+                            }}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                isLightMode 
+                                ? 'bg-white text-slate-850 border-slate-200' 
+                                : 'bg-white/5 text-gray-300 border-white/10'
+                            }`}
+                        >
+                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Feature Highlights */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-                <div className="bg-gray-900/50 border border-gray-800 p-8 rounded-3xl">
-                    <div className="w-14 h-14 bg-blue-900/30 text-blue-400 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/20">
-                        <PenTool size={28} />
+                {/* Mobile Dropdown Menu */}
+                {isMobileMenuOpen && (
+                    <div className={`md:hidden border-t px-6 py-6 space-y-4 transition-all ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200' 
+                        : 'bg-gray-950 border-white/10'
+                    }`}>
+                        <div className="flex flex-col gap-4 text-sm font-semibold text-left">
+                            <a href="#showcase" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Artistic Showcase</a>
+                            <a href="#soundscapes" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Soundscapes</a>
+                            <a href="#capabilities" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Capabilities</a>
+                            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Pricing</a>
+                            <a href="#trending" onClick={() => setIsMobileMenuOpen(false)} className={`py-1.5 transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Trending</a>
+                        </div>
+                        <div className="pt-4 border-t border-dashed border-indigo-500/20">
+                            <button 
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false);
+                                    handleActionUnlockCloud();
+                                }}
+                                className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white py-3 rounded-xl text-sm font-bold shadow-md cursor-pointer"
+                            >
+                                Launch Studio
+                            </button>
+                        </div>
                     </div>
-                    <h3 className="text-2xl font-bold mb-3">Consistent Characters</h3>
-                    <p className="text-gray-400 leading-relaxed">Our custom pipeline ensures your heroes look the same from panel 1 to page 10. No more random face changes.</p>
-                </div>
-                <div className="bg-gray-900/50 border border-gray-800 p-8 rounded-3xl">
-                    <div className="w-14 h-14 bg-purple-900/30 text-purple-400 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/20">
-                        <Zap size={28} />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">Instant Panels</h3>
-                    <p className="text-gray-400 leading-relaxed">Type a script, and watch the AI auto-generate layouts, speech bubbles, and sound effects in seconds.</p>
-                </div>
-                <div className="bg-gray-900/50 border border-gray-800 p-8 rounded-3xl">
-                    <div className="w-14 h-14 bg-pink-900/30 text-pink-400 rounded-2xl flex items-center justify-center mb-6 border border-pink-500/20">
-                        <GitMerge size={28} />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">Remix Engine</h3>
-                    <p className="text-gray-400 leading-relaxed">Love a community story? Click 'Remix' to fork their characters and continue the timeline in your own direction.</p>
-                </div>
-            </div>
+                )}
+            </header>
 
-            {/* Trending Feed */}
-            <div id="trending" className="flex items-center justify-between mb-10 pt-8 border-t border-gray-800">
-                <div className="flex items-center gap-4">
-                    <div className="bg-pink-500/20 p-2 rounded-xl border border-pink-500/30">
-                        <Flame className="text-pink-500" size={24} />
-                    </div>
-                    <h2 className="text-4xl font-black tracking-tight">Trending Universes</h2>
-                </div>
-                <button className="hidden sm:flex items-center gap-2 text-gray-400 hover:text-white font-medium transition-colors">
-                    View All <ArrowRight size={18} />
-                </button>
-            </div>
+            <div className="max-w-7xl mx-auto px-6 py-12 relative">
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {trendingStories.map(story => (
-                    <div 
-                        key={story.id} 
-                        onClick={() => onNavigate('reader', { id: story.id })}
-                        className="bg-gray-900 rounded-[1.5rem] border border-gray-800 overflow-hidden hover:border-gray-600 transition-all group cursor-pointer hover:shadow-2xl hover:-translate-y-1"
-                    >
-                        <div className="h-72 overflow-hidden relative">
-                            <img src={story.cover} alt={story.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-80"></div>
-                            
-                            {/* Tags overlay */}
-                            <div className="absolute top-4 left-4 flex gap-2">
-                                <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border border-gray-700 text-gray-200">
-                                    {story.type === 'Comic' ? <BookOpen size={12} className="text-blue-400" /> : <Layers size={12} className="text-pink-400"/>}
-                                    {story.type}
+                {/* Background glowing ambient grids */}
+                <div className={`absolute top-24 left-1/4 w-[500px] h-[500px] rounded-full blur-[140px] animate-pulse-glow pointer-events-none -z-10 transition-colors ${isLightMode ? 'bg-indigo-500/5' : 'bg-indigo-600/10'}`}></div>
+                <div className={`absolute top-1/2 right-1/4 w-[600px] h-[600px] rounded-full blur-[160px] animate-pulse-glow pointer-events-none -z-10 transition-colors ${isLightMode ? 'bg-pink-500/5' : 'bg-pink-600/10'}`} style={{ animationDelay: '3s' }}></div>
+
+                {/* Cinematic Hero Section */}
+                <div className={`relative rounded-[2.5rem] overflow-hidden border shadow-2xl transition-all mb-24 p-8 md:p-16 ${
+                    isLightMode 
+                    ? 'bg-white/80 border-slate-200/80 shadow-[0_15px_40px_rgba(0,0,0,0.05)] backdrop-blur-xl' 
+                    : 'bg-gray-950/60 border-white/10 backdrop-blur-xl'
+                }`}>
+                    
+                    {/* Hero grid layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                        
+                        {/* Left Column: Heading & Value Prop */}
+                        <div className="lg:col-span-7 space-y-8 text-left">
+                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                                <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
+                                <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>Live SaaS Production Ready at Story.Menu</span>
+                            </div>
+
+                            <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
+                              What universe are you <br />
+                              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
+                                Craving Today?
+                              </span>
+                            </h1>
+
+                            <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                              Welcome to <strong className="text-indigo-500">Story.Menu</strong>—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <button 
+                                    onClick={handleActionUnlockCloud}
+                                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:scale-[1.03] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] cursor-pointer"
+                                >
+                                    <Sparkles size={20} />
+                                    Unlock Cloud Studio Sync
+                                </button>
+                                <button 
+                                    onClick={handleActionLaunchSandbox}
+                                    className={`flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold transition-all cursor-pointer ${
+                                        isLightMode 
+                                        ? 'bg-slate-150 border border-slate-200 text-slate-800 hover:bg-slate-200' 
+                                        : 'bg-white/5 border border-white/10 hover:bg-white/10 text-white'
+                                    }`}
+                                >
+                                    <Play size={20} className="text-indigo-400" />
+                                    Try sandbox offline
+                                </button>
+                            </div>
+
+                            {/* Social Proof stats grid (original verbiage) */}
+                            <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-2xl border font-sans ${isLightMode ? 'bg-slate-100 border-slate-200 divide-slate-200' : 'bg-black/40 border-white/5 divide-white/5'} divide-x`}>
+                                <div className="text-center md:text-left px-2">
+                                    <div className="text-2xl font-black text-indigo-400 font-mono">5,800+</div>
+                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Comics Made</div>
+                                </div>
+                                <div className="text-center md:text-left px-2">
+                                    <div className="text-2xl font-black text-purple-400 font-mono">14K+</div>
+                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Casting Vaults</div>
+                                </div>
+                                <div className="text-center md:text-left px-2">
+                                    <div className="text-2xl font-black text-pink-400 font-mono">100%</div>
+                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Cohesion</div>
+                                </div>
+                                <div className="text-center md:text-left px-2">
+                                    <div className="text-2xl font-black text-emerald-400 font-mono">&lt; 3s</div>
+                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Synth Speech</div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="p-6 relative">
-                            {/* Floating Avatar */}
-                            <div className="absolute -top-6 right-6 w-12 h-12 bg-gray-800 rounded-full border-2 border-gray-900 flex items-center justify-center overflow-hidden shadow-lg">
-                                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-sm font-bold">
-                                    {story.creator.charAt(0)}
-                                </div>
-                            </div>
-                            
-                            <h3 className="text-xl font-bold mb-1 group-hover:text-blue-400 transition-colors line-clamp-1">{story.title}</h3>
-                            <p className="text-gray-400 text-sm mb-4">by @{story.creator}</p>
-                            
-                            <div className="flex gap-2 mb-6">
-                                {story.tags.map(tag => (
-                                    <span key={tag} className="text-xs font-medium text-gray-500 bg-gray-800/50 px-2 py-1 rounded-md">
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
 
-                            <div className="flex justify-between items-center text-sm font-medium pt-4 border-t border-gray-800/80">
-                                <div className="flex items-center gap-1.5 text-gray-300">
-                                    <Star size={16} className="text-yellow-500" /> {story.likes}
+                        {/* Right Column: Interactive Simulator */}
+                        <div className="lg:col-span-5">
+                            <div className={`rounded-3xl p-6 border shadow-2xl relative transition-all ${
+                                isLightMode 
+                                ? 'bg-slate-100 border-slate-200 shadow-[0_10px_30px_rgba(0,0,0,0.03)]' 
+                                : 'bg-gray-950 border-white/10'
+                            }`}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                                        <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                        <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                                    </div>
+                                    <span className={`text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>story-menu-simulator.sh</span>
                                 </div>
+
+                                <div className="space-y-4">
+                                    <div className={`p-3.5 border rounded-xl text-left transition-all ${
+                                        isLightMode 
+                                        ? 'bg-white border-slate-200' 
+                                        : 'bg-white/5 border-white/10'
+                                    }`}>
+                                         <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>🎮 Prompt Sandbox Arena</span>
+                                         <p className={`text-[11px] leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                                              The <strong>Prompt Sandbox</strong> allows you to prototype universe layouts and story nodes. Input a custom premise or pick a preset below, then synthesize your design.
+                                         </p>
+                                    </div>
+
+                                    <div>
+                                        <div className="relative">
+                                            <textarea 
+                                                value={customPromptInput}
+                                                onChange={(e) => setCustomPromptInput(e.target.value)}
+                                                placeholder="A cybernetic samurai defending a neon city gate..." 
+                                                className={`w-full h-20 rounded-xl p-3 text-sm resize-none font-sans transition-all focus:outline-none focus:border-indigo-500/50 ${
+                                                    isLightMode 
+                                                    ? 'bg-white border border-slate-200 text-slate-800 placeholder-slate-400' 
+                                                    : 'bg-black/40 border border-white/10 text-gray-200 placeholder-gray-600'
+                                                }`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Sample Suggestions */}
+                                    <div className="space-y-1.5 text-left">
+                                        <span className={`text-xs block font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Select a preset story prompt:</span>
+                                        <div className="flex flex-col gap-2">
+                                            {samplePrompts.map((p, idx) => (
+                                                <button 
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        setCustomPromptInput(p);
+                                                        playPageTurnSFX();
+                                                    }}
+                                                    className={`text-xs border p-2.5 rounded-lg transition-all text-left truncate cursor-pointer ${
+                                                        isLightMode 
+                                                        ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900' 
+                                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                                    }`}
+                                                >
+                                                    {idx === 0 ? "🌆 Cyberpunk" : idx === 1 ? "🪐 Mars Monolith" : "✨ Wizard apprentice"}: {p}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={`p-3.5 border rounded-xl text-left transition-all ${
+                                        isLightMode 
+                                        ? 'bg-white border-slate-200' 
+                                        : 'bg-white/5 border-white/10'
+                                    }`}>
+                                         <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${isLightMode ? 'text-purple-600' : 'text-purple-400'}`}>⚡ Generate Preview Card</span>
+                                         <p className={`text-[11px] leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                                              Synthesizes a mockup story block demonstrating <strong>visual rendering</strong>, <strong>casting vault identity</strong>, and <strong>synth soundtracks</strong> matching the prompt.
+                                         </p>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => triggerMockGeneration('')}
+                                        disabled={isGeneratingMock}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/40 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/20"
+                                    >
+                                        {isGeneratingMock ? (
+                                            <>
+                                                <RotateCw size={16} className="animate-spin text-white" />
+                                                Assembling Panels...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Zap size={16} className="text-yellow-400 fill-yellow-400" />
+                                                Generate Preview Card
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {/* Output panel with simulated generation */}
+                                    <div className={`border rounded-2xl overflow-hidden min-h-[140px] flex items-center justify-center relative transition-all ${
+                                        isLightMode 
+                                        ? 'bg-white border-slate-200' 
+                                        : 'border-white/5 bg-black/30'
+                                    }`}>
+                                        {isGeneratingMock && (
+                                            <div className="absolute inset-0 shimmer-bg flex flex-col items-center justify-center gap-2 p-4">
+                                                <Sparkles size={24} className="text-indigo-400 animate-bounce" />
+                                                <span className="text-xs text-indigo-300 font-mono tracking-widest uppercase">Rendering story frame...</span>
+                                            </div>
+                                        )}
+
+                                        {!isGeneratingMock && !mockResult && (
+                                            <div className="text-center p-6">
+                                                <p className={`text-sm ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Run the generator sandbox above to witness a dynamic preview.</p>
+                                            </div>
+                                        )}
+
+                                        {!isGeneratingMock && mockResult && (
+                                            <div className="w-full animate-fadeIn p-4 flex flex-col gap-3">
+                                                <div className="flex gap-4 items-center">
+                                                    <div className={`w-20 h-28 rounded-lg overflow-hidden border flex-shrink-0 relative ${isLightMode ? 'border-slate-200' : 'border-white/15'}`}>
+                                                        <img src={mockResult.panel1} alt="Preview" className="w-full h-full object-cover" />
+                                                        <span className="absolute bottom-1 right-1 bg-black/80 text-[7px] text-cyan-300 border border-white/10 px-1 rounded font-mono">PANEL 1</span>
+                                                    </div>
+                                                    <div className="text-left space-y-1 flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1 text-[9px] text-purple-500 font-bold uppercase tracking-wider">
+                                                                <Sparkles size={10} />
+                                                                COHESIVE PANEL
+                                                            </span>
+                                                            <span className="text-[9px] font-mono text-emerald-500">100% OK</span>
+                                                        </div>
+                                                        <p className={`text-sm font-bold truncate ${isLightMode ? 'text-slate-800' : 'text-gray-200'}`}>{mockResult.title}</p>
+                                                        <p className={`text-xs line-clamp-3 italic ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>"{mockResult.caption}"</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className={`grid grid-cols-2 gap-2 text-[10px] font-mono border rounded-lg p-2 text-left ${
+                                                    isLightMode 
+                                                    ? 'bg-slate-50 border-slate-200' 
+                                                    : 'bg-white/5 border-white/5'
+                                                }`}>
+                                                    <div>
+                                                        <span className="text-gray-500 block uppercase">Cast Member</span>
+                                                        <span className={`truncate block ${isLightMode ? 'text-indigo-600' : 'text-indigo-300'}`}>👤 {mockResult.character}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500 block uppercase">Soundtrack</span>
+                                                        <span className={`truncate block ${isLightMode ? 'text-pink-600' : 'text-pink-300'}`}>🎵 {mockResult.soundtrack}</span>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    onClick={handleActionLaunchSandbox}
+                                                    className="w-full mt-1 bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-500/20 text-xs text-white font-bold py-2 rounded-lg flex items-center justify-center gap-1 transition-all"
+                                                >
+                                                    Open in Creator Studio <ArrowRight size={12} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Visual Style Showcase Grid (Moved Up!) */}
+                <div id="showcase" className="mb-24">
+                    <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
+                            <PenTool size={12} /> Artistic Diversity
+                        </div>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Artisanal & Storybook Styles</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Choose a visual framework that aligns with your story's soul. Hand-drawn aesthetics meet modern SaaS tools.</p>
+                    </div>
+
+                    {/* Switcher tabs */}
+                    <div className="flex justify-center gap-2 mb-8 flex-wrap">
+                        {Object.keys(stylePreviews).map((key) => (
+                            <button
+                                key={key}
+                                onClick={() => {
+                                    setSelectedStyleTab(key);
+                                    playPageTurnSFX();
+                                }}
+                                className={`px-6 py-2.5 rounded-xl font-semibold transition-all cursor-pointer ${
+                                    selectedStyleTab === key 
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
+                                    : isLightMode 
+                                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' 
+                                    : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                {stylePreviews[key as keyof typeof stylePreviews].title}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Showcase Display Card */}
+                    <div className={`rounded-[2rem] overflow-hidden border grid grid-cols-1 md:grid-cols-12 gap-8 p-6 md:p-10 items-center transition-all ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 shadow-xl' 
+                        : 'glass-panel border-white/10'
+                    }`}>
+                        
+                        <div className="md:col-span-5 space-y-6 text-left">
+                            <span className="text-xs bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 px-3 py-1 rounded-md font-bold uppercase tracking-wider">
+                                {stylePreviews[selectedStyleTab as keyof typeof stylePreviews].badge}
+                            </span>
+                            <h3 className={`text-3xl font-extrabold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>
+                                {stylePreviews[selectedStyleTab as keyof typeof stylePreviews].title}
+                            </h3>
+                            <p className={`font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                                {stylePreviews[selectedStyleTab as keyof typeof stylePreviews].desc}
+                            </p>
+                            
+                            <div className="pt-4 flex gap-4">
                                 <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onNavigate('remix', { id: story.id });
-                                    }}
-                                    className="flex items-center gap-1.5 text-blue-400 hover:text-white bg-blue-900/20 hover:bg-blue-600 px-4 py-2 rounded-xl transition-all"
+                                    onClick={handleActionLaunchSandbox}
+                                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all cursor-pointer border ${
+                                        isLightMode 
+                                        ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800' 
+                                        : 'bg-white text-black border-transparent hover:bg-gray-200'
+                                    }`}
                                 >
-                                    <GitMerge size={16} /> Remix
+                                    <Sparkles size={16} className="text-indigo-500" />
+                                    Launch with this Style
                                 </button>
                             </div>
                         </div>
+
+                        <div className="md:col-span-7">
+                            <div className={`relative rounded-2xl overflow-hidden aspect-[16/10] border group shadow-2xl ${isLightMode ? 'border-slate-200' : 'border-white/15'}`}>
+                                <img 
+                                    src={stylePreviews[selectedStyleTab as keyof typeof stylePreviews].cover} 
+                                    alt={stylePreviews[selectedStyleTab as keyof typeof stylePreviews].title} 
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s]"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent opacity-85"></div>
+                                <div className="absolute bottom-6 left-6 text-left">
+                                    <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">Rendering Lock</p>
+                                    <p className="text-lg font-bold text-white">Consistent Art Direction Engine</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                ))}
+                </div>
+
+                {/* Procedural Audio & Interactive SFX Panel (Moved Up!) */}
+                <div id="soundscapes" className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-24">
+                    
+                    {/* Audio Engine Dashboard */}
+                    <div className={`lg:col-span-7 rounded-[2rem] p-8 border text-left space-y-6 relative overflow-hidden transition-all ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 shadow-xl' 
+                        : 'glass-panel border-white/10'
+                    }`}>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="bg-purple-500/20 p-2.5 rounded-xl border border-purple-500/30 text-purple-400">
+                                <Music size={24} />
+                            </div>
+                            <div>
+                                <h3 className={`text-2xl font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Interactive Soundscapes</h3>
+                                <p className={`text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Web Audio procedural synth engine</p>
+                            </div>
+                        </div>
+
+                        <p className={`font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                            Every multiverse genre carries its own generative procedural theme. Change genres to watch the synthetic frequency arpeggios shift live in your browser's audio nodes.
+                        </p>
+
+                        {/* Audio controller display */}
+                        <div className={`border rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-slate-55 border-slate-200 bg-slate-50' 
+                            : 'border-white/10 bg-black/40'
+                        }`}>
+                            <div className="flex items-center gap-4">
+                                <button 
+                                    onClick={handleAudioToggle}
+                                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                        isPlayingAudio 
+                                        ? 'bg-purple-600 text-white hover:bg-purple-500 shadow-lg shadow-purple-600/30' 
+                                        : isLightMode 
+                                        ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg' 
+                                        : 'bg-white text-black hover:bg-gray-200 shadow-lg'
+                                    }`}
+                                >
+                                    {isPlayingAudio ? <Pause size={28} fill="currentColor" /> : <Play size={28} className="translate-x-0.5" fill="currentColor" />}
+                                </button>
+                                <div>
+                                    <p className={`text-xs uppercase font-bold tracking-wider ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Soundtrack Status</p>
+                                    <p className={`text-lg font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{isPlayingAudio ? 'Procedural Audio Running' : 'Synthesizer Standby'}</p>
+                                </div>
+                            </div>
+
+                            {/* Selector for soundtrack themes */}
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                {['Sci-Fi Cyberpunk', 'Magic Fantasy', 'Slice of Life'].map((theme) => (
+                                    <button
+                                        key={theme}
+                                        onClick={() => handleGenreChange(theme)}
+                                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                                            selectedAudioGenre === theme 
+                                            ? 'bg-purple-600/20 text-purple-600 border-purple-500/40' 
+                                            : isLightMode 
+                                            ? 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200' 
+                                            : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border-transparent'
+                                        }`}
+                                    >
+                                        {theme}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Animated wave bars */}
+                        <div className={`flex items-end justify-between h-16 px-4 rounded-xl border ${isLightMode ? 'bg-slate-50 border-slate-200' : 'bg-black/20 border-white/5'}`}>
+                            {Array.from({ length: 24 }).map((_, idx) => {
+                                const heights = [20, 40, 15, 60, 30, 48, 24, 55, 38, 12, 45, 64, 20, 32, 40, 15, 60, 24, 48, 35, 12, 50, 22, 10];
+                                const currentHeight = heights[idx % heights.length];
+                                
+                                const animClass = idx % 4 === 0 
+                                    ? 'waveform-bar-delayed-1' 
+                                    : idx % 4 === 1 
+                                    ? 'waveform-bar-delayed-2' 
+                                    : idx % 4 === 2 
+                                    ? 'waveform-bar-delayed-3' 
+                                    : 'waveform-bar-delayed-4';
+
+                                return (
+                                    <div 
+                                        key={idx}
+                                        style={{ height: `${currentHeight}%`, animationPlayState: isPlayingAudio ? 'running' : 'paused' }}
+                                        className={`w-1.5 bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-500 rounded-t-sm waveform-bar ${animClass}`}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* SFX triggers pad */}
+                    <div className={`lg:col-span-5 rounded-[2rem] p-8 border text-left flex flex-col justify-between space-y-6 transition-all ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 shadow-xl' 
+                        : 'glass-panel border-white/10'
+                    }`}>
+                        <div>
+                            <h3 className={`text-2xl font-bold flex items-center gap-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>
+                                <Volume2 className="text-pink-500" />
+                                Spatial SFX Board
+                            </h3>
+                            <p className={`text-sm mt-2 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                                Click any trigger block to command the sound synthesis engine directly.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <button 
+                                onClick={playLaserSFX}
+                                className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
+                                    isLightMode 
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-pink-500/40 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-pink-500/40'
+                                }`}
+                            >
+                                <span className="block text-2xl mb-1">⚡</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Laser Beam</span>
+                            </button>
+                            <button 
+                                onClick={playExplosionSFX}
+                                className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
+                                    isLightMode 
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-pink-500/40 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-pink-500/40'
+                                }`}
+                            >
+                                <span className="block text-2xl mb-1">💥</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Explosion</span>
+                            </button>
+                            <button 
+                                onClick={playPageTurnSFX}
+                                className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
+                                    isLightMode 
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-pink-500/40 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-pink-500/40'
+                                }`}
+                            >
+                                <span className="block text-2xl mb-1">📖</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Page Turn</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    playPageTurnSFX();
+                                    setTimeout(playLaserSFX, 200);
+                                }}
+                                className="bg-gradient-to-r from-pink-500/10 to-indigo-500/10 hover:from-pink-500/20 hover:to-indigo-500/20 border border-indigo-500/30 rounded-2xl p-5 text-center transition-all cursor-pointer group"
+                            >
+                                <span className="block text-2xl mb-1">🚀</span>
+                                <span className={`block text-xs uppercase font-mono tracking-widest group-hover:text-indigo-600 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Combo Synthesis</span>
+                            </button>
+                        </div>
+
+                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs ${isLightMode ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-400/80'}`}>
+                            <AlertTriangle size={14} className="flex-shrink-0" />
+                            Ensure your system audio is enabled to hear procedural sounds.
+                        </div>
+                    </div>
+                </div>
+
+                {/* Core Capabilities Section (Repurposed from original page bento grid) */}
+                <div id="capabilities" className="mb-24">
+                    <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
+                            <Cpu size={12} /> Chassis v3.11 Publishing Workshop
+                        </div>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Built For Dynamic Multi-Tenant Publishing</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {/* Feature 1: Story Blueprint Architect */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-indigo-500/30' 
+                            : 'glass-panel border-white/10 hover:border-indigo-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/20 shadow-inner">
+                                    <Layers size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Story Blueprint Architect</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Map chapter goals from inciting incident triggers on page 1 to decision branches on page 3, climbing to the climax on page 9. Strictly structured outline grids.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-indigo-400 uppercase mt-6 block">● CHAPTER CONTROL ACTIVE</span>
+                        </div>
+
+                        {/* Feature 2: Multi-Tenant Casting Vault */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-purple-500/30' 
+                            : 'glass-panel border-white/10 hover:border-purple-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/20 shadow-inner">
+                                    <PenTool size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Multi-Tenant Casting Vault</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Forge persistent files containing character biometrics, facial weights, clothing references, and style lock keys. Keep heroes and archenemies consistent.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-purple-400 uppercase mt-6 block">● MODEL SYNTAX LOCKED</span>
+                        </div>
+
+                        {/* Feature 3: Multi-Engine Diffusion Router */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-cyan-500/30' 
+                            : 'glass-panel border-white/10 hover:border-cyan-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/20 shadow-inner">
+                                    <Cpu size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Multi-Engine Diffusion Router</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Choose your renderer: LlamaGen.ai (Comic API) for panel grids, Stable Diffusion (via ComfyUI) for raw workflow control, Leonardo.ai (CharRef), or Gemini 2.5 Flash.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-cyan-400 uppercase mt-6 block">● DIFFUSION ENGINES STABLE</span>
+                        </div>
+
+                        {/* Feature 4: Synthesized Speech Narration */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-pink-500/30' 
+                            : 'glass-panel border-white/10 hover:border-pink-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-pink-500/10 text-pink-400 rounded-2xl flex items-center justify-center mb-6 border border-pink-500/20 shadow-inner">
+                                    <Volume2 size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Synthesized Speech Narration</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Hear dialogue panels narrated instantly! Generates character text-to-speech outputs in multiple actor voice accents alongside backing audio.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-pink-400 uppercase mt-6 block">● VOICE ENGINES READY</span>
+                        </div>
+
+                        {/* Feature 5: Procedural Soundscapes */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-emerald-500/30' 
+                            : 'glass-panel border-white/10 hover:border-emerald-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20 shadow-inner">
+                                    <Music size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Procedural Soundscapes</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Generative arpeggios, frequency oscillators, and synthesized background themes that adapt dynamically to your selected story genres.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-emerald-400 uppercase mt-6 block">● AUDIOPROCESSOR OPERATIONAL</span>
+                        </div>
+
+                        {/* Feature 6: Publishing & Export Hub */}
+                        <div className={`rounded-3xl p-8 text-left border flex flex-col justify-between transition-all ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-yellow-500/30' 
+                            : 'glass-panel border-white/10 hover:border-yellow-500/30'
+                        }`}>
+                            <div>
+                                <div className="w-14 h-14 bg-yellow-500/10 text-yellow-400 rounded-2xl flex items-center justify-center mb-6 border border-yellow-500/20 shadow-inner">
+                                    <BookOpen size={26} />
+                                </div>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Unified Book & PDF Export</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Compile completed comics directly to high-fidelity PDF documents. Automatically packages page layouts, panels, speech bubbles, and text logs.</p>
+                            </div>
+                            <span className="text-[10px] font-mono font-semibold text-yellow-400 uppercase mt-6 block">● EXPORTER STANDBY</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Upgraded Trending Universes Feed */}
+                <div id="trending" className={`flex items-center justify-between mb-10 pt-8 border-t ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
+                    <div className="flex items-center gap-3">
+                        <div className="bg-pink-500/20 p-2.5 rounded-xl border border-pink-500/30 text-pink-500">
+                            <Flame size={24} />
+                        </div>
+                        <h2 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Trending Multiverses</h2>
+                    </div>
+                    <button 
+                        onClick={handleActionLaunchSandbox}
+                        className={`flex items-center gap-1.5 text-sm font-semibold transition-colors cursor-pointer ${isLightMode ? 'text-slate-500 hover:text-slate-800' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Create Your Story <ArrowRight size={16} />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
+                    {trendingStories.map(story => (
+                        <div 
+                            key={story.id} 
+                            onClick={() => onNavigate('reader', { id: story.id })}
+                            className={`rounded-2xl overflow-hidden border transition-all duration-300 group cursor-pointer flex flex-col ${
+                                isLightMode 
+                                ? 'bg-white border-slate-250 border-slate-200 hover:border-indigo-400 hover:shadow-lg' 
+                                : 'glass-panel border-white/10 hover:border-indigo-500/40 hover:shadow-[0_10px_30px_rgba(99,102,241,0.15)]'
+                            }`}
+                        >
+                            <div className="h-56 overflow-hidden relative">
+                                <img src={story.cover} alt={story.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent opacity-85"></div>
+                                
+                                {/* Tags overlay */}
+                                <div className="absolute top-4 left-4 flex gap-2">
+                                    <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 border border-white/10 text-gray-250">
+                                        {story.type === 'Comic' ? <BookOpen size={10} className="text-indigo-400" /> : <Layers size={10} className="text-pink-400"/>}
+                                        {story.type}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-5 relative flex-1 flex flex-col justify-between">
+                                <div>
+                                    <h3 className={`text-lg font-bold mb-1 group-hover:text-indigo-500 transition-colors line-clamp-1 text-left ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{story.title}</h3>
+                                    <p className={`text-xs mb-3 text-left ${isLightMode ? 'text-slate-400' : 'text-gray-400'}`}>by @{story.creator}</p>
+                                    
+                                    <div className="flex flex-wrap gap-1.5 mb-4 justify-start">
+                                        {story.tags.map(tag => (
+                                            <span key={tag} className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${isLightMode ? 'text-slate-600 bg-slate-100 border-slate-200' : 'text-gray-400 bg-white/5 border-white/5'}`}>
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className={`flex justify-between items-center text-xs font-semibold pt-3 border-t ${isLightMode ? 'border-slate-100' : 'border-white/5'}`}>
+                                    <div className={`flex items-center gap-1 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>
+                                        <Star size={14} className="text-amber-400 fill-amber-400" /> {story.likes}
+                                    </div>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onNavigate('remix', { id: story.id });
+                                        }}
+                                        className="flex items-center gap-1 text-indigo-400 hover:text-white bg-indigo-500/10 hover:bg-indigo-600 px-3.5 py-1.5 rounded-lg transition-all border border-indigo-500/20 cursor-pointer"
+                                    >
+                                        <GitMerge size={12} /> Remix
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Pricing Section (Original copy, repurposed in high-end Glassmorphic styles) */}
+                <div id="pricing" className={`mb-24 pt-8 border-t ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
+                    <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Choose Your Multiverse Studio Tier</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Instantly deploy professional-grade publication features and take your original comics directly to your global audience.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Indie Sandbox */}
+                        <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
+                            : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
+                        }`}>
+                            <div className="space-y-4">
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Indie Sandbox</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>À La Carte</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Design in transient browser memory. Perfect for casual creators sketching out individual panel frames.</p>
+                                
+                                <div className="flex items-baseline py-2">
+                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$0</span>
+                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Forever</span>
+                                </div>
+
+                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-300 border-white/5'}`}>
+                                    <li>✓ Standard 10-page generation</li>
+                                    <li>✓ Local JSON state draft files</li>
+                                    <li>✓ Standard voice synthesis</li>
+                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Cloud backup project storage</li>
+                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Enterprise high-res styling</li>
+                                </ul>
+                            </div>
+                            <button 
+                                onClick={handleActionLaunchSandbox}
+                                className={`mt-8 w-full font-semibold py-3.5 rounded-xl border transition-all cursor-pointer ${
+                                    isLightMode 
+                                    ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
+                                }`}
+                            >
+                                Launch Sandbox Mode
+                            </button>
+                        </div>
+
+                        {/* Multiverse Pro */}
+                        <div className={`p-8 rounded-3xl text-left shadow-[0_0_30px_rgba(99,102,241,0.1)] transition-all flex flex-col justify-between relative border-2 ${
+                            isLightMode 
+                            ? 'bg-white border-indigo-400 hover:shadow-xl' 
+                            : 'glass-panel border-indigo-500/50 hover:border-indigo-400/80 hover:-translate-y-1'
+                        }`}>
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border border-indigo-400/30 shadow-md">
+                                ✨ Popular Best Value
+                            </div>
+                            <div className="space-y-4">
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Multiverse Pro</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Full Course</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Our signature recipe for continuous multi-chapter epics. Secure Web Cloud Firestore database backing.</p>
+                                
+                                <div className="flex items-baseline py-2">
+                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$19</span>
+                                    <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/ Monthly</span>
+                                </div>
+
+                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-250 border-indigo-950 text-gray-200'}`}>
+                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ Secure Web Cloud Firestore database backing</li>
+                                    <li>✓ Dynamic 10-chapter Story Blueprints</li>
+                                    <li>✓ Priority Gemini-3 Image style anchors</li>
+                                    <li>✓ Limitless character biometric vault cards</li>
+                                    <li>✓ Multi-language custom voice output synthesis</li>
+                                </ul>
+                            </div>
+                            <button 
+                                onClick={() => handleActionCheckout('Pro')}
+                                className="mt-8 w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3.5 rounded-xl border border-indigo-400/30 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                            >
+                                Access Pro Account
+                            </button>
+                        </div>
+
+                        {/* Studio Publisher */}
+                        <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
+                            isLightMode 
+                            ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
+                            : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
+                        }`}>
+                            <div className="space-y-4">
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Studio Publisher</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Multi-Course</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Our full-suite solution for professional studios managing continuous, Firestore-backed 10-chapter epic blueprints.</p>
+                                
+                                <div className="flex items-baseline py-2">
+                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$79</span>
+                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Monthly</span>
+                                </div>
+
+                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-350 border-white/5 text-gray-300'}`}>
+                                    <li>✓ Everything in Pro plan</li>
+                                    <li>✓ UHD 4K Vector generation exports</li>
+                                    <li>✓ Custom model tuning weights</li>
+                                    <li>✓ Collaborative publishing workspaces</li>
+                                    <li>✓ Dedicate GCP priority prompt endpoints</li>
+                                </ul>
+                            </div>
+                            <button 
+                                onClick={() => handleActionCheckout('Enterprise')}
+                                className={`mt-8 w-full font-semibold py-3.5 rounded-xl border transition-all cursor-pointer ${
+                                    isLightMode 
+                                    ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800' 
+                                    : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
+                                }`}
+                            >
+                                Access Enterprise Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom CTA Section */}
+                <div className={`rounded-[2.5rem] p-12 text-center max-w-5xl mx-auto space-y-6 relative overflow-hidden mb-12 border ${
+                    isLightMode 
+                    ? 'bg-white border-slate-200 shadow-xl text-slate-800' 
+                    : 'glass-panel border-white/10 text-white'
+                }`}>
+                    <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+                    <h2 className={`text-2xl sm:text-4xl font-extrabold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                        Ready to claim your place in the multiverse?
+                    </h2>
+                    <p className={`text-sm max-w-xl mx-auto leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                        Unlock the creative potential of multimodal artificial intelligence. Draft script blueprints, mold actors, and release immersive visual graphic books safely stored in Firestore today.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-sm mx-auto">
+                        <button
+                            onClick={handleActionUnlockCloud}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 py-3.5 rounded-xl transition-all cursor-pointer border border-indigo-400/20 shadow-lg"
+                        >
+                            Access Creative Console
+                        </button>
+                        <button
+                            onClick={handleActionLaunchSandbox}
+                            className={`font-semibold px-8 py-3.5 rounded-xl transition-all cursor-pointer border ${
+                                isLightMode 
+                                ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800' 
+                                : 'bg-white/5 hover:bg-white/10 text-slate-350 border-white/10'
+                            }`}
+                        >
+                            Launch local sandbox
+                        </button>
+                    </div>
+
+                    <div className={`border-t pt-8 mt-12 flex flex-col sm:flex-row justify-between items-center text-xs gap-4 ${isLightMode ? 'border-slate-100 text-slate-400' : 'border-white/5 text-gray-500'}`}>
+                        <div>
+                            © 2026 STORY.MENU. ALL RIGHTS RESERVED.
+                        </div>
+                        <div className="flex gap-4">
+                            <span>DOMAIN: <span className="text-indigo-500 font-bold">story.menu</span></span>
+                            <span>CHASSIS: <span className="text-purple-500 font-bold">MULTIVERSE v3.11</span></span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            {/* Mobile View All */}
-            <button className="w-full sm:hidden mt-8 flex items-center justify-center gap-2 bg-gray-900 border border-gray-800 py-4 rounded-2xl text-gray-300 hover:text-white transition-colors">
-                View All Community Creations <ArrowRight size={18} />
-            </button>
         </div>
     );
 }

@@ -1487,42 +1487,52 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             
                             {/* HERO CARD (BLUE THEME) */}
-                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] cursor-pointer ${
+                                 isEditorial
+                                      ? `border bg-stone-100/90 ${props.hero ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
+                                      : `border-4 bg-slate-950 ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'}`
+                            }`}>
                                  <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onHeroUpload(e.target.files[0])} />
                                  
                                  {props.hero ? (
                                       <>
                                           {/* Upper portion: Card Artwork with hover overlay */}
-                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                     <span className="sr-only">Upload Hero</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               <div className="absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]">
-                                                    HERO ACTIVE
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                                    {isEditorial ? "PROTAGONIST ACTIVE" : "HERO ACTIVE"}
                                                </div>
 
-                                               <div className="absolute inset-0 bg-blue-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
-                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
-                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-blue-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                                </div>
                                           </div>
                                           
                                           <div className="flex flex-col flex-1 justify-between pt-2">
                                                <div className="text-left">
-                                                    <span className="text-green-400 text-[9px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">⚡ IDENTITY SCANNED</span>
-                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">MAIN HERO</p>
-                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.hero.desc || "Ready for battle"}</p>
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400 animate-pulse'}`}>
+                                                         {isEditorial ? "🖋️ PROTAGONIST REGISTERED" : "⚡ IDENTITY SCANNED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "PROTAGONIST" : "MAIN HERO"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.hero.desc || (isEditorial ? "A central figure of the narrative..." : "Ready for battle")}</p>
                                                </div>
 
                                                {/* Sub-visual layout triggers */}
-                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
-                                                    <span className="text-[9px] text-blue-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <span className={`text-[9px] font-mono font-bold tracking-wide block mb-1 text-left ${isEditorial ? 'text-stone-600' : 'text-blue-400'}`}>
+                                                         {isEditorial ? "✒️ VISUAL REFERENCES:" : "🎨 DESIGN REFINEMENTS:"}
+                                                    </span>
                                                     <div className="grid grid-cols-2 gap-2">
                                                          {/* Hair/Head suggestion box */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-blue-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-blue-500'}`}>
                                                               {props.hero.headBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.hero.headBase64}`} alt="Hero Hair Detail" className="w-full h-full object-cover" />
@@ -1537,7 +1547,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">💇</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Hair / Silh" : "Style Hair"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1552,7 +1562,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                          </div>
 
                                                          {/* Clothe suggestion box */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-blue-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-blue-500'}`}>
                                                               {props.hero.clothesBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.hero.clothesBase64}`} alt="Hero Clothing Detail" className="w-full h-full object-cover" />
@@ -1567,7 +1577,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">👕</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Attire Ref" : "Outfit Ref"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1588,62 +1598,76 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       <label htmlFor="hero-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            {/* Emblem representation */}
                                            <div className="flex justify-between items-center">
-                                                <span className="bg-blue-600 text-white font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]">REQUIRED</span>
-                                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" />
+                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2.5 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]"}>REQUIRED</span>
+                                                <span className={`w-2.5 h-2.5 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
                                            </div>
 
                                            <div className="flex flex-col items-center my-auto py-2 text-center select-none">
-                                                <div className="text-blue-400 mb-2 transform group-hover:scale-110 transition-transform duration-300">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-blue-400'}`}>
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                      </svg>
                                                 </div>
-                                                <span className="font-comic text-lg text-blue-300 tracking-wide">HERO AVATAR</span>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO SCAN</span>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-blue-300'}`}>{isEditorial ? "PROTAGONIST PORTRAIT" : "HERO AVATAR"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO SCAN"}</span>
                                            </div>
 
-                                           <div className="bg-blue-950/80 border border-blue-800 text-center py-1.5 rounded font-comic text-xs text-blue-200 group-hover:bg-blue-600 group-hover:text-white transition-all cursor-pointer">
-                                                UPLOAD IMAGE
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-blue-950/80 border border-blue-800 text-blue-200 group-hover:bg-blue-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD PROTAGONIST FILE" : "UPLOAD IMAGE"}
                                            </div>
                                       </label>
                                  )}
                             </div>
 
                             {/* CO-STAR CARD (PURPLE THEME) */}
-                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.friend ? 'border-purple-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.5)]' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.3)] hover:border-purple-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] cursor-pointer ${
+                                 isEditorial
+                                      ? `border bg-stone-100/90 ${props.friend ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
+                                      : `border-4 bg-slate-950 ${props.friend ? 'border-purple-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.5)]' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.3)] hover:border-purple-500'}`
+                            }`}>
                                  <input type="file" accept="image/*" id="friend-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onFriendUpload(e.target.files[0])} />
                                  
                                  {props.friend ? (
                                       <>
-                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                     <span className="sr-only">Upload Co-Star</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               <div className="absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]">
-                                                    CO-STAR READY
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                                    {isEditorial ? "SUPPORTING CAST READY" : "CO-STAR READY"}
                                                </div>
 
-                                               <div className="absolute inset-0 bg-purple-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
-                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
-                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-purple-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                                </div>
                                           </div>
                                           
                                           <div className="flex flex-col flex-1 justify-between pt-2">
                                                <div className="text-left">
-                                                    <span className="text-green-400 text-[9px] font-mono tracking-wider font-bold animate-pulse block mb-0.5">🌟 ALLY DISCOVERED</span>
-                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">SOCIUS / SIDEKICK</p>
-                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.friend.desc || "Ready for combat support"}</p>
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400 animate-pulse'}`}>
+                                                         {isEditorial ? "📜 SUPPORTING CAST REGISTERED" : "🌟 ALLY DISCOVERED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "CO-STAR / ALLY" : "SOCIUS / SIDEKICK"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.friend.desc || (isEditorial ? "Supporting the main narrative thread..." : "Ready for combat support")}</p>
                                                </div>
 
-                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
-                                                    <span className="text-[9px] text-purple-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <span className={`text-[9px] font-mono font-bold tracking-wide block mb-1 text-left ${isEditorial ? 'text-stone-600' : 'text-purple-400'}`}>
+                                                         {isEditorial ? "✒️ VISUAL REFERENCES:" : "🎨 DESIGN REFINEMENTS:"}
+                                                    </span>
                                                     <div className="grid grid-cols-2 gap-2">
                                                          {/* Hair/Head detail */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-purple-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-purple-500'}`}>
                                                               {props.friend.headBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.friend.headBase64}`} alt="CoStar Hair Detail" className="w-full h-full object-cover" />
@@ -1658,7 +1682,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">💇</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Hair / Silh" : "Style Hair"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1673,7 +1697,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                          </div>
 
                                                          {/* Clothing reference */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-purple-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-purple-500'}`}>
                                                               {props.friend.clothesBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.friend.clothesBase64}`} alt="CoStar Clothing Detail" className="w-full h-full object-cover" />
@@ -1688,7 +1712,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">👕</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Attire Ref" : "Outfit Ref"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1708,62 +1732,76 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  ) : (
                                       <label htmlFor="friend-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
-                                                <span className="bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full">OPTIONAL</span>
-                                                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>OPTIONAL</span>
+                                                <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-purple-500'}`} />
                                            </div>
 
                                            <div className="flex flex-col items-center my-auto py-2 text-center select-none">
-                                                <div className="text-purple-400 mb-2 transform group-hover:scale-110 transition-transform duration-300">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-purple-400'}`}>
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94-3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                                                      </svg>
                                                 </div>
-                                                <span className="font-comic text-lg text-purple-300 tracking-wide">SIDEKICK GRID</span>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO JOIN</span>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-purple-300'}`}>{isEditorial ? "SUPPORTING CAST" : "SIDEKICK GRID"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO JOIN"}</span>
                                            </div>
 
-                                           <div className="bg-purple-950/80 border border-purple-800 text-center py-1.5 rounded font-comic text-xs text-purple-200 group-hover:bg-purple-600 group-hover:text-white transition-all cursor-pointer">
-                                                UPLOAD PHOTO
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-purple-950/80 border border-purple-800 text-purple-200 group-hover:bg-purple-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD CAST FILE" : "UPLOAD PHOTO"}
                                            </div>
                                       </label>
                                  )}
                             </div>
 
                             {/* VILLAIN CARD (RED THEME) */}
-                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden border-4 bg-slate-950 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] ${props.villain ? 'border-red-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:border-red-500'} cursor-pointer`}>
+                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] cursor-pointer ${
+                                 isEditorial
+                                      ? `border bg-stone-100/90 ${props.villain ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
+                                      : `border-4 bg-slate-950 ${props.villain ? 'border-red-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:border-red-500'}`
+                            }`}>
                                  <input type="file" accept="image/*" id="villain-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onVillainUpload(e.target.files[0])} />
                                  
                                  {props.villain ? (
                                       <>
-                                          <div className="relative w-full h-40 mt-3 rounded-lg overflow-hidden border-2 border-black group/main min-h-[160px]">
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                     <span className="sr-only">Upload Villain</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                                
-                                               <div className="absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse">
-                                                    NEMESIS ACTIVE
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
+                                                    {isEditorial ? "ANTAGONIST ACTIVE" : "NEMESIS ACTIVE"}
                                                </div>
 
-                                               <div className="absolute inset-0 bg-red-950/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
-                                                    <span className="text-yellow-400 font-comic text-xs font-bold uppercase tracking-wider">CHANGE PROFILE</span>
-                                                    <span className="text-gray-300 text-[8px] font-mono mt-0.5">CLICK TO SWAP</span>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-red-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                                </div>
                                           </div>
                                           
                                           <div className="flex flex-col flex-1 justify-between pt-2">
                                                <div className="text-left">
-                                                    <span className="text-red-500 text-[9px] font-mono tracking-wider font-bold block mb-0.5">⚠️ MENACE UNLEASHED</span>
-                                                    <p className="text-white font-comic text-sm leading-none uppercase tracking-wide truncate">ARC-RIVAL</p>
-                                                    <p className="text-gray-300 text-[9.5px] line-clamp-1 mt-0.5 font-sans">{props.villain.desc || "Plotting doom..."}</p>
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-red-500'}`}>
+                                                         {isEditorial ? "⚖️ CONFLICT CORE REGISTERED" : "⚠️ MENACE UNLEASHED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.villain.desc || (isEditorial ? "The central source of narrative tension..." : "Plotting doom...")}</p>
                                                </div>
 
-                                               <div className="mt-2.5 pt-2 border-t border-slate-800">
-                                                    <span className="text-[9px] text-red-400 font-mono font-bold tracking-wide block mb-1 text-left">🎨 DESIGN REFINEMENTS:</span>
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <span className={`text-[9px] font-mono font-bold tracking-wide block mb-1 text-left ${isEditorial ? 'text-stone-600' : 'text-red-400'}`}>
+                                                         {isEditorial ? "✒️ VISUAL REFERENCES:" : "🎨 DESIGN REFINEMENTS:"}
+                                                    </span>
                                                     <div className="grid grid-cols-2 gap-2">
                                                          {/* Hair/Head detail */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-red-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-red-500'}`}>
                                                               {props.villain.headBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.villain.headBase64}`} alt="Villain Hair Detail" className="w-full h-full object-cover" />
@@ -1778,7 +1816,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">💇</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Style Hair</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Hair / Silh" : "Style Hair"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1793,7 +1831,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                          </div>
 
                                                          {/* Clothing reference */}
-                                                         <div className="relative bg-slate-900 border border-slate-800 hover:border-red-500 rounded p-1 transition-all">
+                                                         <div className={`relative rounded p-1 transition-all ${isEditorial ? 'bg-stone-200/50 border border-stone-300 hover:border-stone-400' : 'bg-slate-900 border border-slate-800 hover:border-red-500'}`}>
                                                               {props.villain.clothesBase64 ? (
                                                                    <div className="relative w-full h-12 rounded overflow-hidden">
                                                                         <img src={`data:image/jpeg;base64,${props.villain.clothesBase64}`} alt="Villain Clothing Detail" className="w-full h-full object-cover" />
@@ -1808,7 +1846,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               ) : (
                                                                    <label className="w-full h-12 flex flex-col items-center justify-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                                                         <span className="text-xs">👕</span>
-                                                                        <span className="text-[8px] text-slate-400 font-mono uppercase tracking-tight leading-none mt-0.5">Outfit Ref</span>
+                                                                        <span className={`text-[8px] font-mono uppercase tracking-tight leading-none mt-0.5 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{isEditorial ? "Attire Ref" : "Outfit Ref"}</span>
                                                                         <input 
                                                                              type="file" 
                                                                              accept="image/*" 
@@ -1828,23 +1866,27 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  ) : (
                                       <label htmlFor="villain-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
-                                                <span className="bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full">OPTIONAL</span>
-                                                <span className="w-2 h-2 rounded-full bg-red-600" />
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>OPTIONAL</span>
+                                                <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-red-600'}`} />
                                            </div>
 
                                            <div className="flex flex-col items-center my-auto py-2 text-center select-none">
-                                                <div className="text-red-500 mb-2 transform group-hover:scale-110 transition-transform duration-300">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-red-500'}`}>
                                                      <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M112.236 10.97a9.236 9.236 0 11-18.472 0 9.236 9.236 0 0118.472 0zm-1.89 12.394A4.484 4.484 0 0012 10.5a4.484 4.484 0 00-1.654-3.464M18.364 5.636a9 9 0 010 12.728m-1.414-1.414a7 7 0 000-9.9" />
+                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m-1.414-1.414a7 7 0 000-9.9" />
                                                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
                                                      </svg>
                                                 </div>
-                                                <span className="font-comic text-lg text-red-300 tracking-wide">ARC-RIVAL</span>
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-mono mt-1">CLICK TO ENGAGE</span>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-red-300'}`}>{isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO ENGAGE"}</span>
                                            </div>
 
-                                           <div className="bg-red-950/80 border border-red-900 text-center py-1.5 rounded font-comic text-xs text-red-200 group-hover:bg-red-600 group-hover:text-white transition-all cursor-pointer">
-                                                UPLOAD PHOTO
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-red-950/80 border border-red-900 text-red-200 group-hover:bg-red-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD ANTAGONIST FILE" : "UPLOAD PHOTO"}
                                            </div>
                                       </label>
                                  )}
@@ -1854,12 +1896,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                         {/* CHARACTER VAULT SAVED ITEMS MODULE */}
                         {savedCharacters.length > 0 && (
-                            <div className="mt-5 pt-4 border-t-2 border-slate-700">
+                            <div className={`mt-5 pt-4 border-t-2 ${isEditorial ? 'border-stone-200' : 'border-slate-700'}`}>
                                 <div className="flex justify-between items-center mb-2.5">
-                                     <span className="font-comic text-xs uppercase text-yellow-300 font-bold tracking-wider">
-                                          🗃️ Character Vault (Saved in pg DB)
+                                     <span className={isEditorial ? "font-sans text-xs uppercase text-stone-700 font-black tracking-wider" : "font-comic text-xs uppercase text-yellow-300 font-bold tracking-wider"}>
+                                          {isEditorial ? "🗃️ Character Index (Stored Profiles)" : "🗃️ Character Vault (Saved in pg DB)"}
                                      </span>
-                                     <span className="text-[10px] font-mono text-slate-400">
+                                     <span className={`text-[10px] font-mono ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
                                           {savedCharacters.length} active profiles
                                      </span>
                                 </div>
@@ -1867,9 +1909,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      {savedCharacters.map((char) => (
                                           <div 
                                                key={char.id} 
-                                               className="flex-shrink-0 w-36 bg-slate-900 border-2 border-black rounded-lg p-2 flex flex-col justify-between group/vault relative text-left"
+                                               className={`flex-shrink-0 w-36 rounded-lg p-2 flex flex-col justify-between group/vault relative text-left ${
+                                                    isEditorial 
+                                                         ? 'bg-stone-205 border border-stone-300' 
+                                                         : 'bg-slate-900 border-2 border-black'
+                                               }`}
                                           >
-                                               <div className="relative h-20 w-full mb-1 bg-slate-950 rounded overflow-hidden">
+                                               <div className={`relative h-20 w-full mb-1 rounded overflow-hidden ${isEditorial ? 'bg-stone-200' : 'bg-slate-950'}`}>
                                                     {char.image_url ? (
                                                          <img 
                                                               src={char.image_url.startsWith('data:') ? char.image_url : `data:image/jpeg;base64,${char.image_url}`} 
@@ -1877,7 +1923,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               className="w-full h-full object-cover select-none" 
                                                          />
                                                     ) : (
-                                                         <div className="w-full h-full flex items-center justify-center text-xs font-mono text-slate-400">
+                                                         <div className={`w-full h-full flex items-center justify-center text-xs font-mono ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
                                                               [No Avatar]
                                                          </div>
                                                     )}
@@ -1892,15 +1938,22 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     </button>
                                                </div>
                                                <div>
-                                                    <p className="font-comic text-xs font-bold text-gray-200 uppercase truncate leading-tight select-none">
+                                                    <p className={`text-xs uppercase truncate leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-850' : 'font-comic font-bold text-gray-200'}`}>
                                                          {char.character_name}
                                                     </p>
-                                                    <span className={`text-[9px] font-mono uppercase px-1 py-0.2 rounded border border-black inline-block mt-0.5 select-none ${
-                                                         char.role_type === 'Hero' ? 'bg-blue-900/40 text-blue-300 border-blue-800' :
-                                                         char.role_type === 'Co-Star' ? 'bg-purple-900/40 text-purple-300 border-purple-800' :
-                                                         'bg-red-900/40 text-red-300 border-red-800'
+                                                    <span className={`text-[9px] font-mono uppercase px-1 py-0.2 rounded border inline-block mt-0.5 select-none ${
+                                                         isEditorial
+                                                              ? char.role_type === 'Hero' ? 'bg-stone-200 text-stone-700 border-stone-300' :
+                                                                char.role_type === 'Co-Star' ? 'bg-stone-200 text-stone-700 border-stone-300' :
+                                                                'bg-stone-300 text-stone-800 border-stone-400'
+                                                              : char.role_type === 'Hero' ? 'bg-blue-900/40 text-blue-300 border-blue-800 border-black' :
+                                                                char.role_type === 'Co-Star' ? 'bg-purple-900/40 text-purple-300 border-purple-800 border-black' :
+                                                                'bg-red-900/40 text-red-300 border-red-800 border-black'
                                                     }`}>
-                                                         {char.role_type}
+                                                         {isEditorial 
+                                                              ? char.role_type === 'Hero' ? 'Protagonist' : char.role_type === 'Co-Star' ? 'Supporting' : 'Antagonist'
+                                                              : char.role_type
+                                                         }
                                                     </span>
                                                </div>
                                                
@@ -1912,9 +1965,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               else if (char.role_type === 'Co-Star') props.onSelectFriend(persona);
                                                               else if (char.role_type === 'Villain') props.onSelectVillain(persona);
                                                          }}
-                                                         className="bg-zinc-805 hover:bg-yellow-400 font-comic text-[10px] text-gray-300 hover:text-black py-0.5 uppercase tracking-wide rounded border border-black transition-colors"
+                                                         className={`text-[10px] py-0.5 uppercase tracking-wide rounded border transition-colors ${
+                                                              isEditorial
+                                                                   ? 'bg-stone-200 hover:bg-[#3c3730] text-stone-700 hover:text-white border-stone-300 font-sans font-bold'
+                                                    : 'bg-zinc-805 hover:bg-yellow-400 font-comic text-gray-300 hover:text-black border-black'
+                                                         }`}
                                                     >
-                                                         CAST ROLE
+                                                         {isEditorial ? "ASSIGN ROLE" : "CAST ROLE"}
                                                     </button>
                                                </div>
                                           </div>
@@ -1924,27 +1981,46 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         )}
 
                         {/* CHARACTER VISUAL COHESION CONTROLS (HAIR & OUTIFT STYLING) */}
-                        <div className="mt-4 bg-slate-900 border-4 border-black p-5 rounded-lg text-left shadow-[4px_4px_0px_#000]">
+                        <div className={`mt-4 p-5 rounded-lg text-left ${
+                             isEditorial 
+                                  ? 'bg-stone-100/90 border border-stone-300 shadow-sm' 
+                                  : 'bg-slate-900 border-4 border-black shadow-[4px_4px_0px_#000]'
+                        }`}>
                              <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-xl">💈</span>
-                                  <span className="font-comic text-sm uppercase text-green-400 font-extrabold tracking-wider animate-pulse">
-                                       Character Visual Cohesion & Design Coordinates
+                                  <span className="text-xl">{isEditorial ? '✒️' : '💈'}</span>
+                                  <span className={
+                                       isEditorial 
+                                            ? "font-sans text-sm uppercase text-stone-700 font-black tracking-wider" 
+                                            : "font-comic text-sm uppercase text-green-400 font-extrabold tracking-wider animate-pulse"
+                                  }>
+                                       {isEditorial ? "Character Cohesion & Editorial Style Sheets" : "Character Visual Cohesion & Design Coordinates"}
                                   </span>
                              </div>
-                             <p className="text-xs text-gray-300 mb-4 font-sans leading-relaxed">
-                                  Specify matching hairstyles, garments, and distinctive accessories below. To guarantee absolute design consistency across generated panels, our AI engines enforce these descriptors recursively into every scene's prompt layout.
+                             <p className={`text-xs mb-4 font-sans leading-relaxed ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>
+                                  {isEditorial 
+                                       ? "Specify character descriptions, garments, and recurring motifs. To ensure style continuity across generated manuscript chapters, these visual anchors are blended dynamically into every scene composition."
+                                       : "Specify matching hairstyles, garments, and distinctive accessories below. To guarantee absolute design consistency across generated panels, our AI engines enforce these descriptors recursively into every scene's prompt layout."
+                                  }
                              </p>
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-blue-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                  <div className={`flex flex-col gap-1 p-3.5 rounded ${
+                                       isEditorial 
+                                            ? 'bg-stone-200/40 border border-stone-300' 
+                                            : 'bg-slate-950 p-3.5 border border-blue-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]'
+                                  }`}>
                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="block text-[10.5px] font-mono text-blue-400 uppercase font-bold tracking-wide">
-                                                 Hero Dress & Hair Design
+                                            <label className={`block text-[10.5px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black tracking-wider' : 'font-mono text-blue-400'}`}>
+                                                 {isEditorial ? "Protagonist Visual Reference" : "Hero Dress & Hair Design"}
                                             </label>
                                             <button
                                                  type="button"
                                                  onClick={() => handleSuggestField('heroVisuals', props.heroVisuals)}
                                                  disabled={suggestingFields['heroVisuals']}
-                                                 className="text-[9.5px] bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                                 className={`text-[9.5px] rounded px-2 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                      isEditorial
+                                                           ? 'bg-stone-200 hover:bg-stone-300 text-stone-700 border border-stone-300 font-sans'
+                                                           : 'bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40 font-comic tracking-wide'
+                                                 }`}
                                             >
                                                  {suggestingFields['heroVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
                                             </button>
@@ -1953,26 +2029,38 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             rows={4}
                                             value={props.heroVisuals} 
                                             onChange={(e) => props.onHeroVisualsChange(e.target.value)} 
-                                            placeholder="e.g. silver messy hair, glowing neon superhero nanosuit with silver shoulder plates" 
-                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-blue-500 font-sans"
+                                            placeholder={isEditorial ? "e.g. dark hair with silver streaks, classic tweed jacket, wireframe spectacles" : "e.g. silver messy hair, glowing neon superhero nanosuit with silver shoulder plates"} 
+                                            className={`w-full text-xs p-2.5 h-28 resize-y rounded focus:outline-none font-sans ${
+                                                 isEditorial
+                                                      ? 'bg-white border border-stone-350 text-stone-900 focus:border-stone-500'
+                                                      : 'bg-slate-900 border-2 border-black text-white focus:border-blue-500'
+                                            }`}
                                        />
                                        <div className="mt-1.5 flex flex-col gap-0.5">
-                                            <span className="text-[9px] text-blue-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
-                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
-                                                 "charcoal combat gi, spiky crimson hair, gold gauntlets"
+                                            <span className={`text-[9px] font-mono uppercase font-bold ${isEditorial ? 'text-stone-500' : 'text-blue-400/90'}`}>{isEditorial ? "Suggested Visual Motifs:" : "Suggested Palettes:"}</span>
+                                            <span className={`text-[9.5px] font-sans italic leading-tight ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
+                                                 {isEditorial ? '"charcoal coat, silver pocketwatch, brushed back hair"' : '"charcoal combat gi, spiky crimson hair, gold gauntlets"'}
                                             </span>
                                        </div>
                                   </div>
-                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-purple-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                  <div className={`flex flex-col gap-1 p-3.5 rounded ${
+                                       isEditorial 
+                                            ? 'bg-stone-200/40 border border-stone-300' 
+                                            : 'bg-slate-950 p-3.5 border border-purple-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]'
+                                  }`}>
                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="block text-[10.5px] font-mono text-purple-400 uppercase font-bold tracking-wide">
-                                                 Co-Star Dress & Hair Design
+                                            <label className={`block text-[10.5px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black tracking-wider' : 'font-mono text-purple-400'}`}>
+                                                 {isEditorial ? "Supporting Cast Visual Reference" : "Co-Star Dress & Hair Design"}
                                             </label>
                                             <button
                                                  type="button"
                                                  onClick={() => handleSuggestField('friendVisuals', props.friendVisuals)}
                                                  disabled={suggestingFields['friendVisuals'] || !props.friend}
-                                                 className="text-[9.5px] bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                                 className={`text-[9.5px] rounded px-2 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                      isEditorial
+                                                           ? 'bg-stone-200 hover:bg-stone-300 text-stone-700 border border-stone-300 font-sans'
+                                                           : 'bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-comic tracking-wide'
+                                                 }`}
                                             >
                                                  {suggestingFields['friendVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
                                             </button>
@@ -1982,26 +2070,38 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             value={props.friendVisuals} 
                                             onChange={(e) => props.onFriendVisualsChange(e.target.value)} 
                                             disabled={!props.friend}
-                                            placeholder={props.friend ? "e.g. auburn ponytail, leather bomber jacket" : "Upload Co-Star character layout first."} 
-                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-purple-500 disabled:opacity-40 font-sans"
+                                            placeholder={props.friend ? (isEditorial ? "e.g. auburn ponytail, wool trenchcoat" : "e.g. auburn ponytail, leather bomber jacket") : (isEditorial ? "Upload Supporting Cast profile first." : "Upload Co-Star character layout first.")} 
+                                            className={`w-full text-xs p-2.5 h-28 resize-y rounded focus:outline-none disabled:opacity-40 font-sans ${
+                                                 isEditorial
+                                                      ? 'bg-white border border-stone-350 text-stone-900 focus:border-stone-500'
+                                                      : 'bg-slate-900 border-2 border-black text-white focus:border-purple-500'
+                                            }`}
                                        />
                                        <div className="mt-1.5 flex flex-col gap-0.5">
-                                            <span className="text-[9px] text-purple-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
-                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
-                                                 "green aviator jumpsuit, short brunette bob hair"
+                                            <span className={`text-[9px] font-mono uppercase font-bold ${isEditorial ? 'text-stone-500' : 'text-purple-400/90'}`}>{isEditorial ? "Suggested Visual Motifs:" : "Suggested Palettes:"}</span>
+                                            <span className={`text-[9.5px] font-sans italic leading-tight ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
+                                                 {isEditorial ? '"emerald scarf, gold rimmed glasses, auburn bob hair"' : '"green aviator jumpsuit, short brunette bob hair"'}
                                             </span>
                                        </div>
                                   </div>
-                                  <div className="flex flex-col gap-1 bg-slate-950 p-3.5 rounded border border-red-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]">
+                                  <div className={`flex flex-col gap-1 p-3.5 rounded ${
+                                       isEditorial 
+                                            ? 'bg-stone-200/40 border border-stone-300' 
+                                            : 'bg-slate-950 p-3.5 border border-red-500/30 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]'
+                                  }`}>
                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="block text-[10.5px] font-mono text-red-400 uppercase font-bold tracking-wide">
-                                                 Nemesis Dress & Hair Design
+                                            <label className={`block text-[10.5px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black tracking-wider' : 'font-mono text-red-400'}`}>
+                                                 {isEditorial ? "Antagonist Visual Reference" : "Nemesis Dress & Hair Design"}
                                             </label>
                                             <button
                                                  type="button"
                                                  onClick={() => handleSuggestField('villainVisuals', props.villainVisuals)}
                                                  disabled={suggestingFields['villainVisuals'] || !props.villain}
-                                                 className="text-[9.5px] bg-red-900/60 hover:bg-red-850 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase transition-all"
+                                                 className={`text-[9.5px] rounded px-2 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                      isEditorial
+                                                           ? 'bg-stone-200 hover:bg-stone-300 text-stone-700 border border-stone-300 font-sans'
+                                                           : 'bg-red-900/60 hover:bg-red-850 text-red-200 border border-red-500/40 font-comic tracking-wide'
+                                                 }`}
                                             >
                                                  {suggestingFields['villainVisuals'] ? '✨ SUGGESTING...' : '✨ AI SUGGEST'}
                                             </button>
@@ -2011,25 +2111,33 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             value={props.villainVisuals} 
                                             onChange={(e) => props.onVillainVisualsChange(e.target.value)} 
                                             disabled={!props.villain}
-                                            placeholder={props.villain ? "e.g. slick black hair, dark high-collar robe" : "Upload Nemesis character layout first."} 
-                                            className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 h-28 resize-y rounded focus:outline-none focus:border-red-500 disabled:opacity-40 font-sans"
+                                            placeholder={props.villain ? (isEditorial ? "e.g. slick black hair, dark high-collar robe" : "e.g. slick black hair, dark high-collar robe") : (isEditorial ? "Upload Antagonist profile first." : "Upload Nemesis character layout first.")} 
+                                            className={`w-full text-xs p-2.5 h-28 resize-y rounded focus:outline-none disabled:opacity-40 font-sans ${
+                                                 isEditorial
+                                                      ? 'bg-white border border-stone-350 text-stone-900 focus:border-stone-500'
+                                                      : 'bg-slate-900 border-2 border-black text-white focus:border-red-500'
+                                            }`}
                                        />
                                        <div className="mt-1.5 flex flex-col gap-0.5">
-                                            <span className="text-[9px] text-red-400/90 font-mono uppercase font-bold">Suggested Palettes:</span>
-                                            <span className="text-[9.5px] text-slate-400 font-sans italic leading-tight">
-                                                 "regal dark obsidian heavy mantle, white slicked hair"
-                                             </span>
-                                        </div>
-                                   </div>
-                                                                      {/* Structured Nemesis Identity Schema (Commercial Grade) */}
-                                   <div className="md:col-span-3 mt-4 border-2 border-red-500/30 bg-slate-950 p-4 rounded shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-red-500/20 pb-3 mb-3 gap-2">
+                                            <span className={`text-[9px] font-mono uppercase font-bold ${isEditorial ? 'text-stone-500' : 'text-red-400/90'}`}>{isEditorial ? "Suggested Visual Motifs:" : "Suggested Palettes:"}</span>
+                                            <span className={`text-[9.5px] font-sans italic leading-tight ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
+                                                 {isEditorial ? '"heavy charcoal cloak, slicked back dark hair"' : '"regal dark obsidian heavy mantle, white slicked hair"'}
+                                            </span>
+                                       </div>
+                                  </div>
+                                  {/* Structured Nemesis Identity Schema (Commercial Grade) */}
+                                  <div className={`md:col-span-3 mt-4 p-4 rounded ${
+                                       isEditorial 
+                                            ? 'border border-stone-300 bg-stone-50' 
+                                            : 'border-2 border-red-500/30 bg-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.8)]'
+                                  }`}>
+                                        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-3 gap-2 ${isEditorial ? 'border-stone-200' : 'border-red-500/20'}`}>
                                              <div className="flex flex-col text-left">
-                                                  <span className="text-xs font-comic font-black text-red-400 uppercase tracking-wide flex items-center gap-1.5 leading-tight select-none">
-                                                       🔒 Nemesis Identity Schema (Google Firestore Sync Layer)
+                                                  <span className={`text-xs uppercase tracking-wide flex items-center gap-1.5 leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-700' : 'font-comic font-black text-red-400'}`}>
+                                                       {isEditorial ? "🔒 Antagonist Archetype Schema (Persistent Character Model)" : "🔒 Nemesis Identity Schema (Google Firestore Sync Layer)"}
                                                   </span>
-                                                  <span className="text-[10px] text-gray-400 font-mono">
-                                                       Decoupled Persistence & Adaptive Layers • Attention Weights Matrix
+                                                  <span className={`text-[10px] ${isEditorial ? 'text-stone-500 font-sans' : 'text-gray-400 font-mono'}`}>
+                                                       {isEditorial ? "Structured narrative constants and visual attention locks" : "Decoupled Persistence & Adaptive Layers • Attention Weights Matrix"}
                                                   </span>
                                              </div>
                                              <button
@@ -2055,18 +2163,22 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        props.onNemesisDnaChange(defaultSchema);
                                                        props.onVillainDnaChange(JSON.stringify(defaultSchema));
                                                   }}
-                                                  className="self-start sm:self-center text-[9.5px] bg-red-950/65 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2.5 py-1 font-comic font-bold uppercase transition-all tracking-wide disabled:opacity-40"
+                                                  className={`self-start sm:self-center text-[9.5px] rounded px-2.5 py-1 font-bold uppercase transition-all tracking-wide disabled:opacity-40 ${
+                                                       isEditorial
+                                                            ? 'bg-stone-200 hover:bg-[#3c3730] text-stone-700 hover:text-white border border-stone-300 font-sans'
+                                                            : 'bg-red-955/65 hover:bg-red-900 text-red-200 border border-red-500/40 font-comic'
+                                                  }`}
                                                   disabled={!props.villain}
                                              >
-                                                  ✨ RESET SCHEMA CONSTANTS
+                                                  {isEditorial ? "✨ RESET NARRATIVE SCHEMAS" : "✨ RESET SCHEMA CONSTANTS"}
                                              </button>
                                         </div>
 
                                         {/* Persistence Layer inputs */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
-                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
-                                                       🧬 Biometric Backbone (Likeness)
+                                             <div className={`flex flex-col gap-1 p-2 rounded border text-left ${isEditorial ? 'bg-stone-105 border-stone-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                                                  <label className={`text-[10px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black' : 'font-mono text-red-400'}`}>
+                                                       {isEditorial ? "🧬 Physical Characteristics (Likeness)" : "🧬 Biometric Backbone (Likeness)"}
                                                   </label>
                                                   <textarea
                                                        value={props.nemesisDNA?.persistence_layer?.biometric_backbone || ""}
@@ -2083,14 +2195,18 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        }}
                                                        disabled={!props.villain}
                                                        rows={3}
-                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
+                                                            isEditorial
+                                                                 ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                 : 'bg-slate-950 text-white focus:border-red-500 border-slate-800'
+                                                       }`}
                                                        placeholder="Core physical features and likeness anchors..."
                                                   />
                                              </div>
 
-                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
-                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
-                                                       🔩 Structural Constants (Anchors)
+                                             <div className={`flex flex-col gap-1 p-2 rounded border text-left ${isEditorial ? 'bg-stone-105 border-stone-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                                                  <label className={`text-[10px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black' : 'font-mono text-red-400'}`}>
+                                                       {isEditorial ? "🔩 Distinctive Accessories (Details)" : "🔩 Structural Constants (Anchors)"}
                                                   </label>
                                                   <textarea
                                                        value={props.nemesisDNA?.persistence_layer?.structural_constants || ""}
@@ -2107,14 +2223,18 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        }}
                                                        disabled={!props.villain}
                                                        rows={3}
-                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
+                                                            isEditorial
+                                                                 ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                 : 'bg-slate-950 text-white focus:border-red-500 border-slate-800'
+                                                       }`}
                                                        placeholder="Piercings, scars, jewelry, micro-anchors..."
                                                   />
                                              </div>
 
-                                             <div className="flex flex-col gap-1 bg-slate-900/60 p-2 rounded border border-slate-800 text-left">
-                                                  <label className="text-[10px] font-mono text-red-400 uppercase font-bold tracking-wide">
-                                                       🎨 Chromatic Anchor (Lighting)
+                                             <div className={`flex flex-col gap-1 p-2 rounded border text-left ${isEditorial ? 'bg-stone-105 border-stone-200' : 'bg-slate-900/60 border-slate-800'}`}>
+                                                  <label className={`text-[10px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black' : 'font-mono text-red-400'}`}>
+                                                       {isEditorial ? "🎨 Contrast & Tone Guidelines (Atmosphere)" : "🎨 Chromatic Anchor (Lighting)"}
                                                   </label>
                                                   <textarea
                                                        value={props.nemesisDNA?.persistence_layer?.chromatic_anchor || ""}
@@ -2131,20 +2251,24 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        }}
                                                        disabled={!props.villain}
                                                        rows={3}
-                                                       className="w-full bg-slate-950 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans border border-slate-800"
+                                                       className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
+                                                            isEditorial
+                                                                 ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                 : 'bg-slate-950 text-white focus:border-red-500 border-slate-800'
+                                                       }`}
                                                        placeholder="Contrast parameters, spotlight anchors, tones..."
                                                   />
                                              </div>
                                         </div>
 
                                         {/* Adaptive Layer inputs */}
-                                        <div className="border-t border-slate-800/80 pt-3 mb-4 text-left font-sans">
+                                        <div className={`pt-3 mb-4 text-left font-sans border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800/80'}`}>
                                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                                                  <span className="text-[11px] font-mono text-cyan-400 uppercase font-bold tracking-wide">
-                                                       🕶️ Adaptive Dressing (Active Wardrobe Closet)
+                                                  <span className={`text-[11px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-700 font-black' : 'font-mono text-cyan-400'}`}>
+                                                       {isEditorial ? "🕶️ Attire Variations (Scene Clothing Closet)" : "🕶️ Adaptive Dressing (Active Wardrobe Closet)"}
                                                   </span>
                                                   <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
-                                                       <span className="text-[10px] text-gray-400 font-sans">Presets:</span>
+                                                       <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>Presets:</span>
                                                        <select
                                                             onChange={(e) => {
                                                                  const updated = {
@@ -2158,23 +2282,29 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                  props.onVillainDnaChange(JSON.stringify(updated));
                                                             }}
                                                             disabled={!props.villain}
-                                                            className="bg-slate-900 text-gray-300 border border-slate-700/60 rounded text-[10px] px-2 py-0.5"
+                                                            className={`rounded text-[10px] px-2 py-0.5 border ${
+                                                                 isEditorial 
+                                                                      ? 'bg-white border-stone-300 text-stone-700' 
+                                                                      : 'bg-slate-900 text-gray-300 border-slate-700/60'
+                                                            }`}
                                                        >
                                                             <option value="A tailored charcoal evening dress with hidden utility structural seams and a concealed thigh-holster line">
-                                                                 👗 Evening Gown: High-Society Couture
+                                                                 {isEditorial ? "👗 Formal/Elegant Attire" : "👗 Evening Gown: High-Society Couture"}
                                                             </option>
                                                             <option value="A high-mobility cybernetic stealth bodysuit with integrated cooling lines and lightweight carbon-fiber plating">
-                                                                 🥷 Stealth Armor: Shadow-OPS Nanosuit
+                                                                 {isEditorial ? "🥷 Minimalist/Tactical Ensemble" : "🥷 Stealth Armor: Shadow-OPS Nanosuit"}
                                                             </option>
                                                             <option value="A heavy charcoal leather duster coat over high-collar tactical body Kevlar mesh with holographic communications cuff">
-                                                                 🌋 Post-Apocalyptic: Obsidian Combat Trenchcoat
+                                                                 {isEditorial ? "🌋 Outdoor/Heavy Duster Coat" : "🌋 Post-Apocalyptic: Obsidian Combat Trenchcoat"}
                                                             </option>
                                                        </select>
                                                   </div>
                                              </div>
                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                   <div className="flex flex-col gap-1">
-                                                       <label className="text-[9.5px] text-gray-400 uppercase font-semibold">Sartorial Style Theme</label>
+                                                       <label className={`text-[9.5px] uppercase font-semibold ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                                                            {isEditorial ? "Sartorial Style / Theme" : "Sartorial Style Theme"}
+                                                       </label>
                                                        <input
                                                             type="text"
                                                             value={props.nemesisDNA?.adaptive_layer?.sartorial_style || ""}
@@ -2190,11 +2320,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                  props.onVillainDnaChange(JSON.stringify(updated));
                                                             }}
                                                             disabled={!props.villain}
-                                                            className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-2 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                            className={`w-full text-xs p-2 rounded focus:outline-none font-sans border ${
+                                                                 isEditorial
+                                                                      ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                      : 'bg-slate-900 border-slate-800 text-white focus:border-red-500'
+                                                            }`}
                                                        />
                                                   </div>
                                                   <div className="flex flex-col gap-1">
-                                                       <label className="text-[9.5px] text-gray-400 uppercase font-semibold">Current Scene Combat Closet</label>
+                                                       <label className={`text-[9.5px] uppercase font-semibold ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                                                            {isEditorial ? "Current Scene Active Outfit" : "Current Scene Combat Closet"}
+                                                       </label>
                                                        <input
                                                             type="text"
                                                             value={props.nemesisDNA?.adaptive_layer?.active_wardrobe || ""}
@@ -2210,41 +2346,45 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                  props.onVillainDnaChange(JSON.stringify(updated));
                                                             }}
                                                             disabled={!props.villain}
-                                                            className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-2 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                            className={`w-full text-xs p-2 rounded focus:outline-none font-sans border ${
+                                                                 isEditorial
+                                                                      ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                      : 'bg-slate-900 border-slate-800 text-white focus:border-red-500'
+                                                            }`}
                                                        />
                                                   </div>
                                              </div>
                                         </div>
 
                                         {/* Coordinate Attention Weighting Details */}
-                                        <div className="border-t border-slate-800/80 pt-3 mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-left">
+                                        <div className={`pt-3 mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-left border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800/80'}`}>
                                              <div className="flex flex-col gap-1 w-full md:w-auto">
-                                                  <label className="text-[10px] font-mono text-yellow-400 uppercase font-bold tracking-wide flex items-center gap-1">
-                                                       🔒 Attention Matrix Descriptors Locked:
+                                                  <label className={`text-[10px] uppercase font-bold tracking-wide flex items-center gap-1 ${isEditorial ? 'font-sans text-stone-700 font-black' : 'font-mono text-yellow-400'}`}>
+                                                       {isEditorial ? "🔒 Continuity Constraints Locked:" : "🔒 Attention Matrix Descriptors Locked:"}
                                                   </label>
                                                   <div className="flex flex-wrap gap-1.5 mt-1">
-                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
                                                             <span>wavy hair</span>
-                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
                                                        </span>
-                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
                                                             <span>calculating hazel eyes</span>
-                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
                                                        </span>
-                                                       <span className="text-[9px] font-mono bg-red-950 border border-red-500/30 text-red-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
                                                             <span>snake ear-cuff</span>
-                                                            <span className="text-[7.5px] bg-red-700 text-white px-1 font-bold rounded-sm">1.4 Locked</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
                                                        </span>
-                                                       <span className="text-[9px] font-mono bg-blue-950 border border-blue-500/30 text-blue-200 rounded px-2 py-0.5 flex items-center gap-1">
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-blue-950 border-blue-500/30 text-blue-200'}`}>
                                                             <span>evening dress</span>
-                                                            <span className="text-[7.5px] bg-blue-600 text-white px-1 font-bold rounded-sm">1.1 Adapt</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-400 text-stone-100 font-sans' : 'bg-blue-600 text-white'}`}>1.1 Adapt</span>
                                                        </span>
                                                   </div>
                                              </div>
                                              <div className="flex gap-3 items-center w-full md:w-auto mt-2 md:mt-0">
                                                   <div className="flex flex-col gap-1 w-1/2 md:w-32">
-                                                       <label className="text-[9px] text-gray-400 uppercase">Cohesion Weight</label>
-                                                       <div className="flex border border-slate-700 rounded overflow-hidden">
+                                                       <label className={`text-[9px] uppercase ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>{isEditorial ? "Cohesion Strength" : "Cohesion Weight"}</label>
+                                                       <div className={`flex rounded overflow-hidden border ${isEditorial ? 'border-stone-300' : 'border-slate-700'}`}>
                                                             {(['LOW', 'MEDIUM', 'HIGH'] as const).map((w) => (
                                                                  <button
                                                                       key={w}
@@ -2263,8 +2403,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                       disabled={!props.villain}
                                                                       className={`flex-1 text-[8.5px] py-1 font-mono uppercase font-black transition-colors ${
                                                                            props.nemesisDNA?.rendering_directives?.continuity_weight === w
-                                                                                ? 'bg-red-600 text-white'
-                                                                                : 'bg-slate-900 text-gray-400 hover:text-white'
+                                                                                ? isEditorial ? 'bg-[#3c3730] text-stone-50' : 'bg-red-600 text-white'
+                                                                                : isEditorial ? 'bg-stone-200 text-stone-600 hover:bg-stone-300' : 'bg-slate-900 text-gray-400 hover:text-white'
                                                                       }`}
                                                                  >
                                                                       {w}
@@ -2273,7 +2413,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        </div>
                                                   </div>
                                                   <div className="flex flex-col gap-1 w-1/2 md:w-44">
-                                                       <label className="text-[9px] text-gray-400 uppercase">Art Style Lock</label>
+                                                       <label className={`text-[9px] uppercase ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>{isEditorial ? "Visual Style Continuity" : "Art Style Lock"}</label>
                                                             <input
                                                                  type="text"
                                                                  value={props.nemesisDNA?.rendering_directives?.art_style_lock || ""}
@@ -2289,7 +2429,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                       props.onVillainDnaChange(JSON.stringify(updated));
                                                                  }}
                                                                  disabled={!props.villain}
-                                                                 className="w-full bg-slate-900 border border-slate-800 text-white text-xs p-1 rounded focus:outline-none focus:border-red-500 font-sans"
+                                                                 className={`w-full text-xs p-1 rounded focus:outline-none font-sans border ${
+                                                                      isEditorial 
+                                                                           ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500' 
+                                                                           : 'bg-slate-900 border-slate-800 text-white focus:border-red-500'
+                                                                 }`}
                                                             />
                                                        </div>
                                                   </div>
@@ -2322,14 +2466,18 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             <button 
                                                 key={g}
                                                 onClick={() => props.onGenreChange(g)}
-                                                className={`py-2 px-3 text-left border-2 rounded transition-all duration-150 transform flex items-center gap-1.5 ${
+                                                className={`py-2 px-3 text-left rounded transition-all duration-150 transform flex items-center gap-1.5 ${
                                                     isSelected 
-                                                    ? 'bg-yellow-400 text-black border-black font-bold -rotate-1 translate-x-px translate-y-px shadow-[2px_2px_0px_rgba(0,0,0,1)]' 
-                                                    : 'bg-slate-900 text-gray-300 border-slate-700 hover:bg-slate-750 hover:text-white hover:border-gray-500 hover:-translate-y-px shadow-sm'
+                                                    ? (isEditorial
+                                                        ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm'
+                                                        : 'bg-yellow-400 text-black border-2 border-black font-bold -rotate-1 translate-x-px translate-y-px shadow-[2px_2px_0px_rgba(0,0,0,1)]')
+                                                    : (isEditorial
+                                                        ? 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-100 hover:text-stone-900 hover:border-stone-400'
+                                                        : 'bg-slate-900 text-gray-300 border-2 border-slate-700 hover:bg-slate-750 hover:text-white hover:border-gray-500 hover:-translate-y-px shadow-sm')
                                                 }`}
                                             >
                                                 <span className="text-base select-none">{genreIcons[g] || "📖"}</span>
-                                                <span className="font-comic text-xs tracking-wide uppercase truncate">{g}</span>
+                                                <span className={`text-xs tracking-wide uppercase truncate ${isEditorial ? 'font-sans font-medium' : 'font-comic'}`}>{g}</span>
                                             </button>
                                         );
                                     })}
@@ -2338,7 +2486,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                             {/* Dense Grid chips for Common Languages */}
                             <div>
-                                <p className="font-comic text-base tracking-wide text-cyan-400 uppercase mb-2">Multilingual Lexicon (Language)</p>
+                                <p className={isEditorial
+                                    ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
+                                    : 'font-comic text-base tracking-wide text-cyan-400 uppercase mb-2'}>
+                                    {isEditorial ? 'Output Language' : 'Multilingual Lexicon (Language)'}
+                                </p>
                                 <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
                                      {LANGUAGES.map((l) => {
                                          const isSelected = props.selectedLanguage === l.code;
@@ -2346,10 +2498,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                              <button
                                                  key={l.code}
                                                  onClick={() => props.onLanguageChange(l.code)}
-                                                 className={`text-[10px] px-2 py-1 font-mono uppercase font-bold tracking-tight rounded-md border-2 transition-all ${
+                                                 className={`text-[10px] px-2 py-1 uppercase font-bold tracking-tight rounded-md transition-all ${
                                                      isSelected
-                                                     ? 'bg-cyan-400 text-black border-black shadow-[1px_1px_0px_black]'
-                                                     : 'bg-slate-900 text-gray-400 border-slate-700 hover:text-white hover:border-gray-500'
+                                                     ? (isEditorial
+                                                         ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm font-sans'
+                                                         : 'bg-cyan-400 text-black border-2 border-black shadow-[1px_1px_0px_black] font-mono')
+                                                     : (isEditorial
+                                                         ? 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-100 hover:text-stone-800 hover:border-stone-400 font-sans'
+                                                         : 'bg-slate-900 text-gray-400 border-2 border-slate-700 hover:text-white hover:border-gray-500 font-mono')
                                                  }`}
                                              >
                                                  {l.name}
@@ -2361,7 +2517,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                             {/* Narrator TTS Pick Option */}
                             <div>
-                                <p className="font-comic text-base tracking-wide text-purple-300 uppercase mb-2">Voice Narrator (Gemini Audio)</p>
+                                <p className={isEditorial
+                                    ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
+                                    : 'font-comic text-base tracking-wide text-purple-300 uppercase mb-2'}>
+                                    {isEditorial ? 'Narration Voice' : 'Voice Narrator (Gemini Audio)'}
+                                </p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
                                      {VOICES.map((v) => {
                                          const isSelected = props.selectedVoice === v.id;
@@ -2370,10 +2530,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                              <button
                                                  key={v.id}
                                                  onClick={() => props.onVoiceChange(v.id)}
-                                                 className={`flex items-center gap-2 px-3 py-1.5 text-left rounded border-2 transition-all text-xs ${
+                                                 className={`flex items-center gap-2 px-3 py-1.5 text-left rounded transition-all text-xs ${
                                                      isSelected
-                                                     ? 'bg-purple-600 text-white border-black shadow-[2px_2px_0px_black] scale-[1.01] font-bold'
-                                                     : 'bg-slate-900 text-gray-400 border-slate-700 hover:text-white hover:border-gray-500'
+                                                     ? (isEditorial
+                                                         ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm'
+                                                         : 'bg-purple-600 text-white border-2 border-black shadow-[2px_2px_0px_black] scale-[1.01] font-bold')
+                                                     : (isEditorial
+                                                         ? 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-100 hover:text-stone-800 hover:border-stone-400'
+                                                         : 'bg-slate-900 text-gray-400 border-2 border-slate-700 hover:text-white hover:border-gray-500')
                                                  }`}
                                              >
                                                  <span className="text-sm select-none">{emoji}</span>
@@ -2388,59 +2552,111 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             {props.selectedGenre === 'Custom' && (
                                 <div className="animate-fadeIn">
                                     <div className="flex items-center justify-between mb-1">
-                                         <p className="font-comic text-xs tracking-wide text-red-400 uppercase">Enter Your Unique Multiverse Concept</p>
+                                         <p className={isEditorial
+                                             ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase'
+                                             : 'font-comic text-xs tracking-wide text-red-400 uppercase'}>
+                                             {isEditorial ? 'Describe Your Custom Genre' : 'Enter Your Unique Multiverse Concept'}
+                                         </p>
                                          <button
                                               type="button"
                                               onClick={() => handleSuggestField('customPremise', props.customPremise)}
                                               disabled={suggestingFields['customPremise']}
-                                              className="text-[9.5px] bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase"
+                                              className={isEditorial
+                                                  ? 'text-[9.5px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-300 rounded px-2 py-0.5 font-sans tracking-wide transition-all disabled:opacity-40 font-semibold uppercase'
+                                                  : 'text-[9.5px] bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
                                          >
-                                              {suggestingFields['customPremise'] ? '✨ THINKING...' : '✨ AI SUGGEST'}
+                                              {suggestingFields['customPremise'] ? (isEditorial ? '✨ Thinking…' : '✨ THINKING...') : (isEditorial ? '✨ AI Suggest' : '✨ AI SUGGEST')}
                                          </button>
                                     </div>
                                     <textarea 
                                         value={props.customPremise} 
                                         onChange={(e) => props.onPremiseChange(e.target.value)} 
-                                        placeholder="Space cats fighting medieval robot wizards in a neon cathedral..." 
-                                        className="w-full p-2 bg-slate-950 border-2 border-black text-white text-xs font-sans h-16 resize-none rounded shadow-[inset_0px_2px_6px_rgba(0,0,0,0.8)] focus:outline-none focus:border-yellow-400 transition-colors" 
+                                        placeholder={isEditorial
+                                            ? "e.g., A Victorian-era botanist unravels an ancient conspiracy through encrypted herbarium notes…"
+                                            : "Space cats fighting medieval robot wizards in a neon cathedral..."} 
+                                        className={isEditorial
+                                            ? 'w-full p-2 bg-white border border-stone-300 text-stone-800 text-xs font-sans h-16 resize-none rounded shadow-sm focus:outline-none focus:border-stone-500 transition-colors'
+                                            : 'w-full p-2 bg-slate-950 border-2 border-black text-white text-xs font-sans h-16 resize-none rounded shadow-[inset_0px_2px_6px_rgba(0,0,0,0.8)] focus:outline-none focus:border-yellow-400 transition-colors'}
                                     />
                                 </div>
                             )}
 
                             {/* ADVANCED STORY DIRECTIONS & NARRATIVE DIRECTIVES */}
-                            <div className="border-t border-slate-700/60 pt-4 mt-2 font-comic text-left">
+                            <div className={`border-t pt-4 mt-2 text-left ${isEditorial ? 'border-stone-200' : 'border-slate-700/60 font-comic'}`}>
                                 {/* Header with neon elements */}
                                 <div className="flex flex-col mb-2.5">
                                      <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-1.5 animate-pulse">
-                                               <span className="text-base">🔮</span>
-                                               <span className="font-comic text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider" style={{ textShadow: '1px 1px 0px black' }}>
-                                                    Saga Blueprint Console
+                                          <div className={`flex items-center gap-1.5 ${isEditorial ? '' : 'animate-pulse'}`}>
+                                               <span className="text-base">{isEditorial ? '📋' : '🔮'}</span>
+                                               <span className={isEditorial
+                                                   ? 'font-sans text-[13px] font-bold uppercase text-stone-700 tracking-wider'
+                                                   : 'font-comic text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider'}
+                                                   style={isEditorial ? {} : { textShadow: '1px 1px 0px black' }}>
+                                                    {isEditorial ? 'Story Blueprint & Guidelines' : 'Saga Blueprint Console'}
                                                </span>
                                           </div>
                                           <button
                                                type="button"
                                                onClick={() => handleSuggestField('creativeDirectives', props.creativeDirectives)}
                                                disabled={suggestingFields['creativeDirectives']}
-                                               className="text-[9px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/40 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-bold uppercase hover:text-white"
+                                               className={isEditorial
+                                                   ? 'text-[9px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-300 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-semibold uppercase font-sans'
+                                                   : 'text-[9px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/40 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-bold uppercase hover:text-white'}
                                           >
-                                               {suggestingFields['creativeDirectives'] ? '⚡ AI THINKING...' : '✨ AI GENERATE BLUEPRINT'}
+                                               {suggestingFields['creativeDirectives']
+                                                   ? (isEditorial ? '✨ Thinking…' : '⚡ AI THINKING...')
+                                                   : (isEditorial ? '✨ AI Draft' : '✨ AI GENERATE BLUEPRINT')}
                                           </button>
                                      </div>
-                                     <span className="text-[10px] text-slate-400 mt-1 leading-normal font-sans">
-                                          Specify plot outlines, milestones, customer spotlights, or custom narrative formulas.
+                                     <span className={`text-[10px] mt-1 leading-normal font-sans ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
+                                          {isEditorial
+                                              ? 'Outline plot structure, chapter goals, themes, and any narrative constraints for your manuscript.'
+                                              : 'Specify plot outlines, milestones, customer spotlights, or custom narrative formulas.'}
                                      </span>
                                 </div>
 
                                 {/* PRESETS CONTAINER WITH ACCORDION / CONTAINER CARDS */}
-                                <div className="bg-slate-900/60 border-2 border-black rounded p-3.5 mb-4 shadow-[inner_0px_2px_8px_rgba(0,0,0,0.5)]">
-                                     <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold font-mono block mb-2">
-                                          ⚡ Choose Predefined Narrative Blueprint
+                                <div className={isEditorial
+                                    ? 'bg-stone-100/70 border border-stone-200 rounded-xl p-3.5 mb-4'
+                                    : 'bg-slate-900/60 border-2 border-black rounded p-3.5 mb-4 shadow-[inner_0px_2px_8px_rgba(0,0,0,0.5)]'}>
+                                     <span className={`text-[10px] uppercase tracking-widest font-bold block mb-2 ${isEditorial ? 'text-stone-500 font-sans' : 'text-gray-400 font-mono'}`}>
+                                          {isEditorial ? '📚 Structural Templates' : '⚡ Choose Predefined Narrative Blueprint'}
                                      </span>
 
                                      {/* Horizontal Scroll of presets cards */}
                                      <div className="flex gap-2.5 overflow-x-auto pb-2 mb-3.5 custom-scrollbar snap-x">
-                                          {[
+                                          {(isEditorial ? [
+                                               {
+                                                    name: "Three-Act Structure",
+                                                    emoji: "📐",
+                                                    desc: "Classic setup, confrontation, resolution arc.",
+                                                    prompt: "STRUCTURE: THREE-ACT NARRATIVE\n[ACT 1 — SETUP]: Introduce protagonist in their ordinary world, establish the inciting incident.\n[ACT 2 — CONFRONTATION]: Rising stakes, character growth, midpoint revelation.\n[ACT 3 — RESOLUTION]: Climax confrontation, denouement, thematic resonance."
+                                               },
+                                               {
+                                                    name: "Hero's Journey",
+                                                    emoji: "🗺️",
+                                                    desc: "Departure, initiation, and return.",
+                                                    prompt: "STRUCTURE: HERO'S JOURNEY (CAMPBELL)\n[CALL TO ADVENTURE]: Protagonist receives the call and initially refuses.\n[CROSSING THE THRESHOLD]: Commits to the journey, enters the unknown.\n[ORDEAL]: Faces the central crisis — death and rebirth motif.\n[RETURN]: Brings wisdom or a gift back to the ordinary world."
+                                               },
+                                               {
+                                                    name: "In Medias Res",
+                                                    emoji: "⚡",
+                                                    desc: "Start at the dramatic peak, then unfold.",
+                                                    prompt: "STRUCTURE: IN MEDIAS RES\n[OPENING]: Begin at the height of action — mid-scene, mid-crisis.\n[FLASHBACK]: Weave in backstory through memory, dialogue, and discovery.\n[REVELATION]: The past catches up and recontextualises the opening."
+                                               },
+                                               {
+                                                    name: "Parallel Narratives",
+                                                    emoji: "🔀",
+                                                    desc: "Two timelines converging on one truth.",
+                                                    prompt: "STRUCTURE: PARALLEL NARRATIVES\n[TIMELINE A]: Contemporary storyline revealing the present consequences.\n[TIMELINE B]: Historical or past storyline revealing origins.\n[CONVERGENCE]: Both timelines intersect in a climactic revelation that recontextualises both."
+                                               },
+                                               {
+                                                    name: "Epistolary Form",
+                                                    emoji: "✉️",
+                                                    desc: "Told through letters, journals, documents.",
+                                                    prompt: "STRUCTURE: EPISTOLARY NARRATIVE\n[FORMAT]: Story told through letters, diary entries, news clippings, and documents.\n[UNRELIABLE NARRATOR]: Each document reveals only a partial truth.\n[COLLAGE EFFECT]: Reader assembles the full picture from fragmented sources."
+                                               }
+                                          ] : [
                                                {
                                                     name: "Episodic Campaign",
                                                     emoji: "📺",
@@ -2471,22 +2687,26 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     desc: "Déjà-vu, cosmic countdowns, quantum anomalies.",
                                                     prompt: "BLUEPRINT: TEMPORAL MATRIX PARADOX\n[GENRE INTEGRATION]: High-tech retro-futurism.\n[SCENESTART]: Temporal lab inside a raging celestial solar storm.\n[NARRATIVE CONSTRAINT]: Every character has slight déjà-vu, noticing identical recurring audio ticks. The clock displays a countdown sequence that matches their heartbeats."
                                                }
-                                          ].map((item) => (
+                                          ]).map((item) => (
                                                <button
                                                     key={item.name}
                                                     type="button"
                                                     onClick={() => props.onCreativeDirectivesChange(item.prompt)}
-                                                    className="flex-shrink-0 w-36 bg-slate-950 border border-slate-700/60 hover:border-yellow-400 p-2 text-left rounded-md transition-all snap-start"
+                                                    className={`flex-shrink-0 w-36 p-2 text-left rounded-md transition-all snap-start ${isEditorial
+                                                        ? 'bg-white border border-stone-200 hover:border-stone-500 hover:shadow-sm'
+                                                        : 'bg-slate-950 border border-slate-700/60 hover:border-yellow-400'}`}
                                                >
                                                     <div className="flex items-center gap-1 mb-1">
                                                          <span className="text-sm">{item.emoji}</span>
-                                                         <span className="text-[10px] font-black text-white uppercase tracking-wider truncate block w-full">{item.name}</span>
+                                                         <span className={`text-[10px] uppercase tracking-wider truncate block w-full ${isEditorial ? 'font-semibold text-stone-800 font-sans' : 'font-black text-white'}`}>{item.name}</span>
                                                     </div>
-                                                    <p className="text-[9px] text-gray-400 font-sans leading-tight line-clamp-2 h-6">
+                                                    <p className={`text-[9px] font-sans leading-tight line-clamp-2 h-6 ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
                                                          {item.desc}
                                                     </p>
-                                                    <span className="text-[8px] bg-cyan-950 text-cyan-300 px-1 py-0.5 rounded font-black tracking-wide uppercase font-mono block text-center mt-1.5 border border-cyan-800/30">
-                                                         APPLY SETUP
+                                                    <span className={`text-[8px] px-1 py-0.5 rounded tracking-wide uppercase block text-center mt-1.5 ${isEditorial
+                                                        ? 'bg-stone-100 text-stone-600 border border-stone-200 font-semibold font-sans'
+                                                        : 'bg-cyan-950 text-cyan-300 font-black font-mono border border-cyan-800/30'}`}>
+                                                         {isEditorial ? 'Use Template' : 'APPLY SETUP'}
                                                     </span>
                                                </button>
                                           ))}
@@ -2494,18 +2714,25 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                      {/* Quick formatting Insert Tags */}
                                      <div>
-                                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 font-mono">
-                                               ➕ Click To Insert Story anchors / tags
+                                          <span className={`text-[9px] font-bold uppercase tracking-widest block mb-1.5 ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-400 font-mono'}`}>
+                                               {isEditorial ? '➕ Insert narrative anchors' : '➕ Click To Insert Story anchors / tags'}
                                           </span>
                                           <div className="flex flex-wrap gap-1">
-                                               {[
+                                               {(isEditorial ? [
+                                                    { label: "Chapter Goal", tag: "[CHAPTER GOAL]: " },
+                                                    { label: "Theme", tag: "[THEME]: " },
+                                                    { label: "Tone", tag: "[TONE]: " },
+                                                    { label: "Character Arc", tag: "[CHARACTER ARC]: " },
+                                                    { label: "Turning Point", tag: "[TURNING POINT]: " },
+                                                    { label: "Subtext", tag: "[SUBTEXT]: " }
+                                               ] : [
                                                     { label: "Plot Constraint", tag: "[PLOT CONSTRAINT]: " },
                                                     { label: "Key Artifact", tag: "[KEY ARTIFACT]: " },
                                                     { label: "Dialogue Style", tag: "[DIALOGUE STYLE]: " },
                                                     { label: "Saga Milestone", tag: "[SAGA MILESTONE]: " },
                                                     { label: "Client Monument", tag: "[CLIENT MONUMENT]: " },
                                                     { label: "CliffHanger", tag: "[CLIFFHANGER]: " }
-                                               ].map((tagObj) => (
+                                               ]).map((tagObj) => (
                                                     <button
                                                          key={tagObj.label}
                                                          type="button"
@@ -2514,7 +2741,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               const spacing = currentVal ? (currentVal.endsWith("\n") ? "" : "\n") : "";
                                                               props.onCreativeDirectivesChange(currentVal + spacing + tagObj.tag);
                                                          }}
-                                                         className="text-[8.5px] bg-slate-950 hover:bg-slate-800 text-gray-300 font-sans tracking-wide px-1.5 py-0.5 rounded border border-slate-800 hover:border-cyan-500/50 transition-colors uppercase font-bold"
+                                                         className={`text-[8.5px] font-sans tracking-wide px-1.5 py-0.5 rounded transition-colors uppercase font-bold ${isEditorial
+                                                             ? 'bg-white hover:bg-stone-100 text-stone-600 border border-stone-200 hover:border-stone-400'
+                                                             : 'bg-slate-950 hover:bg-slate-800 text-gray-300 border border-slate-800 hover:border-cyan-500/50'}`}
                                                     >
                                                          + {tagObj.label}
                                                     </button>
@@ -2525,75 +2754,91 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                 {/* Deep Textarea layout */}
                                 <div className="space-y-1 mb-4">
-                                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
-                                          GUIDELINES FIELD (AI or Author Prompts)
+                                     <label className={`text-[10px] font-bold uppercase tracking-wider block ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-400 font-mono'}`}>
+                                          {isEditorial ? 'Story Guidelines & Author Notes' : 'GUIDELINES FIELD (AI or Author Prompts)'}
                                      </label>
                                      <textarea 
                                          value={props.creativeDirectives} 
                                          onChange={(e) => props.onCreativeDirectivesChange(e.target.value)} 
-                                         placeholder="e.g., Weave in a client spotlight where they discover a transformative artifact, start the scene in a futuristic solar storm, highlight values of perseverance, or ensure a specific golden emblem is found..." 
-                                         className="w-full p-3 bg-slate-950 border-2 border-black text-white text-xs font-sans h-32 resize-y rounded shadow-[inset_0px_2px_6px_rgba(0,0,0,0.8)] focus:outline-none focus:border-cyan-400 transition-colors" 
+                                         placeholder={isEditorial
+                                             ? "e.g., Explore themes of grief and resilience. Keep the prose lyrical with short chapters. Each scene should reveal one character secret. The ending must be ambiguous…"
+                                             : "e.g., Weave in a client spotlight where they discover a transformative artifact, start the scene in a futuristic solar storm, highlight values of perseverance, or ensure a specific golden emblem is found..."} 
+                                         className={isEditorial
+                                             ? 'w-full p-3 bg-white border border-stone-300 text-stone-800 text-xs font-sans h-32 resize-y rounded shadow-sm focus:outline-none focus:border-stone-500 transition-colors'
+                                             : 'w-full p-3 bg-slate-950 border-2 border-black text-white text-xs font-sans h-32 resize-y rounded shadow-[inset_0px_2px_6px_rgba(0,0,0,0.8)] focus:outline-none focus:border-cyan-400 transition-colors'}
                                      />
-                                     <div className="flex items-center justify-between text-[9px] text-gray-500 font-mono">
+                                     <div className={`flex items-center justify-between text-[9px] font-mono ${isEditorial ? 'text-stone-400' : 'text-gray-500'}`}>
                                           <span>Characters: {(props.creativeDirectives || "").length}</span>
-                                          <span>Fully compatible with server custom story synthesis</span>
+                                          <span>{isEditorial ? 'Influences narrative generation' : 'Fully compatible with server custom story synthesis'}</span>
                                      </div>
                                 </div>
 
-                                {/* COMPELLING COHESIVE SYSTEM STORY SUMMARY - "GUIDELINE DOSSIER" */}
-                                <div className="border border-slate-800 hover:border-cyan-900/60 transition-colors bg-slate-950/70 rounded-md p-3 font-comic text-left relative overflow-hidden">
-                                     <div className="absolute top-0 right-0 h-10 w-10 bg-cyan-500/5 blur-2xl rounded-full" />
+                                {/* COMPILED GUIDELINE DOSSIER */}
+                                <div className={`transition-colors rounded-md p-3 text-left relative overflow-hidden ${isEditorial
+                                    ? 'border border-stone-200 hover:border-stone-400 bg-stone-50'
+                                    : 'border border-slate-800 hover:border-cyan-900/60 bg-slate-950/70 font-comic'}`}>
+                                     {!isEditorial && <div className="absolute top-0 right-0 h-10 w-10 bg-cyan-500/5 blur-2xl rounded-full" />}
                                      
-                                     <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-                                          <div className="flex items-center gap-1.5 font-comic">
-                                               <span className="text-yellow-400">📋</span>
-                                               <span className="text-[10px] font-black tracking-wider text-yellow-400 uppercase">
-                                                    COMPILED GUIDELINE DOSSIER
+                                     <div className={`flex items-center justify-between pb-1.5 mb-2 ${isEditorial ? 'border-b border-stone-200' : 'border-b border-slate-800'}`}>
+                                          <div className="flex items-center gap-1.5">
+                                               <span className={isEditorial ? 'text-stone-600' : 'text-yellow-400'}>📋</span>
+                                               <span className={`text-[10px] font-black tracking-wider uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-yellow-400'}`}>
+                                                    {isEditorial ? 'Active Story Configuration' : 'COMPILED GUIDELINE DOSSIER'}
                                                </span>
                                           </div>
-                                          <span className="text-[8px] bg-emerald-950 text-emerald-400 font-mono border border-emerald-800/40 uppercase font-bold px-1.5 rounded tracking-widest animate-pulse">
-                                               ● READY FOR CHAPTER GEN
+                                          <span className={`text-[8px] border uppercase font-bold px-1.5 rounded tracking-widest animate-pulse ${isEditorial
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                              : 'bg-emerald-950 text-emerald-400 font-mono border-emerald-800/40'}`}>
+                                               {isEditorial ? '● Ready' : '● READY FOR CHAPTER GEN'}
                                           </span>
                                      </div>
 
-                                     <p className="text-[10.5px] text-gray-300 leading-normal mb-3 leading-relaxed font-sans">
-                                          This compiles the full context of the active chapter script guidelines, merging selected paths, lexicon systems, custom-authored concepts, and active narrations before submitting to the Multiverse story story generation.
+                                     <p className={`text-[10.5px] leading-normal mb-3 leading-relaxed font-sans ${isEditorial ? 'text-stone-500' : 'text-gray-300'}`}>
+                                          {isEditorial
+                                              ? 'Summarises your active genre, language, narration voice, and any custom guidelines before passing to the manuscript generation engine.'
+                                              : 'This compiles the full context of the active chapter script guidelines, merging selected paths, lexicon systems, custom-authored concepts, and active narrations before submitting to the Multiverse story generation.'}
                                      </p>
 
                                      {/* Guideline parameter pills */}
                                      <div className="grid grid-cols-2 md:grid-cols-1 xl:grid-cols-2 gap-1.5 font-sans">
-                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
-                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">STORY PATH (GENRE)</span>
-                                               <span className="text-[10.5px] text-white font-extrabold font-comic">
+                                          <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
+                                               <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Genre' : 'STORY PATH (GENRE)'}</span>
+                                               <span className={`text-[10.5px] font-extrabold ${isEditorial ? 'text-stone-800 font-sans' : 'text-white font-comic'}`}>
                                                     {genreIcons[props.selectedGenre] || "📖"} {props.selectedGenre || "Custom"}
                                                </span>
                                           </div>
 
-                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
-                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">LEXICON SYSTEM</span>
-                                               <span className="text-[10.5px] text-cyan-300 font-bold uppercase font-mono">
+                                          <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
+                                               <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Language' : 'LEXICON SYSTEM'}</span>
+                                               <span className={`text-[10.5px] font-bold uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-cyan-300 font-mono'}`}>
                                                     🌐 {LANGUAGES.find(l => l.code === props.selectedLanguage)?.name || props.selectedLanguage}
                                                </span>
                                           </div>
 
-                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded">
-                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">AUDITORY SOUNDTRACK</span>
-                                               <span className="text-[10.5px] text-yellow-300 font-semibold truncate block">
-                                                    🎵 {props.soundPrompt || "Standard Cinematic Soundtrack"}
+                                          <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
+                                               <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Ambient Sound' : 'AUDITORY SOUNDTRACK'}</span>
+                                               <span className={`text-[10.5px] font-semibold truncate block ${isEditorial ? 'text-stone-600 font-sans' : 'text-yellow-300'}`}>
+                                                    🎵 {props.soundPrompt || (isEditorial ? "No ambient sound set" : "Standard Cinematic Soundtrack")}
                                                </span>
                                           </div>
 
-                                          <div className="bg-slate-900/80 p-1.5 border border-slate-800 rounded font-sans">
-                                               <span className="text-[8px] text-slate-500 uppercase block font-bold font-mono">STORY OUTLINE TYPE</span>
-                                               <span className="text-[10.5px] text-purple-300 font-medium font-comic block">
-                                                    {props.creativeDirectives ? "📝 Author Blueprint Customised" : "🤖 Standard Co-Creative Formula"}
+                                          <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
+                                               <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Story Template' : 'STORY OUTLINE TYPE'}</span>
+                                               <span className={`text-[10.5px] font-medium block ${isEditorial ? 'text-stone-700 font-sans' : 'text-purple-300 font-comic'}`}>
+                                                    {props.creativeDirectives
+                                                        ? (isEditorial ? "📝 Custom guidelines active" : "📝 Author Blueprint Customised")
+                                                        : (isEditorial ? "📖 Default narrative formula" : "🤖 Standard Co-Creative Formula")}
                                                </span>
                                           </div>
                                      </div>
 
                                      {props.creativeDirectives && (
-                                          <div className="mt-2 text-[9px] bg-slate-900/40 p-2 border border-slate-800 rounded font-sans leading-relaxed text-slate-400">
-                                               <span className="font-bold text-slate-300 uppercase block mb-1">🔍 ACTIVE AUTHOR OUTLINE CAPTIONS:</span>
+                                          <div className={`mt-2 text-[9px] p-2 rounded font-sans leading-relaxed ${isEditorial
+                                              ? 'bg-stone-100 border border-stone-200 text-stone-500'
+                                              : 'bg-slate-900/40 border border-slate-800 text-slate-400'}`}>
+                                               <span className={`font-bold uppercase block mb-1 ${isEditorial ? 'text-stone-600' : 'text-slate-300'}`}>
+                                                    {isEditorial ? '🔍 Active author guidelines:' : '🔍 ACTIVE AUTHOR OUTLINE CAPTIONS:'}
+                                               </span>
                                                <p className="line-clamp-2 italic">
                                                     "{props.creativeDirectives}"
                                                </p>
@@ -2602,43 +2847,60 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             </div>
 
-                            {/* Beautiful Slider Toggles for soundtrack & Mode */}
-                            <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-700 mt-2">
+                            {/* Slider Toggles for soundtrack & Mode */}
+                            <div className={`flex flex-col gap-2.5 pt-3 border-t mt-2 ${isEditorial ? 'border-stone-200' : 'border-slate-700'}`}>
                                 {props.soundtrackEnabled && (
-                                     <div className="flex flex-col gap-1.5 mb-2 bg-slate-950 p-2.5 rounded border border-yellow-500/30 animate-fadeIn text-left">
+                                     <div className={`flex flex-col gap-1.5 mb-2 p-2.5 rounded animate-fadeIn text-left ${isEditorial
+                                         ? 'bg-stone-100 border border-stone-200'
+                                         : 'bg-slate-950 border border-yellow-500/30'}`}>
                                          <div className="flex items-center justify-between">
-                                              <span className="text-[10.5px] font-mono text-yellow-500 uppercase font-bold tracking-wide">
-                                                   🎵 Generative Auditory Bibles & Sound Prompts
+                                              <span className={`text-[10.5px] uppercase font-bold tracking-wide ${isEditorial ? 'font-sans text-stone-600' : 'font-mono text-yellow-500'}`}>
+                                                   {isEditorial ? '🎵 Ambient Sound & Atmosphere' : '🎵 Generative Auditory Bibles & Sound Prompts'}
                                               </span>
                                               <button
                                                    type="button"
                                                    onClick={() => handleSuggestField('soundPrompt', props.soundPrompt)}
                                                    disabled={suggestingFields['soundPrompt']}
-                                                   className="text-[9.5px] bg-yellow-950/60 hover:bg-yellow-900 text-yellow-200 border border-yellow-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase"
+                                                   className={isEditorial
+                                                       ? 'text-[9.5px] bg-stone-200 hover:bg-stone-300 text-stone-600 border border-stone-300 rounded px-2 py-0.5 font-sans tracking-wide transition-all disabled:opacity-40 font-semibold uppercase'
+                                                       : 'text-[9.5px] bg-yellow-950/60 hover:bg-yellow-900 text-yellow-200 border border-yellow-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
                                               >
-                                                   {suggestingFields['soundPrompt'] ? '✨ THINKING...' : '✨ AI SUGGEST'}
+                                                   {suggestingFields['soundPrompt']
+                                                       ? (isEditorial ? '✨ Thinking…' : '✨ THINKING...')
+                                                       : (isEditorial ? '✨ AI Suggest' : '✨ AI SUGGEST')}
                                               </button>
                                          </div>
                                          <input 
                                              type="text"
                                              value={props.soundPrompt} 
                                              onChange={(e) => props.onSoundPromptChange(e.target.value)} 
-                                             placeholder="e.g. 80s arcade synthesizer, cosmic cyberbass, retro spooky pipe organ" 
-                                             className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-yellow-400 font-sans"
+                                             placeholder={isEditorial
+                                                 ? "e.g. Melancholic piano, rain on cobblestones, candlelit library ambience"
+                                                 : "e.g. 80s arcade synthesizer, cosmic cyberbass, retro spooky pipe organ"} 
+                                             className={isEditorial
+                                                 ? 'w-full bg-white border border-stone-300 text-stone-800 text-xs p-2 rounded focus:outline-none focus:border-stone-500 font-sans'
+                                                 : 'w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-yellow-400 font-sans'}
                                          />
                                          {/* Clickable Sound Presets */}
                                          <div className="mt-2 flex flex-wrap gap-1.5">
-                                              {[
+                                              {(isEditorial ? [
+                                                   { label: "🕯️ Candlelit", value: "Soft crackling fireplace with gentle rain on old windows and distant clock chimes" },
+                                                   { label: "☕ Coffee Shop", value: "Warm café ambience with soft jazz piano and quiet background murmur" },
+                                                   { label: "🌿 Forest", value: "Gentle forest birdsong, rustling leaves, and a distant stream in a quiet woodland glade" },
+                                                   { label: "🌊 Coastal", value: "Melancholic coastal wind with slow tide, distant foghorn, and solitary seabird calls" }
+                                              ] : [
                                                    { label: "⚡ J-Rock Anime", value: "High-octane energetic J-Rock Anime OST with driving electric guitars and heavy synthesizer lead" },
                                                    { label: "🏺 Tomb Flute", value: "Eerie ancient wooden flute melody echoed inside a deep sandstone tomb with heavy orchestral drone chords" },
                                                    { label: "🌌 Cyberbass", value: "Low-frequency cosmic cyberbass rumble, retro hardware sequencer patterns and mechanical synth soundscapes" },
                                                    { label: "🎻 Cathedral", value: "Chilling, gothic pipe organ progressions with rain and distant low thunder ambience" }
-                                              ].map((snd) => (
+                                              ]).map((snd) => (
                                                    <button
                                                         key={snd.label}
                                                         type="button"
                                                         onClick={() => props.onSoundPromptChange(snd.value)}
-                                                        className="text-[8.5px] bg-slate-900 hover:bg-slate-800 text-yellow-500 font-mono tracking-wide px-2 py-0.5 rounded border border-slate-700/60 hover:border-yellow-400 transition-colors uppercase font-bold"
+                                                        className={`text-[8.5px] tracking-wide px-2 py-0.5 rounded transition-colors uppercase font-bold ${isEditorial
+                                                            ? 'bg-white hover:bg-stone-100 text-stone-600 border border-stone-200 hover:border-stone-400 font-sans'
+                                                            : 'bg-slate-900 hover:bg-slate-800 text-yellow-500 font-mono border border-slate-700/60 hover:border-yellow-400'}`}
                                                    >
                                                         {snd.label}
                                                    </button>
@@ -2649,13 +2911,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                         <span className="text-white text-xs font-bold font-comic tracking-wide uppercase">Novel Mode / Rich Content</span>
-                                         <span className="text-[10px] text-gray-400">Deep dialogues & full scenery descriptors</span>
+                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-white font-comic'}`}>
+                                             {isEditorial ? 'Rich Prose Mode' : 'Novel Mode / Rich Content'}
+                                         </span>
+                                         <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                                             {isEditorial ? 'Deeper prose, expanded internal monologue' : 'Deep dialogues & full scenery descriptors'}
+                                         </span>
                                     </div>
                                     <button 
                                         onClick={() => props.onRichModeChange(!props.richMode)}
-                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.richMode ? 'bg-cyan-500' : 'bg-slate-700'} relative`}
-                                        aria-label="Toggle Novel Mode"
+                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.richMode ? (isEditorial ? 'bg-stone-700' : 'bg-cyan-500') : 'bg-slate-700'} relative`}
+                                        aria-label="Toggle Rich Prose Mode"
                                     >
                                          <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${props.richMode ? 'translate-x-6' : 'translate-x-0'}`} />
                                     </button>
@@ -2663,13 +2929,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                         <span className="text-yellow-400 text-xs font-bold font-comic tracking-wide uppercase animate-pulse">🎵 SYNAPSE Retro SOUNDTRACK</span>
-                                         <span className="text-[10px] text-gray-400">Generative procedural synth loops</span>
+                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-yellow-400 font-comic animate-pulse'}`}>
+                                             {isEditorial ? '🎵 Ambient Soundscape' : '🎵 SYNAPSE Retro SOUNDTRACK'}
+                                         </span>
+                                         <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                                             {isEditorial ? 'Procedural atmospheric audio' : 'Generative procedural synth loops'}
+                                         </span>
                                     </div>
                                     <button 
                                         onClick={() => props.onSoundtrackChange(!props.soundtrackEnabled)}
-                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.soundtrackEnabled ? 'bg-yellow-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'bg-slate-700'} relative`}
-                                        aria-label="Toggle Retro Soundtrack"
+                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.soundtrackEnabled
+                                            ? (isEditorial ? 'bg-stone-700' : 'bg-yellow-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]')
+                                            : 'bg-slate-700'} relative`}
+                                        aria-label="Toggle Ambient Soundscape"
                                     >
                                          <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${props.soundtrackEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
                                     </button>
@@ -3560,26 +3832,41 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   )}
              </div>
         ) : (
-            <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none">
-                 <span className="block font-comic text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2" style={{ textShadow: '2px 2px 0px black' }}>
-                     📚 THE MULTIVERSE STUDIO LIBRARY
-                 </span>
-                 <p className="text-xs text-slate-400 font-mono mb-6 max-w-2xl leading-relaxed">
-                     Welcome to your central comic storage vault! Below are your saved dynamic publications and chapters. Open any creation to load it instantly into the immersive 3D book binder reader. You can also self-publish a custom graphic layout to compile it under your active creator identity profile.
-                 </p>
+             <div className={isEditorial 
+                  ? "relative z-10 bg-[#fdfdfc] border border-stone-200 p-6 rounded-xl shadow-sm text-stone-900 text-left select-none font-sans"
+                  : "relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none"}>
+                  <span className={isEditorial
+                      ? "block font-sans text-[#3c3730] font-black text-2xl uppercase tracking-wider mb-2"
+                      : "block font-comic text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2"}
+                      style={isEditorial ? {} : { textShadow: '2px 2px 0px black' }}>
+                      {isEditorial ? "📚 THE NARRATIVE ARCHIVE" : "📚 THE MULTIVERSE STUDIO LIBRARY"}
+                  </span>
+                  <p className={isEditorial
+                      ? "text-xs text-stone-500 font-sans mb-6 max-w-2xl leading-relaxed"
+                      : "text-xs text-slate-400 font-mono mb-6 max-w-2xl leading-relaxed"}>
+                      {isEditorial 
+                           ? "Welcome to your central narrative archive! Below are your saved publications and manuscript chapters. Open any creation to load it instantly into the reading binder. You can also manually register a manuscript layout to compile it under your active author profile."
+                           : "Welcome to your central comic storage vault! Below are your saved dynamic publications and chapters. Open any creation to load it instantly into the immersive 3D book binder reader. You can also self-publish a custom graphic layout to compile it under your active creator identity profile."}
+                  </p>
 
                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                      
                      {/* LEFT SECTION: Comic Library List (8 cols) */}
                      <div className="lg:col-span-8 flex flex-col gap-4">
-                          <span className="text-xs font-comic text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block">
-                              📚 Active Publications Archive ({savedProjects.length})
+                          <span className={isEditorial
+                                ? "text-xs font-sans text-stone-605 tracking-wider uppercase border-b border-stone-200 pb-1.5 font-bold block"
+                                : "text-xs font-comic text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block"}>
+                               {isEditorial ? `📚 Saved Manuscripts Catalog (${savedProjects.length})` : `📚 Active Publications Archive (${savedProjects.length})`}
                           </span>
 
                           {savedProjects.length === 0 ? (
-                               <div className="p-12 border-4 border-dashed border-slate-800 rounded bg-slate-950/40 text-center text-slate-500 font-mono my-4">
-                                    <p className="text-sm font-bold text-slate-400">No publications detected in your creator catalog.</p>
-                                    <p className="text-[11px] mt-1.5 text-yellow-500">Initiate an adventure, create comic stories, or self-publish on the right to populate your inventory!</p>
+                               <div className={isEditorial
+                                    ? "p-12 border border-dashed border-stone-300 rounded bg-stone-50 text-center text-stone-400 font-sans my-4"
+                                    : "p-12 border-4 border-dashed border-slate-800 rounded bg-slate-950/40 text-center text-slate-500 font-mono my-4"}>
+                                    <p className="text-sm font-bold">{isEditorial ? "No manuscript entries found in your author catalog." : "No publications detected in your creator catalog."}</p>
+                                    <p className={isEditorial ? "text-[11px] mt-1.5 text-stone-500" : "text-[11px] mt-1.5 text-yellow-500"}>
+                                         {isEditorial ? "Initiate an adventure, draft chapters, or self-publish on the right to populate your inventory!" : "Initiate an adventure, create comic stories, or self-publish on the right to populate your inventory!"}
+                                    </p>
                                </div>
                           ) : (
                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -3605,18 +3892,24 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                          return (
                                               <div 
                                                    key={project.id}
-                                                   className="group flex gap-3.5 bg-slate-950 border-4 border-black p-3.5 rounded-lg hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all cursor-pointer relative text-left"
+                                                   className={isEditorial
+                                                        ? "group flex gap-3.5 bg-white border border-stone-200 p-3.5 rounded-lg hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer relative text-left"
+                                                        : "group flex gap-3.5 bg-slate-950 border-4 border-black p-3.5 rounded-lg hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all cursor-pointer relative text-left"}
                                                    onClick={() => props.onLoadProject(project)}
                                               >
                                                    {/* Cover thumbnail */}
-                                                   <div className="w-16 h-24 bg-slate-900 border-2 border-slate-700 rounded overflow-hidden flex-shrink-0 relative">
+                                                   <div className={isEditorial
+                                                        ? "w-16 h-24 bg-stone-50 border border-stone-200 rounded overflow-hidden flex-shrink-0 relative"
+                                                        : "w-16 h-24 bg-slate-900 border-2 border-slate-700 rounded overflow-hidden flex-shrink-0 relative"}>
                                                         <img 
                                                              src={coverUrl.startsWith('data:') ? coverUrl : coverUrl}
                                                              alt="Cover" 
                                                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                              referrerPolicy="no-referrer"
                                                         />
-                                                        <div className="absolute top-1 left-1 bg-black/80 text-[8px] font-mono text-white px-1 py-0.2 rounded border border-slate-600/50">
+                                                        <div className={isEditorial
+                                                             ? "absolute top-1 left-1 bg-stone-800 text-[8px] font-sans text-stone-50 px-1 py-0.5 rounded"
+                                                             : "absolute top-1 left-1 bg-black/80 text-[8px] font-mono text-white px-1 py-0.2 rounded border border-slate-600/50"}>
                                                              {project.language || 'en-US'}
                                                         </div>
                                                    </div>
@@ -3624,23 +3917,31 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                    {/* Narrative details */}
                                                    <div className="flex-1 flex flex-col justify-between min-w-0">
                                                         <div>
-                                                             <span className="block font-comic font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors">
+                                                             <span className={isEditorial
+                                                                  ? "block font-sans font-bold text-sm tracking-wide text-stone-900 group-hover:text-stone-700 truncate transition-colors"
+                                                                  : "block font-comic font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors"}>
                                                                   {project.title}
                                                              </span>
-                                                             <span className="inline-block mt-1 bg-blue-600/40 border border-blue-500 rounded text-[9px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase tracking-wider font-bold">
+                                                             <span className={isEditorial
+                                                                  ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[9px] font-sans text-stone-600 px-1.5 py-0.5 uppercase tracking-wider font-bold"
+                                                                  : "inline-block mt-1 bg-blue-600/40 border border-blue-500 rounded text-[9px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase tracking-wider font-bold"}>
                                                                   {project.genre}
                                                              </span>
                                                         </div>
                                                         
-                                                        <div className="flex items-center justify-between text-[10px] font-mono mt-3 text-slate-400">
-                                                             <span>📖 {pageCount} {pageCount === 1 ? 'Page' : 'Pages'}</span>
+                                                        <div className={isEditorial
+                                                             ? "flex items-center justify-between text-[10px] font-sans mt-3 text-stone-500"
+                                                             : "flex items-center justify-between text-[10px] font-mono mt-3 text-slate-400"}>
+                                                             <span>{isEditorial ? "🖋️" : "📖"} {pageCount} {pageCount === 1 ? (isEditorial ? 'Chapter' : 'Page') : (isEditorial ? 'Chapters' : 'Pages')}</span>
                                                              <button
                                                                   type="button"
                                                                   onClick={(e) => handleDeleteProject(project.id, e)}
-                                                                  className="text-red-400 hover:text-red-500 px-1.5 py-0.5 bg-red-950/20 rounded border border-red-900/40 font-bold hover:bg-red-900/30 transition-colors"
-                                                                  title="Shred Publication"
+                                                                  className={isEditorial
+                                                                       ? "text-red-700 hover:text-red-800 px-1.5 py-0.5 bg-red-50 rounded border border-red-200 font-bold hover:bg-red-100 transition-colors"
+                                                                       : "text-red-400 hover:text-red-500 px-1.5 py-0.5 bg-red-950/20 rounded border border-red-900/40 font-bold hover:bg-red-900/30 transition-colors"}
+                                                                  title={isEditorial ? "Discard Publication" : "Shred Publication"}
                                                              >
-                                                                  SHRED
+                                                                  {isEditorial ? "DISCARD" : "SHRED"}
                                                              </button>
                                                         </div>
                                                    </div>
@@ -3652,130 +3953,163 @@ export const Setup: React.FC<SetupProps> = (props) => {
                      </div>
 
                      {/* RIGHT SECTION: Manual Publish Form (4 cols) */}
-                     <div className="lg:col-span-4 bg-slate-950 border-4 border-black p-4 rounded-lg relative text-left">
-                          <span className="block font-comic text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2">
-                               🚀 SELF-PUBLISH COMIC
-                          </span>
-                          <p className="text-[10.5px] text-slate-400 font-mono mb-4 leading-normal">
-                               Already generated or sketched a comic layout? Publish it under your profile to host your visual achievements permanently.
-                          </p>
+                      <div className={isEditorial
+                           ? "lg:col-span-4 bg-[#fdfdfc] border border-stone-200 p-4 rounded-lg relative text-left shadow-sm"
+                           : "lg:col-span-4 bg-slate-950 border-4 border-black p-4 rounded-lg relative text-left"}>
+                           <span className={isEditorial
+                                ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider mb-2"
+                                : "block font-comic text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2"}>
+                                {isEditorial ? "✍️ MANUSCRIPT REGISTRY" : "🚀 SELF-PUBLISH COMIC"}
+                           </span>
+                           <p className={isEditorial
+                                ? "text-[10.5px] text-stone-550 font-sans mb-4 leading-normal"
+                                : "text-[10.5px] text-slate-400 font-mono mb-4 leading-normal"}>
+                                {isEditorial 
+                                     ? "Already drafted or designed a manuscript layout? Register it here to catalog your literary accomplishments."
+                                     : "Already generated or sketched a comic layout? Publish it under your profile to host your visual achievements permanently."}
+                           </p>
 
-                          <form onSubmit={handleManualPublish} className="flex flex-col gap-3">
-                               <div className="text-left">
-                                    <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Comic Book Title</label>
-                                    <input 
-                                         type="text"
-                                         required
-                                         placeholder="e.g. Captain Nebula: Deep Space"
-                                         value={manualComicTitle}
-                                         onChange={(e) => setManualComicTitle(e.target.value)}
-                                         className="w-full bg-slate-900 border-2 border-black p-1.5 px-2.5 rounded font-mono text-xs text-yellow-300 focus:outline-none focus:border-orange-500"
-                                    />
-                               </div>
-
-                               <div className="grid grid-cols-2 gap-2 text-left">
-                                    <div>
-                                         <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Genre</label>
-                                         <select
-                                              value={manualComicGenre}
-                                              onChange={(e) => setManualComicGenre(e.target.value)}
-                                              className="w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"
-                                         >
-                                              {GENRES.map((g) => (
-                                                   <option key={g} value={g}>{g}</option>
-                                              ))}
-                                         </select>
-                                    </div>
-                                    <div>
-                                         <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Language</label>
-                                         <select
-                                              value={manualComicLanguage}
-                                              onChange={(e) => setManualComicLanguage(e.target.value)}
-                                              className="w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"
-                                         >
-                                              {LANGUAGES.map((l) => (
-                                                   <option key={l.code} value={l.code}>{l.name}</option>
-                                              ))}
-                                         </select>
-                                    </div>
+                           <form onSubmit={handleManualPublish} className="flex flex-col gap-3">
+                                <div className="text-left">
+                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>
+                                          {isEditorial ? "Manuscript Title" : "Comic Book Title"}
+                                     </label>
+                                     <input 
+                                          type="text"
+                                          required
+                                          placeholder={isEditorial ? "e.g. Chronicles of Eldoria: Vol I" : "e.g. Captain Nebula: Deep Space"}
+                                          value={manualComicTitle}
+                                          onChange={(e) => setManualComicTitle(e.target.value)}
+                                          className={isEditorial ? sInput : "w-full bg-slate-900 border-2 border-black p-1.5 px-2.5 rounded font-mono text-xs text-yellow-305 focus:outline-none focus:border-orange-500"}
+                                     />
                                 </div>
 
-                               <div className="text-left">
-                                    <label className="block text-slate-400 font-mono text-[9px] uppercase mb-1">Cover Graphic Upload</label>
-                                    <div className="relative border-2 border-dashed border-slate-700 hover:border-orange-500 rounded bg-slate-900/60 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24">
-                                         <input 
-                                              type="file" 
-                                              accept="image/*" 
-                                              id="manual-cover-upload"
-                                              className="hidden" 
-                                              onChange={async (e) => {
-                                                   const file = e.target.files?.[0];
-                                                   if (file) {
-                                                        const base64 = await fileToBase64(file);
-                                                        setManualComicCover(base64);
-                                                   }
-                                              }}
-                                         />
-                                         <label htmlFor="manual-cover-upload" className="absolute inset-0 cursor-pointer z-10" />
+                                <div className="grid grid-cols-2 gap-2 text-left">
+                                     <div>
+                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Genre</label>
+                                          <select
+                                               value={manualComicGenre}
+                                               onChange={(e) => setManualComicGenre(e.target.value)}
+                                               className={isEditorial ? sSelect : "w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
+                                          >
+                                               {GENRES.map((g) => (
+                                                    <option key={g} value={g}>{g}</option>
+                                               ))}
+                                          </select>
+                                     </div>
+                                     <div>
+                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Language</label>
+                                          <select
+                                               value={manualComicLanguage}
+                                               onChange={(e) => setManualComicLanguage(e.target.value)}
+                                               className={isEditorial ? sSelect : "w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
+                                          >
+                                               {LANGUAGES.map((l) => (
+                                                    <option key={l.code} value={l.code}>{l.name}</option>
+                                               ))}
+                                          </select>
+                                     </div>
+                                 </div>
 
-                                         {manualComicCover ? (
-                                              <div className="flex items-center gap-2">
-                                                   <div className="w-10 h-14 border border-slate-600 rounded overflow-hidden flex-shrink-0">
-                                                        <img 
-                                                             src={`data:image/jpeg;base64,${manualComicCover}`} 
-                                                             alt="Cover" 
-                                                             className="w-full h-full object-cover" 
-                                                             referrerPolicy="no-referrer"
-                                                        />
-                                                   </div>
-                                                   <span className="text-[10px] font-mono text-green-400 line-clamp-1">✓ File Loaded</span>
-                                              </div>
-                                         ) : (
-                                              <>
-                                                   <span className="text-[10px] font-mono text-slate-500">Click or drag cover file</span>
-                                                   <span className="text-[8px] font-mono text-slate-600 mt-1 uppercase">JPEG, PNG Max 5MB</span>
-                                              </>
-                                         )}
-                                    </div>
-                               </div>
+                                <div className="text-left">
+                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Cover Graphic/Image Upload</label>
+                                     <div className={isEditorial
+                                          ? "relative border border-dashed border-stone-300 hover:border-stone-400 rounded bg-stone-50 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"
+                                          : "relative border-2 border-dashed border-slate-700 hover:border-orange-500 rounded bg-slate-900/60 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"}>
+                                          <input 
+                                               type="file" 
+                                               accept="image/*" 
+                                               id="manual-cover-upload"
+                                               className="hidden" 
+                                               onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                         const base64 = await fileToBase64(file);
+                                                         setManualComicCover(base64);
+                                                    }
+                                               }}
+                                          />
+                                          <label htmlFor="manual-cover-upload" className="absolute inset-0 cursor-pointer z-10" />
 
-                               <button 
-                                    type="submit"
-                                    disabled={isPublishingManual}
-                                    className="mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-comic text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40"
-                               >
-                                    {isPublishingManual ? 'PUBLISHING...' : '🔔 SELF-PUBLISH COMIC'}
-                               </button>
-                          </form>
-                     </div>
+                                          {manualComicCover ? (
+                                               <div className="flex items-center gap-2">
+                                                    <div className={isEditorial
+                                                         ? "w-10 h-14 border border-stone-200 rounded overflow-hidden flex-shrink-0"
+                                                         : "w-10 h-14 border border-slate-600 rounded overflow-hidden flex-shrink-0"}>
+                                                         <img 
+                                                              src={`data:image/jpeg;base64,${manualComicCover}`} 
+                                                              alt="Cover" 
+                                                              className="w-full h-full object-cover" 
+                                                              referrerPolicy="no-referrer"
+                                                         />
+                                                    </div>
+                                                    <span className={isEditorial ? "text-[10px] font-sans text-emerald-750 font-bold" : "text-[10px] font-mono text-green-400 line-clamp-1"}>✓ File Loaded</span>
+                                               </div>
+                                          ) : (
+                                               <>
+                                                    <span className={isEditorial ? "text-[10px] font-sans text-stone-400" : "text-[10px] font-mono text-slate-500"}>Click or drag cover file</span>
+                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-300 mt-1 uppercase" : "text-[8px] font-mono text-slate-600 mt-1 uppercase"}>JPEG, PNG Max 5MB</span>
+                                               </>
+                                          )}
+                                     </div>
+                                </div>
+                                <button 
+                                     type="submit"
+                                     disabled={isPublishingManual}
+                                     className={isEditorial
+                                          ? sPrimaryBtn + " w-full mt-2"
+                                          : "mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-comic text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40 w-full"}
+                                >
+                                     {isPublishingManual 
+                                           ? (isEditorial ? 'REGISTERING...' : 'PUBLISHING...') 
+                                           : (isEditorial ? '🖋️ REGISTER MANUSCRIPT' : '🔔 SELF-PUBLISH COMIC')}
+                                </button>
+                           </form>
+                      </div>
 
                  </div>
 
                  {/* DRAFTS HORIZONTAL ARCHIVE SNAPSHOTS */}
-                 <div className="border-t-4 border-dashed border-slate-800 pt-6 mt-8">
+                 <div className={isEditorial ? "border-t border-stone-200 pt-6 mt-8" : "border-t-4 border-dashed border-slate-800 pt-6 mt-8"}>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-1">
                            <div>
-                                <span className="block font-comic text-cyan-400 font-extrabold text-sm uppercase tracking-wider">
-                                    💾 UNFINISHED CREATIVE WORKSPACE DRAFTS ({savedDrafts.length})
+                                <span className={isEditorial
+                                     ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider"
+                                     : "block font-comic text-cyan-400 font-extrabold text-sm uppercase tracking-wider"}>
+                                     {isEditorial 
+                                          ? `💾 UNFINISHED MANUSCRIPT DRAFTS (${savedDrafts.length})` 
+                                          : `💾 UNFINISHED CREATIVE WORKSPACE DRAFTS (${savedDrafts.length})`}
                                 </span>
-                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                     Restore serialized panels, custom guides, and Gemini context objectives straight back to your canvas.
+                                <p className={isEditorial ? "text-[10px] text-stone-500 font-sans mt-0.5" : "text-[10px] text-slate-400 font-mono mt-0.5"}>
+                                     {isEditorial 
+                                          ? "Restore serialized chapters, custom guides, and Gemini context objectives straight back to your workspace." 
+                                          : "Restore serialized panels, custom guides, and Gemini context objectives straight back to your canvas."}
                                 </p>
                            </div>
                            <button
                                 type="button"
                                 disabled={isSavingDraft}
                                 onClick={handleSaveDraft}
-                                className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                                className={isEditorial
+                                     ? sPrimaryBtn
+                                     : "bg-cyan-600 hover:bg-cyan-500 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"}
                            >
-                                {isSavingDraft ? "SNAPSHOT-SAVING..." : "+ SNAPSHOT CURRENT WIP"}
+                                {isSavingDraft 
+                                     ? (isEditorial ? "SAVING SNAPSHOT..." : "SNAPSHOT-SAVING...") 
+                                     : (isEditorial ? "+ CREATE SNAPSHOT" : "+ SNAPSHOT CURRENT WIP")}
                            </button>
                       </div>
 
                       {savedDrafts.length === 0 ? (
-                           <div className="p-8 border-4 border-dashed border-slate-800 rounded bg-slate-950/20 text-center text-slate-500 font-mono">
-                                <p className="text-xs font-bold text-slate-400">No active snapshots or WIP sketches found.</p>
-                                <p className="text-[10px] mt-1 text-slate-400">Save your story character personas and comic progress to load them here dynamic and intact!</p>
+                           <div className={isEditorial
+                                ? "p-8 border border-dashed border-stone-200 rounded bg-stone-50 text-center text-stone-400 font-sans"
+                                : "p-8 border-4 border-dashed border-slate-800 rounded bg-slate-950/20 text-center text-slate-500 font-mono"}>
+                                <p className="text-xs font-bold">{isEditorial ? "No active snapshots or draft outlines found." : "No active snapshots or WIP sketches found."}</p>
+                                <p className="text-[10px] mt-1">
+                                     {isEditorial 
+                                          ? "Save your story character profiles and outline progress to load them here dynamically." 
+                                          : "Save your story character personas and comic progress to load them here dynamic and intact!"}
+                                </p>
                            </div>
                       ) : (
                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -3790,34 +4124,48 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      return (
                                           <div 
                                                key={draft.id}
-                                               className="group flex gap-3.5 bg-slate-950/90 border-4 border-slate-800 p-3.5 rounded-lg hover:border-cyan-400 hover:shadow-[0_0_12px_rgba(6,182,212,0.15)] transition-all cursor-pointer relative text-left"
+                                               className={isEditorial
+                                                    ? "group flex gap-3.5 bg-white border border-stone-200 p-3.5 rounded-lg hover:border-stone-400 transition-all cursor-pointer relative text-left"
+                                                    : "group flex gap-3.5 bg-slate-955/90 border-4 border-slate-800 p-3.5 rounded-lg hover:border-cyan-400 hover:shadow-[0_0_12px_rgba(6,182,212,0.15)] transition-all cursor-pointer relative text-left"}
                                                onClick={() => props.onLoadDraft?.(draft)}
                                           >
                                                {/* Mini draft layout identity */}
-                                               <div className="w-12 h-16 bg-slate-900 border-2 border-slate-700 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0">
+                                               <div className={isEditorial
+                                                    ? "w-12 h-16 bg-stone-50 border border-stone-200 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0"
+                                                    : "w-12 h-16 bg-slate-900 border-2 border-slate-700 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0"}>
                                                     <span className="text-xl">💾</span>
-                                                    <span className="text-[8px] font-mono text-cyan-400 tracking-wider font-bold">SNAPSHOT</span>
+                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-500 tracking-wider font-bold" : "text-[8px] font-mono text-cyan-400 tracking-wider font-bold"}>
+                                                         SNAPSHOT
+                                                    </span>
                                                </div>
 
                                                {/* Details */}
                                                <div className="flex-1 flex flex-col justify-between min-w-0">
                                                     <div>
-                                                         <span className="block font-comic font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors">
+                                                         <span className={isEditorial
+                                                              ? "block font-sans font-bold text-xs text-stone-900 group-hover:text-stone-700 truncate transition-colors"
+                                                              : "block font-comic font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors"}>
                                                               {draft.title}
                                                          </span>
-                                                         <span className="inline-block mt-1 bg-cyan-950 border border-cyan-800 rounded text-[8px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase font-bold">
+                                                         <span className={isEditorial
+                                                              ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[8px] font-sans text-stone-605 px-1.5 py-0.5 uppercase font-bold"
+                                                              : "inline-block mt-1 bg-cyan-950 border border-cyan-800 rounded text-[8px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase font-bold"}>
                                                               {draft.genre || 'Classic Horror'}
                                                          </span>
                                                     </div>
 
-                                                    <div className="flex items-center justify-between text-[9px] font-mono mt-2 text-slate-400">
-                                                         <span>🧬 Pages: {draftPageCount}</span>
+                                                    <div className={isEditorial
+                                                         ? "flex items-center justify-between text-[9px] font-sans mt-2 text-stone-500"
+                                                         : "flex items-center justify-between text-[9px] font-mono mt-2 text-slate-400"}>
+                                                         <span>{isEditorial ? "🖋️ Chapters:" : "🧬 Pages:"} {draftPageCount}</span>
                                                          <button
                                                               type="button"
                                                               onClick={(e) => handleDeleteDraft(draft.id, e)}
-                                                              className="text-red-400 hover:text-red-500 font-bold hover:bg-slate-900/60 px-1.5 py-0.5 rounded transition-all"
+                                                              className={isEditorial
+                                                                   ? "text-red-750 hover:text-red-800 font-bold hover:bg-stone-105 px-1.5 py-0.5 rounded transition-all"
+                                                                   : "text-red-400 hover:text-red-500 font-bold hover:bg-slate-900/60 px-1.5 py-0.5 rounded transition-all"}
                                                          >
-                                                              SHRED
+                                                              {isEditorial ? "DISCARD" : "SHRED"}
                                                          </button>
                                                     </div>
                                                </div>

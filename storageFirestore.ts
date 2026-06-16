@@ -39,7 +39,7 @@ export interface FirestoreProject {
 /**
  * --- Character Operations ---
  */
-export async function saveCharacterToFirestore(userId: string, char: Omit<FirestoreCharacter, 'createdAt'> & { id?: string }): Promise<void> {
+export async function saveCharacterToFirestore(userId: string, char: Omit<FirestoreCharacter, 'createdAt' | 'id'> & { id?: string }): Promise<void> {
   const charId = char.id || `char_${Math.random().toString(36).substring(2, 11)}`;
   const path = `users/${userId}/characters/${charId}`;
   try {
@@ -99,7 +99,7 @@ export async function deleteCharacterFromFirestore(userId: string, charId: strin
 /**
  * --- Project Operations ---
  */
-export async function saveProjectToFirestore(userId: string, project: Omit<FirestoreProject, 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> {
+export async function saveProjectToFirestore(userId: string, project: Omit<FirestoreProject, 'createdAt' | 'updatedAt' | 'id'> & { id?: string }): Promise<string> {
   const projectId = project.id || `proj_${Math.random().toString(36).substring(2, 11)}`;
   const path = `users/${userId}/projects/${projectId}`;
   try {
@@ -172,7 +172,7 @@ export interface FirestoreDraft {
   updatedAt?: any;
 }
 
-export async function saveDraftToFirestore(userId: string, draft: Omit<FirestoreDraft, 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> {
+export async function saveDraftToFirestore(userId: string, draft: Omit<FirestoreDraft, 'createdAt' | 'updatedAt' | 'id'> & { id?: string }): Promise<string> {
   const draftId = draft.id || `draft_${Math.random().toString(36).substring(2, 11)}`;
   const path = `users/${userId}/drafts/${draftId}`;
   try {

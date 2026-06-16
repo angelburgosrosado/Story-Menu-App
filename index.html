@@ -18,8 +18,8 @@
         --page-width: calc(var(--page-height) * 0.666);
       }
 
-      /* Fixed background layer */
-      body::before {
+      /* Fixed background layer for Comic Studio only */
+      body.comic-theme::before {
         content: "";
         position: fixed;
         inset: 0;

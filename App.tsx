@@ -112,6 +112,33 @@ const App: React.FC = () => {
     window.dispatchEvent(new Event('refresh-character-vault'));
   };
 
+  // --- Phase 2: URL Language Routing (Initial Load) ---
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/([a-z]{2}(-[A-Z]{2})?)\/?$/i);
+    if (match) {
+      const shortCode = match[1].toLowerCase();
+      if (shortCode === 'en') {
+        setSelectedLanguage('en-US');
+      } else {
+        const found = LANGUAGES.find(l => l.code.toLowerCase().startsWith(shortCode));
+        if (found) {
+          setSelectedLanguage(found.code);
+        }
+      }
+    }
+  }, []);
+
+  // --- Phase 2: URL Language Routing (State Change -> URL) ---
+  useEffect(() => {
+    const shortCode = selectedLanguage.split('-')[0].toLowerCase();
+    const newPath = shortCode === 'en' ? '/' : `/${shortCode}/`;
+    if (window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
+  }, [selectedLanguage]);
+
+
   useEffect(() => {
     const handleOpenAuth = () => {
       setLandingAuthOpen(true);

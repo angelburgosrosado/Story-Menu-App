@@ -190,6 +190,110 @@ async function startServer(app: express.Express) {
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+    // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
+    app.get('/robots.txt', (_req, res) => {
+        res.type('text/plain').send(
+`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Sitemap: https://storymenu.app/sitemap.xml`
+        );
+    });
+
+    app.get('/sitemap.xml', (_req, res) => {
+        res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://storymenu.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/es/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/ja/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/pt/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://storymenu.app/ko/</loc>
+    <xhtml:link rel="alternate" hreflang="en"        href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"        href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"        href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"     href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"        href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"        href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"        href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq><priority>0.9</priority>
+  </url>
+</urlset>`);
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Try starting & initializing PostgreSQL structure asynchronously so it does not block server startup
     console.info(`📡 Current server-side process.env.DATABASE_URL (masked): ${process.env.DATABASE_URL ? maskConnectionUri(process.env.DATABASE_URL) : 'None'}`);
     initializeDatabaseSchema().catch((e) => {

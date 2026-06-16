@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- ═══════════════════════════════════════════════════════
+       STORY.MENU — MULTILINGUAL SITEMAP
+       Each <url> block declares ALL language alternates so Google
+       can correctly index every region without duplicate content penalties.
+  ════════════════════════════════════════════════════════ -->
+
+  <!-- ENGLISH (default) -->
+  <url>
+    <loc>https://storymenu.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- SPANISH -->
+  <url>
+    <loc>https://storymenu.app/es/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- JAPANESE -->
+  <url>
+    <loc>https://storymenu.app/ja/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- PORTUGUESE (Brazil) -->
+  <url>
+    <loc>https://storymenu.app/pt/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- FRENCH -->
+  <url>
+    <loc>https://storymenu.app/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- GERMAN -->
+  <url>
+    <loc>https://storymenu.app/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- KOREAN -->
+  <url>
+    <loc>https://storymenu.app/ko/</loc>
+    <xhtml:link rel="alternate" hreflang="en"      href="https://storymenu.app/"/>
+    <xhtml:link rel="alternate" hreflang="es"      href="https://storymenu.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="ja"      href="https://storymenu.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR"   href="https://storymenu.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="fr"      href="https://storymenu.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de"      href="https://storymenu.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="ko"      href="https://storymenu.app/ko/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://storymenu.app/"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+</urlset>

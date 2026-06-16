@@ -21,6 +21,7 @@ import { AdminDashboard } from './AdminDashboard';
 import { recordPageGenerated } from './storage';
 import { saveCharacterToFirestore, saveProjectToFirestore } from './storageFirestore';
 import { Sparkles, BookOpen, User, CheckCircle, Zap, Shield, Play, Layers, Cpu, Database, Volume2, ArrowRight, Eye, Palette, Flame, Radio, Clock, CloudLightning } from 'lucide-react';
+import i18n from './i18n';
 
 // --- Constants ---
 const MODEL_V3 = "gemini-3-pro-image-preview";
@@ -129,13 +130,15 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // --- Phase 2: URL Language Routing (State Change -> URL) ---
+  // --- Phase 2 & 3: URL Language Routing (State Change -> URL & i18n) ---
   useEffect(() => {
     const shortCode = selectedLanguage.split('-')[0].toLowerCase();
     const newPath = shortCode === 'en' ? '/' : `/${shortCode}/`;
     if (window.location.pathname !== newPath) {
       window.history.pushState(null, '', newPath);
     }
+    // Update translation engine
+    i18n.changeLanguage(shortCode);
   }, [selectedLanguage]);
 
 

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema } from './types';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { 
     getCharactersFromFirestore, 
     getProjectsFromFirestore, 
@@ -93,6 +94,8 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 export const Setup: React.FC<SetupProps> = (props) => {
+    const { t } = useTranslation();
+
     if (!props.show && !props.isTransitioning) return null;
 
     const [dbConnection, setDbConnection] = useState<{ 
@@ -2944,12 +2947,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                                     </svg>
-                                    {isEditorial ? "COMPILING COGNITIVE BLUEPRINT..." : "CRAFTING DIVERSE REALITY..."}
+                                    {isEditorial ? t("setup.buttons.compiling") : t("setup.buttons.crafting")}
                                </span>
                           ) : props.hero ? (
-                               isEditorial ? "🖋️ LAUNCH STORY ENVIRONMENTS" : "🔥 START ADVENTURE !"
+                               isEditorial ? t("setup.buttons.launchEditorial") : t("setup.buttons.launchComic")
                           ) : (
-                               isEditorial ? "⚠️ HERO CAST REQUIRED TO BEGIN" : "⚠️ AWAITING HERO INITIATION..."
+                               isEditorial ? t("setup.buttons.reqEditorial") : t("setup.buttons.reqComic")
                           )}
                      </button>
                 </div>

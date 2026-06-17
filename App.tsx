@@ -61,7 +61,7 @@ const App: React.FC = () => {
 
   // --- Firebase User Account States ---
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string } | null>(null);
-  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
+  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(!!localStorage.getItem('story_menu_skin'));
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [landingPreviewTab, setLandingPreviewTab] = useState<'blueprint' | 'visuals' | 'sound'>('blueprint');
   const [landingAuthOpen, setLandingAuthOpen] = useState(false);

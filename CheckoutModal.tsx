@@ -6,9 +6,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { CreditCard, Shield, Lock, CheckCircle2, X, AlertCircle, Sparkles, Send, Globe, Star, ShoppingCart } from 'lucide-react';
+import { CreditCard, Shield, Lock, CheckCircle2, X, AlertCircle, Sparkles, Send, Globe, Star, ShoppingCart, Zap, ExternalLink, Check } from 'lucide-react';
 import { logAnalyticsEvent } from './firebase';
-import { updateUserSubscriptionInFirestore } from './storageFirestore';
+import { updateUserSubscriptionInFirestore, addTokensToUser } from './storageFirestore';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -26,7 +26,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onUpgradeSuccessful,
 }) => {
   const { t } = useTranslation();
+  const [purchaseType, setPurchaseType] = useState<'subscription' | 'topup'>('subscription');
   const [tier, setTier] = useState<'Pro' | 'Enterprise'>(initialTier);
+  const [topupTier, setTopupTier] = useState<'Starter' | 'Creator' | 'Studio'>('Starter');
   const [paymentMethod, setPaymentMethod] = useState<'Stripe' | 'PayPal' | 'Square'>('Stripe');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         'High-Resolution Exports (PDF, PNG)',
         'Commercial Usage Rights',
       ],
+      tokensAwarded: 1200
     },
     Enterprise: {
       price: '29',
@@ -64,7 +67,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         'Premium LLMs (GPT-4o / Claude 3.5)',
         'Vector & Editable Exports',
       ],
+      tokensAwarded: 4000
     },
+  };
+
+  const topupPricing = {
+    Starter: { price: '5', label: 'Starter Pack', tokens: 500 },
+    Creator: { price: '10', label: 'Creator Pack', tokens: 1200 },
+    Studio: { price: '25', label: 'Studio Pack', tokens: 3500 },
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,7 +118,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       // Build checkout parameters for Express backend
       const payload: any = {
         email,
-        tier: pricing[tier].label,
+        type: purchaseType,
+        tier: purchaseType === 'subscription' ? pricing[tier].label : topupPricing[topupTier].label,
+        tokensAwarded: purchaseType === 'subscription' ? pricing[tier].tokensAwarded : topupPricing[topupTier].tokens,
         paymentMethod,
       };
 
@@ -153,11 +165,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       // Update in Firestore database for the active logged user
       if (currentUser && !currentUser.isOffline) {
         try {
-          await updateUserSubscriptionInFirestore(currentUser.id, {
-            tier: pricing[tier].label,
-            subscriptionId: data.subscriptionId,
-            paymentMethod: data.paymentMethod,
-          });
+          if (data.type === 'topup' && data.tokensAwarded > 0) {
+            await addTokensToUser(currentUser.id, data.tokensAwarded);
+          } else {
+            // Give subscription tokens initially as well
+            if (data.tokensAwarded > 0) {
+              await addTokensToUser(currentUser.id, data.tokensAwarded);
+            }
+            await updateUserSubscriptionInFirestore(currentUser.id, {
+              tier: pricing[tier].label,
+              subscriptionId: data.subscriptionId,
+              paymentMethod: data.paymentMethod,
+            });
+          }
         } catch (dbErr) {
           console.error("Firestore sync subscription soft fail:", dbErr);
         }
@@ -166,7 +186,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setSuccess(data);
 
       setTimeout(() => {
-        onUpgradeSuccessful(pricing[tier].label, paymentMethod, data.subscriptionId);
+        onUpgradeSuccessful(
+          purchaseType === 'subscription' ? pricing[tier].label : topupPricing[topupTier].label, 
+          paymentMethod, 
+          data.subscriptionId
+        );
       }, 3500);
 
     } catch (err: any) {
@@ -212,20 +236,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             <div className="w-full max-w-sm bg-slate-900 border-2 border-slate-800 p-4 font-mono text-[11px] text-left space-y-2">
               <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500">{t('checkout.auto3', 'SUBSCRIPTION ID:')}</span>
+                <span className="text-slate-500">{t('checkout.auto3', 'TRANSACTION ID:')}</span>
                 <span className="text-yellow-400 font-bold">{success.subscriptionId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{t('checkout.auto4', 'UPGRADE TIER:')}</span>
+                <span className="text-slate-500">{success.type === 'topup' ? 'PURCHASED PACKAGE:' : t('checkout.auto4', 'UPGRADE TIER:')}</span>
                 <span className="text-white font-bold uppercase">{success.tier}</span>
               </div>
+              {success.tokensAwarded > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">TOKENS AWARDED:</span>
+                  <span className="text-yellow-400 font-bold">+{success.tokensAwarded}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500">{t('checkout.auto5', 'PAYMENT PROXY:')}</span>
                 <span className="text-cyan-400 font-bold">{success.paymentMethod} Express Sync</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{t('checkout.auto6', 'AUTOPAY FREQUENCY:')}</span>
-                <span className="text-green-400 font-bold">{t('checkout.auto7', 'Monthly $19 recurring')}</span>
+                <span className="text-slate-500">{t('checkout.auto6', 'TYPE:')}</span>
+                <span className="text-green-400 font-bold">{success.type === 'topup' ? 'One-time Top-Up' : 'Recurring Subscription'}</span>
               </div>
             </div>
 
@@ -238,58 +268,143 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {/* Left side: Package parameters */}
             <div className="w-full md:w-5/12 bg-slate-950 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r-4 border-black">
               <div className="space-y-6">
-                <div>
-                  <span className="inline-flex bg-yellow-950/80 border border-yellow-700 text-yellow-300 px-2 py-0.5 text-[9px] font-mono uppercase font-black rounded-none">
-                    STORY.MENU SELECTION
-                  </span>
-                  <div className="flex justify-between items-baseline mt-2">
-                    <h3 className="text-xl font-black font-sans uppercase tracking-wide text-white">
-                      {pricing[tier].label.split('(')[0]}
-                    </h3>
-                    <span className="text-2xl font-black text-yellow-400 font-mono">
-                      {pricing[tier].price}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-mono mt-1">
-                    Recurrent monthly subscription. Cancel anytime from keys console.
-                  </p>
-                </div>
-
-                {/* Plan switcher */}
+                
+                {/* Purchase Type Switcher */}
                 <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 border border-slate-800">
                   <button
-                    onClick={() => setTier('Pro')}
+                    onClick={() => setPurchaseType('subscription')}
                     className={`py-1.5 text-[10px] font-mono uppercase font-bold text-center border transition-all ${
-                      tier === 'Pro'
+                      purchaseType === 'subscription'
                         ? 'bg-yellow-400 text-black border-yellow-400 font-black'
                         : 'text-slate-400 border-transparent hover:text-white'
                     }`}
                   >
-                    Pro Plan ($19)
+                    Subscriptions
                   </button>
                   <button
-                    onClick={() => setTier('Enterprise')}
+                    onClick={() => setPurchaseType('topup')}
                     className={`py-1.5 text-[10px] font-mono uppercase font-bold text-center border transition-all ${
-                      tier === 'Enterprise'
+                      purchaseType === 'topup'
                         ? 'bg-yellow-400 text-black border-yellow-400 font-black'
                         : 'text-slate-400 border-transparent hover:text-white'
                     }`}
                   >
-                    Enterprise ($79)
+                    Token Top-Ups
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{t('checkout.auto8', 'ACTIVATED INITIATIVES:')}</h4>
-                  <ul className="space-y-1.5 text-[11px] font-mono text-slate-300">
-                    {pricing[tier].features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-1.5">
-                        <span className="text-yellow-400 font-bold">✓</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {purchaseType === 'subscription' ? (
+                  <>
+                    <div>
+                      <span className="inline-flex bg-yellow-950/80 border border-yellow-700 text-yellow-300 px-2 py-0.5 text-[9px] font-mono uppercase font-black rounded-none">
+                        STORY.MENU SUBSCRIPTION
+                      </span>
+                      <div className="flex justify-between items-baseline mt-2">
+                        <h3 className="text-xl font-black font-sans uppercase tracking-wide text-white">
+                          {pricing[tier].label.split('(')[0]}
+                        </h3>
+                        <span className="text-2xl font-black text-yellow-400 font-mono">
+                          ${pricing[tier].price}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono mt-1">
+                        Recurrent monthly subscription. Cancel anytime from keys console.
+                      </p>
+                    </div>
+
+                    {/* Plan switcher */}
+                    <div className="grid grid-cols-2 gap-2 bg-slate-900 p-1 border border-slate-800">
+                      <button
+                        onClick={() => setTier('Pro')}
+                        className={`py-1.5 text-[10px] font-mono uppercase font-bold text-center border transition-all ${
+                          tier === 'Pro'
+                            ? 'bg-yellow-400 text-black border-yellow-400 font-black'
+                            : 'text-slate-400 border-transparent hover:text-white'
+                        }`}
+                      >
+                        Creator ($12)
+                      </button>
+                      <button
+                        onClick={() => setTier('Enterprise')}
+                        className={`py-1.5 text-[10px] font-mono uppercase font-bold text-center border transition-all ${
+                          tier === 'Enterprise'
+                            ? 'bg-yellow-400 text-black border-yellow-400 font-black'
+                            : 'text-slate-400 border-transparent hover:text-white'
+                        }`}
+                      >
+                        Pro ($29)
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{t('checkout.auto8', 'ACTIVATED INITIATIVES:')}</h4>
+                      <ul className="space-y-1.5 text-[11px] font-mono text-slate-300">
+                        {pricing[tier].features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-yellow-400 font-bold">✓</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span className="inline-flex bg-cyan-950/80 border border-cyan-700 text-cyan-300 px-2 py-0.5 text-[9px] font-mono uppercase font-black rounded-none">
+                        ONE-TIME TOP-UP
+                      </span>
+                      <div className="flex justify-between items-baseline mt-2">
+                        <h3 className="text-xl font-black font-sans uppercase tracking-wide text-white">
+                          {topupPricing[topupTier].label}
+                        </h3>
+                        <span className="text-2xl font-black text-cyan-400 font-mono">
+                          ${topupPricing[topupTier].price}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono mt-1">
+                        One-time purchase. Tokens never expire.
+                      </p>
+                    </div>
+
+                    {/* Topup switcher */}
+                    <div className="flex flex-col gap-2 bg-slate-900 p-1 border border-slate-800">
+                      {(['Starter', 'Creator', 'Studio'] as const).map((pk) => (
+                        <button
+                          key={pk}
+                          onClick={() => setTopupTier(pk)}
+                          className={`py-2 text-[10px] font-mono uppercase font-bold text-center border transition-all flex justify-between px-3 ${
+                            topupTier === pk
+                              ? 'bg-cyan-400 text-black border-cyan-400 font-black'
+                              : 'text-slate-400 border-transparent hover:text-white bg-slate-950/50 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span>{topupPricing[pk].label}</span>
+                          <span>{topupPricing[pk].tokens} Tokens for ${topupPricing[pk].price}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">WHY TOP-UPS?</h4>
+                      <ul className="space-y-1.5 text-[11px] font-mono text-slate-300">
+                         <li className="flex items-start gap-1.5">
+                            <Zap className="text-cyan-400" size={14} />
+                            <span>Only pay for what you generate</span>
+                         </li>
+                         <li className="flex items-start gap-1.5">
+                            <Check className="text-cyan-400" size={14} />
+                            <span>Stackable with active subscriptions</span>
+                         </li>
+                         <li className="flex items-start gap-1.5">
+                            <Lock className="text-cyan-400" size={14} />
+                            <span>Tokens securely bound to your account</span>
+                         </li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+
               </div>
 
               <div className="pt-6 border-t border-slate-900 mt-6 flex items-center gap-1.5 text-[10px] font-mono text-slate-500">

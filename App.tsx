@@ -18,8 +18,10 @@ import { doc, getDoc } from 'firebase/firestore';
 import { AuthScreen, AccountPanel } from './Account';
 import { CheckoutModal } from './CheckoutModal';
 import { AdminDashboard } from './AdminDashboard';
+import { ModeSelectionScreen } from './ModeSelectionScreen';
 import { recordPageGenerated } from './storage';
-import { saveCharacterToFirestore, saveProjectToFirestore } from './storageFirestore';
+import { saveCharacterToFirestore, saveProjectToFirestore, addTokensToUser } from './storageFirestore';
+import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import { Sparkles, BookOpen, User, CheckCircle, Zap, Shield, Play, Layers, Cpu, Database, Volume2, ArrowRight, Eye, Palette, Flame, Radio, Clock, CloudLightning } from 'lucide-react';
 import i18n from './i18n';
 
@@ -59,6 +61,7 @@ const App: React.FC = () => {
 
   // --- Firebase User Account States ---
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string } | null>(null);
+  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [landingPreviewTab, setLandingPreviewTab] = useState<'blueprint' | 'visuals' | 'sound'>('blueprint');
   const [landingAuthOpen, setLandingAuthOpen] = useState(false);
@@ -349,6 +352,10 @@ const App: React.FC = () => {
               u.paymentMethod = data.paymentMethod;
               console.info(`🔥 [Subscription Resolved] Loaded ${data.tier} membership status.`);
             }
+            if (data && data.tokenBalance !== undefined) {
+              u.tokenBalance = data.tokenBalance;
+              window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: data.tokenBalance }));
+            }
           }
           setCurrentUser(u);
           setActiveCreator({ id: u.id, email: u.email });
@@ -390,6 +397,15 @@ const App: React.FC = () => {
       const updated = { ...currentUser, tier, paymentMethod, subscriptionId };
       setCurrentUser(updated);
       localStorage.setItem('infinite_heroes_creator', JSON.stringify(updated));
+      // Re-fetch token balance to update UI
+      const docRef = doc(db, 'users', currentUser.id);
+      getDoc(docRef).then(snap => {
+         if (snap.exists() && snap.data().tokenBalance !== undefined) {
+             const newBalance = snap.data().tokenBalance;
+             setCurrentUser(prev => prev ? { ...prev, tokenBalance: newBalance } : prev);
+             window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: newBalance }));
+         }
+      });
     } else {
       // Create a temporary profile for offline sandbox flow
       const u = {
@@ -415,6 +431,38 @@ const App: React.FC = () => {
 
   // --- AI Helpers via Server Proxy ---
 
+  /**
+   * Evaluates cost, checks balance, and deducts tokens.
+   * Throws an error or opens checkout if insufficient balance.
+   */
+  const handleTokenDeduction = async (modelId: keyof typeof AI_MODELS, estimatedTokens: number = 1000): Promise<boolean> => {
+    if (!currentUser || currentUser.isOffline) return true; // Bypass in offline/sandbox mode
+
+    const cost = calculateTokenCost(modelId, estimatedTokens);
+    const currentBalance = currentUser.tokenBalance || 0;
+
+    if (currentBalance < cost) {
+      console.warn(`Insufficient tokens. Needed ${cost}, have ${currentBalance}. Triggering Checkout.`);
+      setCheckoutTier('Starter');
+      setIsCheckoutOpen(true);
+      throw new Error(`INSUFFICIENT_TOKENS:${cost}`);
+    }
+
+    // Optimistically update UI
+    const newBalance = currentBalance - cost;
+    setCurrentUser(prev => prev ? { ...prev, tokenBalance: newBalance } : prev);
+    window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: newBalance }));
+
+    try {
+      // Async update to DB
+      await addTokensToUser(currentUser.id, -cost);
+      return true;
+    } catch (e) {
+      console.error("Failed to deduct tokens in DB", e);
+      return false;
+    }
+  };
+
   // Sync procedural synthesizer soundtrack
   useEffect(() => {
      if (isStarted && soundtrackEnabled) {
@@ -427,6 +475,7 @@ const App: React.FC = () => {
 
   const generateSpeech = async (text: string, voiceName: string): Promise<string> => {
       try {
+          await handleTokenDeduction('gemini-3.1-flash-tts-preview', 1); // 1 generation
           const res = await fetch('/api/gemini/speech', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -467,6 +516,7 @@ const App: React.FC = () => {
   };
 
   const generateBeat = async (history: ComicFace[], isRightPage: boolean, pageNum: number, isDecisionPage: boolean): Promise<Beat> => {
+    await handleTokenDeduction('gemini-3.5-flash', 1500);
     if (!heroRef.current) throw new Error("No Hero");
 
     const isFinalPage = pageNum === MAX_STORY_PAGES;
@@ -554,6 +604,7 @@ const App: React.FC = () => {
 
   const generatePersona = async (desc: string): Promise<Persona> => {
       try {
+          await handleTokenDeduction('gemini-3.5-flash', 1000);
           const response = await fetch('/api/gemini/persona', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -573,6 +624,7 @@ const App: React.FC = () => {
   };
 
   const generateImage = async (beat: Beat, type: ComicFace['type']): Promise<string> => {
+    await handleTokenDeduction('gemini-2.5-flash-image', 1);
     const styleEra = selectedGenre === 'Custom' ? "Modern American" : selectedGenre;
     try {
         const response = await fetch('/api/gemini/image', {
@@ -612,34 +664,40 @@ const App: React.FC = () => {
   };
 
   const generateSinglePage = async (faceId: string, pageNum: number, type: ComicFace['type']) => {
-      const isDecision = DECISION_PAGES.includes(pageNum);
-      let beat: Beat = { scene: "", choices: [], focus_char: 'other' };
+      try {
+          const isDecision = DECISION_PAGES.includes(pageNum);
+          let beat: Beat = { scene: "", choices: [], focus_char: 'other' };
 
-      if (type === 'cover') {
-           // Cover beat is handled in generateImage
-      } else if (type === 'back_cover') {
-           beat = { scene: "Thematic teaser image", choices: [], focus_char: 'other' };
-      } else {
-           beat = await generateBeat(historyRef.current, pageNum % 2 === 0, pageNum, isDecision);
+          if (type === 'cover') {
+               // Cover beat is handled in generateImage
+          } else if (type === 'back_cover') {
+               beat = { scene: "Thematic teaser image", choices: [], focus_char: 'other' };
+          } else {
+               beat = await generateBeat(historyRef.current, pageNum % 2 === 0, pageNum, isDecision);
+          }
+
+          if (beat.focus_char === 'friend' && !friendRef.current && type === 'story') {
+              try {
+                  const newSidekick = await generatePersona(selectedGenre === 'Custom' ? "A fitting sidekick for this story" : `Sidekick for ${selectedGenre} story.`);
+                  setFriend(newSidekick);
+              } catch (e) { beat.focus_char = 'other'; }
+          }
+
+          if (beat.focus_char === 'villain' && !villainRef.current && type === 'story') {
+              try {
+                  const newVillain = await generatePersona(selectedGenre === 'Custom' ? "A terrifying arch-nemesis villain" : `Nemesis villain for ${selectedGenre} story.`);
+                  setVillain(newVillain);
+              } catch (e) { beat.focus_char = 'other'; }
+          }
+
+          updateFaceState(faceId, { narrative: beat, choices: beat.choices, isDecisionPage: isDecision });
+          const url = await generateImage(beat, type);
+          updateFaceState(faceId, { imageUrl: url, isLoading: false });
+      } catch (e: any) {
+          console.error("Failed to generate page", faceId, e);
+          updateFaceState(faceId, { isLoading: false, narrative: { scene: "Generation failed due to insufficient tokens or API error.", choices: [], focus_char: 'other' } });
+          throw e; // rethrow to abort batch
       }
-
-      if (beat.focus_char === 'friend' && !friendRef.current && type === 'story') {
-          try {
-              const newSidekick = await generatePersona(selectedGenre === 'Custom' ? "A fitting sidekick for this story" : `Sidekick for ${selectedGenre} story.`);
-              setFriend(newSidekick);
-          } catch (e) { beat.focus_char = 'other'; }
-      }
-
-      if (beat.focus_char === 'villain' && !villainRef.current && type === 'story') {
-          try {
-              const newVillain = await generatePersona(selectedGenre === 'Custom' ? "A terrifying arch-nemesis villain" : `Nemesis villain for ${selectedGenre} story.`);
-              setVillain(newVillain);
-          } catch (e) { beat.focus_char = 'other'; }
-      }
-
-      updateFaceState(faceId, { narrative: beat, choices: beat.choices, isDecisionPage: isDecision });
-      const url = await generateImage(beat, type);
-      updateFaceState(faceId, { imageUrl: url, isLoading: false });
   };
 
   const generateBatch = async (startPage: number, count: number) => {
@@ -953,16 +1011,32 @@ const App: React.FC = () => {
               if (user) {
                 setActiveCreator({ id: user.id, email: user.email });
                 localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName }));
-                window.dispatchEvent(new Event('refresh-character-vault'));
+                
+                // Fetch extra stats if online
+                if (!user.isOffline) {
+                    import('./check_balance').then(m => m.checkUserBalance(user.id)).then(stats => {
+                        if (stats) setUsageStats(stats);
+                    }).catch(e => console.error("Balance fetch error:", e));
+                }
               }
-            }} 
-            onClose={() => {
-              window.dispatchEvent(new Event('navigate-home'));
-            }} 
+            }}
           />
         </div>
       </div>
     );
+  }
+
+  if (!hasSelectedMode) {
+      return (
+          <ModeSelectionScreen 
+              onSelect={(mode) => {
+                  localStorage.setItem('story_menu_skin', mode);
+                  // Dispatch storage event to notify MainLayout to update styling immediately
+                  window.dispatchEvent(new Event('storage'));
+                  setHasSelectedMode(true);
+              }} 
+          />
+      );
   }
 
   return (

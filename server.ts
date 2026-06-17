@@ -1176,7 +1176,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
      */
     app.post('/api/checkout', async (req, res): Promise<any> => {
-        const { email, tier, paymentMethod, cardDetails, paypalEmail } = req.body;
+        const { email, tier, paymentMethod, cardDetails, paypalEmail, type, tokensAwarded } = req.body;
 
         if (!email) {
             return res.status(400).json({ error: 'Email coordinate is required for checkout verification' });
@@ -1273,6 +1273,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             tier,
             subscriptionId,
             paymentMethod: pMethodName,
+            type: type || 'subscription',
+            tokensAwarded: tokensAwarded || 0,
             timestamp: new Date().toISOString(),
             message: `Checkout Successful! Welcome to story.menu's "${tier}" subscription tier.`
         });

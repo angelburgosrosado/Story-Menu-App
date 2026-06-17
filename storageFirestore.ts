@@ -6,7 +6,8 @@
 import { 
   collection, 
   doc, 
-  setDoc, 
+  setDoc,
+  getDoc,
   getDocs, 
   deleteDoc, 
   query, 
@@ -234,10 +235,14 @@ export async function deleteDraftFromFirestore(userId: string, draftId: string):
 /**
  * --- User / Subscription Operations ---
  */
-export async function updateUserSubscriptionInFirestore(userId: string, subscription: { tier: string; subscriptionId: string; paymentMethod: string }): Promise<void> {
+export async function updateUserSubscriptionInFirestore(userId: string, subscription: { tier: string; subscriptionId: string; paymentMethod: string; tokensAwarded?: number }): Promise<void> {
   const path = `users/${userId}`;
   try {
     const docRef = doc(db, 'users', userId);
+    
+    // If this is a token top-up, we don't necessarily change the tier, we just add tokens.
+    // We will handle token addition separately or via addTokensToUser.
+    
     await setDoc(docRef, {
       tier: subscription.tier,
       subscriptionId: subscription.subscriptionId,
@@ -248,6 +253,43 @@ export async function updateUserSubscriptionInFirestore(userId: string, subscrip
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
+}
+
+/**
+ * --- Token Economy Operations ---
+ */
+export async function getUserTokenBalance(userId: string): Promise<number> {
+  try {
+    const docRef = doc(db, 'users', userId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data().tokenBalance || 0;
+    }
+    return 0;
+  } catch (error) {
+    console.error("🔥 [Firestore] Error getting token balance", error);
+    return 0;
+  }
+}
+
+export async function updateUserTokenBalance(userId: string, newBalance: number): Promise<void> {
+  try {
+    const docRef = doc(db, 'users', userId);
+    await setDoc(docRef, {
+      tokenBalance: newBalance,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    console.info(`🔥 [Firestore] Updated token balance for ${userId} to ${newBalance}`);
+  } catch (error) {
+    console.error("🔥 [Firestore] Error setting token balance", error);
+  }
+}
+
+export async function addTokensToUser(userId: string, amount: number): Promise<number> {
+  const current = await getUserTokenBalance(userId);
+  const updated = current + amount;
+  await updateUserTokenBalance(userId, updated);
+  return updated;
 }
 
 

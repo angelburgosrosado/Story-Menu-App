@@ -19,6 +19,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
     const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
     const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
+    const [tokenBalance, setTokenBalance] = useState<number | null>(null);
 
     // Sync skin from localStorage reactively
     useEffect(() => {
@@ -46,8 +47,15 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             setCurrentView('home');
             window.scrollTo(0, 0);
         };
+        const handleTokenBalance = (e: any) => {
+            setTokenBalance(e.detail);
+        };
         window.addEventListener('navigate-home', handleGoHome);
-        return () => window.removeEventListener('navigate-home', handleGoHome);
+        window.addEventListener('token-balance-updated', handleTokenBalance);
+        return () => {
+            window.removeEventListener('navigate-home', handleGoHome);
+            window.removeEventListener('token-balance-updated', handleTokenBalance);
+        };
     }, []);
 
     const handleNavigate = (view: string, data?: any) => {
@@ -149,10 +157,12 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                         
                         <span className={navSeparator}></span>
 
-                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isEditorial ? 'bg-stone-100 border-stone-200 text-stone-700' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
-                            <span className="text-[10px] font-mono font-bold">50</span>
-                            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70">Credits</span>
-                        </div>
+                        {tokenBalance !== null && (
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isEditorial ? 'bg-stone-100 border-stone-200 text-stone-700' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
+                                <span className="text-[10px] font-mono font-bold">{tokenBalance}</span>
+                                <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70">Tokens</span>
+                            </div>
+                        )}
 
                         <button 
                             onClick={() => {

@@ -19,6 +19,7 @@ interface BookProps {
     onOpenBook: () => void;
     onDownload: () => void;
     onReset: () => void;
+    onUpdateText?: (pageIndex: number, field: 'caption' | 'dialogue', text: string) => void;
 }
 
 export const Book: React.FC<BookProps> = (props) => {
@@ -40,10 +41,10 @@ export const Book: React.FC<BookProps> = (props) => {
               <div key={i} className={`paper ${i < props.currentSheetIndex ? 'flipped' : ''}`} style={{ zIndex: i < props.currentSheetIndex ? i : sheetsToRender.length - i }}
                    onClick={() => props.onSheetClick(i)}>
                   <div className="front">
-                      <Panel face={sheet.front} allFaces={props.comicFaces} selectedVoice={props.selectedVoice} generateSpeech={props.generateSpeech} onChoice={props.onChoice} onOpenBook={props.onOpenBook} onDownload={props.onDownload} onReset={props.onReset} />
+                      <Panel face={sheet.front} allFaces={props.comicFaces} selectedVoice={props.selectedVoice} generateSpeech={props.generateSpeech} onChoice={props.onChoice} onOpenBook={props.onOpenBook} onDownload={props.onDownload} onReset={props.onReset} onUpdateText={props.onUpdateText} />
                   </div>
                   <div className="back">
-                      <Panel face={sheet.back} allFaces={props.comicFaces} selectedVoice={props.selectedVoice} generateSpeech={props.generateSpeech} onChoice={props.onChoice} onOpenBook={props.onOpenBook} onDownload={props.onDownload} onReset={props.onReset} />
+                      <Panel face={sheet.back} allFaces={props.comicFaces} selectedVoice={props.selectedVoice} generateSpeech={props.generateSpeech} onChoice={props.onChoice} onOpenBook={props.onOpenBook} onDownload={props.onDownload} onReset={props.onReset} onUpdateText={props.onUpdateText} />
                   </div>
               </div>
           ))}

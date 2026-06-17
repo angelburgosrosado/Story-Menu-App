@@ -37,7 +37,7 @@ export const WritersJournalDashboard: React.FC<{ onNavigate?: (view: any) => voi
                 'Modern American',
                 {
                     selectedGenre: 'Graphic Novel',
-                    provider: 'gemini'
+                    provider: 'llamagen'
                 }
             );
             updatePage(index, { imageUrl, isLoading: false });

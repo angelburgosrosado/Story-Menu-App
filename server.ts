@@ -671,6 +671,36 @@ Rules:
             return res.status(500).json({ error: e.message || "Suggestion generation failed" });
         }
     });
+
+    app.post('/api/gemini/enhance-kid-story', async (req, res): Promise<any> => {
+        const { rawText } = req.body;
+        if (!rawText) return res.status(400).json({ error: "Missing rawText" });
+
+        try {
+            const promptField = `
+You are a creative writing coach for children. The user has dictated a story idea using speech-to-text, which might contain grammatical errors, run-on sentences, or disjointed thoughts.
+
+Raw Dictation: "${rawText}"
+
+Your task:
+1. Fix grammar and clarify the narrative.
+2. Enhance the story to be imaginative and cohesive, but keep it in the voice of a young author.
+3. Incentivize the kid by making the story sound epic and structured, showing them how their raw thoughts can turn into a real story!
+4. Return ONLY the final enhanced story paragraph, no introductory text, no quotes. Make it a few sentences long (max 50 words).
+`;
+
+            const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
+                model: 'gemini-2.5-flash',
+                contents: { text: promptField }
+            });
+            const text = response.text?.trim() || "";
+            return res.json({ enhancedStory: text });
+        } catch (e: any) {
+            console.error("Enhance Kid Story API failed:", e.message);
+            return res.status(500).json({ error: e.message || "Enhancement failed" });
+        }
+    });
  
     interface CharacterIdentitySchema {
       actor_id: string;
@@ -762,7 +792,8 @@ Rules:
         3. Avoid "The artifact" or "The device" unless established earlier.
         `;
 
-        let instruction = `Continue the story. ALL OUTPUT TEXT (Captions, Dialogue, Choices) MUST BE IN ${langName.toUpperCase()}. ${coreDriver} ${guardrails}`;
+        const safeLangName = langName || 'English';
+        let instruction = `Continue the story. ALL OUTPUT TEXT (Captions, Dialogue, Choices) MUST BE IN ${safeLangName.toUpperCase()}. ${coreDriver} ${guardrails}`;
         if (richMode) {
             instruction += " RICH/NOVEL MODE ENABLED. Prioritize deeper character thoughts, descriptive captions, and meaningful dialogue exchanges over short punchlines.";
         }

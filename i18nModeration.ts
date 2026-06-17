@@ -32,7 +32,10 @@ export const passesLocalFilter = (text: string): boolean => {
     if (!text) return true;
     const lower = text.toLowerCase();
     for (const word of PROFANITY_LIST) {
-        if (lower.includes(word)) return false;
+        if (lower.includes(word)) {
+            console.log(`MODERATION FAILED on word: "${word}" in text:`, text.substring(0, 100));
+            return false;
+        }
     }
     return true;
 };

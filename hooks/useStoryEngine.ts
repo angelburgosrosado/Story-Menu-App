@@ -105,3 +105,22 @@ export const generateSpeechBase = async (text: string, voiceName: string): Promi
         throw e;
     }
 };
+
+export const enhanceKidStoryBase = async (rawText: string): Promise<string> => {
+    try {
+        const res = await fetch('/api/gemini/enhance-kid-story', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rawText })
+        });
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Server failure: ${res.status}`);
+        }
+        const data = await res.json();
+        return data.enhancedStory || '';
+    } catch (e) {
+        console.error("API Error in enhanceKidStoryBase:", e);
+        throw e;
+    }
+};

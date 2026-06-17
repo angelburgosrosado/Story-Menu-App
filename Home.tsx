@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CharacterCreator } from './CharacterCreator';
-import { KidsStoryCreator } from './KidsStoryCreator';
 import { CommunityGallery } from './CommunityGallery';
 import { 
   Sparkles, Layers, Flame, BookOpen, Star, GitMerge, 
@@ -25,23 +23,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     const [selectedAudioGenre, setSelectedAudioGenre] = useState('Sci-Fi Cyberpunk');
 
-    // Mock simulator states
-    const [customPromptInput, setCustomPromptInput] = useState('');
-    const [isGeneratingMock, setIsGeneratingMock] = useState(false);
-    const [mockResult, setMockResult] = useState<any>(null);
-
     // Style selector state
     const [selectedStyleTab, setSelectedStyleTab] = useState('anime');
     const [isLightMode, setIsLightMode] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [sandboxMode, setSandboxMode] = useState<'arena' | 'character' | 'kids'>('arena');
-
-    const samplePrompts = [
-        "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.",
-        "An astronaut discovering an ancient mystical stone temple on Mars.",
-        "A cute wizard apprentice accidentally setting their spellbook on fire."
-    ];
-
     const stylePreviews = {
         anime: {
             title: "Retro Anime 90s",
@@ -118,53 +103,13 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
         onNavigate('studio');
     };
 
-    // Simulated sandbox generator run
-    const triggerMockGeneration = (promptText: string) => {
-        const query = promptText || customPromptInput || "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.";
-        setIsGeneratingMock(true);
-        setMockResult(null);
+    const handleLaunchStudio = (mode: 'comic' | 'kid-story' | 'writers-journal') => {
+        localStorage.setItem('story_menu_skin', mode);
+        window.dispatchEvent(new Event('storage'));
+        onNavigate('studio');
+    };
 
-        setTimeout(() => {
-            setIsGeneratingMock(false);
-            
-            let title = "Procedural Universe Draft";
-            let panel1 = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=500&q=80";
-            let caption = "The system synthesized a new narrative vector for the requested coordinates.";
-            let character = "Prototypal Agent";
-            let soundtrack = "Cinematic Ambient - Track #04";
-            
-            const lowQuery = query.toLowerCase();
-            if (lowQuery.includes("cyberpunk") || lowQuery.includes("detective") || lowQuery.includes("rainy") || lowQuery.includes("neon")) {
-                title = "Neon Rain Chronicles";
-                panel1 = "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=500&q=80";
-                caption = "The hologram flickered. The coordinates pointed straight into the deep Sector 9 slums.";
-                character = "Detective Kaelen";
-                soundtrack = "Synthwave Beats - 110 BPM";
-            } else if (lowQuery.includes("astronaut") || lowQuery.includes("mars") || lowQuery.includes("temple") || lowQuery.includes("space")) {
-                title = "The Red Threshold";
-                panel1 = "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?auto=format&fit=crop&w=500&q=80";
-                caption = "Amidst the dust storms of Mars, the monolith stood undisturbed for a million years.";
-                character = "Commander Sarah Vance";
-                soundtrack = "Dark Ambient Cosmos - Track #09";
-            } else if (lowQuery.includes("wizard") || lowQuery.includes("spellbook") || lowQuery.includes("apprentice") || lowQuery.includes("fire")) {
-                title = "Arcane Mishaps";
-                panel1 = "https://images.unsplash.com/photo-1519074069444-1ba4e566370c?auto=format&fit=crop&w=500&q=80";
-                caption = "'Oops!'—the sparks ignited the ancient parchment before he could recite the counter-spell.";
-                character = "Leo the Novice";
-                soundtrack = "Whimsical Forest Chords - Track #01";
-            }
-
-            setMockResult({
-                title,
-                prompt: query,
-                panel1,
-                caption,
-                character,
-                soundtrack
-            });
-            playPageTurnSFX();
-        }, 2000);
-    };    return (
+    return (
         <div className={`min-h-screen w-full transition-colors duration-500 relative ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-gray-950 text-white'}`}>
             
             {/* Main Header / Navigation Bar */}
@@ -324,270 +269,97 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 )}
             </header>
 
-            <div className="max-w-7xl mx-auto px-6 py-12 relative">
+            <div className="max-w-7xl mx-auto px-6 pt-16 pb-24 relative">
 
                 {/* Background glowing ambient grids */}
-                <div className="ambient-orb cyan w-[500px] h-[500px] top-24 left-1/4 animate-pulse-glow -z-10 transition-colors"></div>
-                <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/2 right-1/4 animate-pulse-glow -z-10 transition-colors" style={{ animationDelay: '3s' }}></div>
+                <div className="ambient-orb cyan w-[500px] h-[500px] top-10 left-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none"></div>
+                <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/4 right-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none" style={{ animationDelay: '3s' }}></div>
 
                 {/* Cinematic Hero Section */}
-                <div className={`relative rounded-[2.5rem] overflow-hidden border shadow-2xl transition-all mb-24 p-8 md:p-16 ${
-                    isLightMode 
-                    ? 'bg-white/80 border-slate-200/80 shadow-[0_15px_40px_rgba(0,0,0,0.05)] backdrop-blur-xl' 
-                    : 'bg-gray-950/60 border-white/10 backdrop-blur-xl'
-                }`}>
-                    
-                    {/* Hero layout: Stacked for full-screen Interactive Simulator */}
-                    <div className="flex flex-col gap-12">
-                        
-                        {/* Top Area: Heading & Value Prop */}
-                        <div className="w-full space-y-8 text-center max-w-4xl mx-auto">
-                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
-                                <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
-                                <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{t('home.hero.badge', 'Live SaaS Production Ready at Story.Menu')}</span>
-                            </div>
-
-                            <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
-                              {t('home.hero.title1', 'What universe are you ')}<br />
-                              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
-                                {t('home.hero.title2', 'Craving Today?')}
-                              </span>
-                            </h1>
-
-                            <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                              {t('home.hero.subtitle', 'Welcome to Story.Menu—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.')}
-                            </p>
-
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button 
-                                    onClick={handleActionUnlockCloud}
-                                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:scale-[1.03] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] cursor-pointer"
-                                >
-                                    <Sparkles size={20} />
-                                    {t('home.hero.unlockCloud', 'Unlock Cloud Studio Sync')}
-                                </button>
-                                <button 
-                                    onClick={handleActionLaunchSandbox}
-                                    className={`flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-lg font-semibold transition-all cursor-pointer ${
-                                        isLightMode 
-                                        ? 'bg-slate-150 border border-slate-200 text-slate-800 hover:bg-slate-200' 
-                                        : 'bg-white/5 border border-white/10 hover:bg-white/10 text-white'
-                                    }`}
-                                >
-                                    <Play size={20} className="text-indigo-400" />
-                                    {t('home.hero.trySandbox', 'Try sandbox offline')}
-                                </button>
-                            </div>
-
-                            {/* Social Proof stats grid (original verbiage) */}
-                            <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-2xl border font-sans ${isLightMode ? 'bg-slate-100 border-slate-200 divide-slate-200' : 'bg-black/40 border-white/5 divide-white/5'} divide-x`}>
-                                <div className="text-center md:text-left px-2">
-                                    <div className="text-2xl font-black text-indigo-400 font-mono">5,800+</div>
-                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Comics Made</div>
-                                </div>
-                                <div className="text-center md:text-left px-2">
-                                    <div className="text-2xl font-black text-purple-400 font-mono">14K+</div>
-                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Casting Vaults</div>
-                                </div>
-                                <div className="text-center md:text-left px-2">
-                                    <div className="text-2xl font-black text-pink-400 font-mono">100%</div>
-                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Cohesion</div>
-                                </div>
-                                <div className="text-center md:text-left px-2">
-                                    <div className="text-2xl font-black text-emerald-400 font-mono">&lt; 3s</div>
-                                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Synth Speech</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Bottom Area: Interactive Simulator (Full Width) */}
-                        <div className="w-full">
-                            {/* Mode Switcher */}
-                            <div className={`flex gap-2 mb-6 p-2 rounded-2xl border ${isLightMode ? 'bg-white border-slate-200' : 'bg-white/5 border-white/10'}`}>
-                                <button 
-                                    onClick={() => setSandboxMode('arena')}
-                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'arena' ? 'bg-indigo-600 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
-                                >
-                                    Arena Sandbox
-                                </button>
-                                <button 
-                                    onClick={() => setSandboxMode('character')}
-                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'character' ? 'bg-purple-600 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
-                                >
-                                    Character Vault
-                                </button>
-                                <button 
-                                    onClick={() => setSandboxMode('kids')}
-                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'kids' ? 'bg-orange-500 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
-                                >
-                                    Kids Story
-                                </button>
-                            </div>
-
-                            {sandboxMode === 'character' && <CharacterCreator isLightMode={isLightMode} />}
-                            {sandboxMode === 'kids' && <KidsStoryCreator isLightMode={isLightMode} />}
-                            {sandboxMode === 'arena' && (
-                            <div className={`rounded-3xl p-6 border shadow-2xl relative transition-all ${
-                                isLightMode 
-                                ? 'bg-slate-100 border-slate-200 shadow-[0_10px_30px_rgba(0,0,0,0.03)]' 
-                                : 'bg-gray-950 border-white/10'
-                            }`}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                                        <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                                        <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                                    </div>
-                                    <span className={`text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>story-menu-simulator.sh</span>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className={`p-3.5 border rounded-xl text-left transition-all ${
-                                        isLightMode 
-                                        ? 'bg-white border-slate-200' 
-                                        : 'bg-white/5 border-white/10'
-                                    }`}>
-                                         <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>🎮 Prompt Sandbox Arena</span>
-                                         <p className={`text-[11px] leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                                              The <strong>Prompt Sandbox</strong> allows you to prototype universe layouts and story nodes. Input a custom premise or pick a preset below, then synthesize your design.
-                                         </p>
-                                    </div>
-
-                                    <div>
-                                        <div className="relative">
-                                            <textarea 
-                                                value={customPromptInput}
-                                                onChange={(e) => setCustomPromptInput(e.target.value)}
-                                                placeholder="A cybernetic samurai defending a neon city gate..." 
-                                                className={`w-full h-20 rounded-xl p-3 text-sm resize-none font-sans transition-all focus:outline-none focus:border-indigo-500/50 ${
-                                                    isLightMode 
-                                                    ? 'bg-white border border-slate-200 text-slate-800 placeholder-slate-400' 
-                                                    : 'bg-black/40 border border-white/10 text-gray-200 placeholder-gray-600'
-                                                }`}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Sample Suggestions */}
-                                    <div className="space-y-1.5 text-left">
-                                        <span className={`text-xs block font-semibold ${isLightMode ? 'text-slate-500' : 'text-gray-500'}`}>Select a preset story prompt:</span>
-                                        <div className="flex flex-col gap-2">
-                                            {samplePrompts.map((p, idx) => (
-                                                <button 
-                                                    key={idx}
-                                                    onClick={() => {
-                                                        setCustomPromptInput(p);
-                                                        playPageTurnSFX();
-                                                    }}
-                                                    className={`text-xs border p-2.5 rounded-lg transition-all text-left truncate cursor-pointer ${
-                                                        isLightMode 
-                                                        ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900' 
-                                                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
-                                                    }`}
-                                                >
-                                                    {idx === 0 ? "🌆 Cyberpunk" : idx === 1 ? "🪐 Mars Monolith" : "✨ Wizard apprentice"}: {p}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className={`p-3.5 border rounded-xl text-left transition-all ${
-                                        isLightMode 
-                                        ? 'bg-white border-slate-200' 
-                                        : 'bg-white/5 border-white/10'
-                                    }`}>
-                                         <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${isLightMode ? 'text-purple-600' : 'text-purple-400'}`}>⚡ Generate Preview Card</span>
-                                         <p className={`text-[11px] leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                                              Synthesizes a mockup story block demonstrating <strong>visual rendering</strong>, <strong>casting vault identity</strong>, and <strong>synth soundtracks</strong> matching the prompt.
-                                         </p>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => triggerMockGeneration('')}
-                                        disabled={isGeneratingMock}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/40 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-indigo-400/20"
-                                    >
-                                        {isGeneratingMock ? (
-                                            <>
-                                                <RotateCw size={16} className="animate-spin text-white" />
-                                                Assembling Panels...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Zap size={16} className="text-yellow-400 fill-yellow-400" />
-                                                Generate Preview Card
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {/* Output panel with simulated generation */}
-                                    <div className={`border rounded-2xl overflow-hidden min-h-[140px] flex items-center justify-center relative transition-all ${
-                                        isLightMode 
-                                        ? 'bg-white border-slate-200' 
-                                        : 'border-white/5 bg-black/30'
-                                    }`}>
-                                        {isGeneratingMock && (
-                                            <div className="absolute inset-0 shimmer-bg flex flex-col items-center justify-center gap-2 p-4">
-                                                <Sparkles size={24} className="text-indigo-400 animate-bounce" />
-                                                <span className="text-xs text-indigo-300 font-mono tracking-widest uppercase">Rendering story frame...</span>
-                                            </div>
-                                        )}
-
-                                        {!isGeneratingMock && !mockResult && (
-                                            <div className="text-center p-6">
-                                                <p className={`text-sm ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Run the generator sandbox above to witness a dynamic preview.</p>
-                                            </div>
-                                        )}
-
-                                        {!isGeneratingMock && mockResult && (
-                                            <div className="w-full animate-fadeIn p-4 flex flex-col gap-3">
-                                                <div className="flex gap-4 items-center">
-                                                    <div className={`w-20 h-28 rounded-lg overflow-hidden border flex-shrink-0 relative ${isLightMode ? 'border-slate-200' : 'border-white/15'}`}>
-                                                        <img src={mockResult.panel1} alt="Preview" className="w-full h-full object-cover" />
-                                                        <span className="absolute bottom-1 right-1 bg-black/80 text-[7px] text-cyan-300 border border-white/10 px-1 rounded font-mono">PANEL 1</span>
-                                                    </div>
-                                                    <div className="text-left space-y-1 flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="flex items-center gap-1 text-[9px] text-purple-500 font-bold uppercase tracking-wider">
-                                                                <Sparkles size={10} />
-                                                                COHESIVE PANEL
-                                                            </span>
-                                                            <span className="text-[9px] font-mono text-emerald-500">100% OK</span>
-                                                        </div>
-                                                        <p className={`text-sm font-bold truncate ${isLightMode ? 'text-slate-800' : 'text-gray-200'}`}>{mockResult.title}</p>
-                                                        <p className={`text-xs line-clamp-3 italic ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>"{mockResult.caption}"</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className={`grid grid-cols-2 gap-2 text-[10px] font-mono border rounded-lg p-2 text-left ${
-                                                    isLightMode 
-                                                    ? 'bg-slate-50 border-slate-200' 
-                                                    : 'bg-white/5 border-white/5'
-                                                }`}>
-                                                    <div>
-                                                        <span className="text-gray-500 block uppercase">Cast Member</span>
-                                                        <span className={`truncate block ${isLightMode ? 'text-indigo-600' : 'text-indigo-300'}`}>👤 {mockResult.character}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-500 block uppercase">Soundtrack</span>
-                                                        <span className={`truncate block ${isLightMode ? 'text-pink-600' : 'text-pink-300'}`}>🎵 {mockResult.soundtrack}</span>
-                                                    </div>
-                                                </div>
-
-                                                <button 
-                                                    onClick={handleActionLaunchSandbox}
-                                                    className="w-full mt-1 bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-500/20 text-xs text-white font-bold py-2 rounded-lg flex items-center justify-center gap-1 transition-all"
-                                                >
-                                                    Open in Creator Studio <ArrowRight size={12} />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            )}
-                        </div>
+                <div className="w-full space-y-8 text-center max-w-4xl mx-auto mb-20 relative z-10">
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                        <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
+                        <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{t('home.hero.badge', 'The Ultimate AI Publishing Platform')}</span>
                     </div>
+
+                    <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
+                        Create the Stories You've <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
+                        Always Imagined
+                        </span>
+                    </h1>
+
+                    <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                        Whether you're crafting complex manga, creating magical picture books for kids, or journaling your next great short story, Story.Menu gives you the AI tools to bring your imagination to life.
+                    </p>
+                </div>
+
+                {/* The 3 Paths (Feature Cards) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                    
+                    {/* Comic Studio */}
+                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
+                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
+                    }`}>
+                        <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
+                            ✍️
+                        </div>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Comic Studio</h3>
+                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                            Make complex comic books including anime and manga with simple tools and deep AI integration to maximize your output.
+                        </p>
+                        <button 
+                            onClick={() => handleLaunchStudio('comic')}
+                            className="w-full py-4 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 transition-all"
+                        >
+                            Launch Studio
+                        </button>
+                    </div>
+
+                    {/* Kid Storymaker */}
+                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
+                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
+                    }`}>
+                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
+                            🌟
+                        </div>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Kid Storymaker</h3>
+                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                            A fun, wizard-driven picture book creator. Pick a theme, name your hero, and generate a story to share or print instantly.
+                        </p>
+                        <button 
+                            onClick={() => handleLaunchStudio('kid-story')}
+                            className="w-full py-4 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 transition-all"
+                        >
+                            Start Adventure
+                        </button>
+                    </div>
+
+                    {/* Writer's Journal */}
+                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
+                        isLightMode 
+                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
+                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
+                    }`}>
+                        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
+                            📖
+                        </div>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Writer's Journal</h3>
+                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                            Write 10-page short stories in a structured journal format, generate matching visuals for each scene, and publish online.
+                        </p>
+                        <button 
+                            onClick={() => handleLaunchStudio('writers-journal')}
+                            className="w-full py-4 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/30 transition-all"
+                        >
+                            Open Journal
+                        </button>
+                    </div>
+
                 </div>
 
                 {/* Visual Style Showcase Grid (Moved Up!) */}

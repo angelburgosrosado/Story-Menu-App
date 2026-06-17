@@ -24,6 +24,7 @@ interface PanelProps {
     onOpenBook: () => void;
     onDownload: () => void;
     onReset: () => void;
+    onUpdateText?: (pageIndex: number, field: 'caption' | 'dialogue', text: string) => void;
 }
 
 export const Panel: React.FC<PanelProps> = ({ 
@@ -34,7 +35,8 @@ export const Panel: React.FC<PanelProps> = ({
     onChoice, 
     onOpenBook, 
     onDownload, 
-    onReset 
+    onReset,
+    onUpdateText
 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [loadingSpeech, setLoadingSpeech] = useState(false);
@@ -102,12 +104,24 @@ export const Panel: React.FC<PanelProps> = ({
                 )}
 
                 {/* Localized HTML Overlay Boxes for readability & accessibility */}
-                {face.type === 'story' && face.narrative && (
+                {face.narrative && (
                     <>
                         {/* Elegant Yellow Caption Box */}
                         {face.narrative.caption && (
                             <div className="absolute top-2 left-2 max-w-[85%] bg-yellow-100 border-2 border-black px-2 py-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] z-10 select-all">
-                                <p className="font-comic text-xs text-black leading-tight select-all uppercase font-medium">{face.narrative.caption}</p>
+                                <p 
+                                    className="font-comic text-xs text-black leading-tight select-all uppercase font-medium focus:outline-none focus:bg-white/50 rounded"
+                                    contentEditable={!!onUpdateText}
+                                    suppressContentEditableWarning={true}
+                                    onBlur={(e) => {
+                                        if (onUpdateText && face.pageIndex !== undefined) {
+                                            onUpdateText(face.pageIndex, 'caption', e.currentTarget.textContent || '');
+                                        }
+                                    }}
+                                    onClick={(e) => !!onUpdateText && e.stopPropagation()}
+                                >
+                                    {face.narrative.caption}
+                                </p>
                             </div>
                         )}
 
@@ -115,7 +129,24 @@ export const Panel: React.FC<PanelProps> = ({
                         {face.narrative.dialogue && (
                             <div className="absolute bottom-2 right-2 max-w-[80%] bg-white border-2 border-black rounded-lg px-2 py-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] z-10 select-all">
                                 <div className="absolute -top-1.5 right-6 w-3 h-3 bg-white border-t-2 border-l-2 border-black transform rotate-45"></div>
-                                <p className="font-comic text-xs text-black italic leading-tight text-center select-all">"{face.narrative.dialogue}"</p>
+                                <p 
+                                    className="font-comic text-xs text-black italic leading-tight text-center select-all focus:outline-none focus:bg-yellow-50 rounded"
+                                    contentEditable={!!onUpdateText}
+                                    suppressContentEditableWarning={true}
+                                    onBlur={(e) => {
+                                        if (onUpdateText && face.pageIndex !== undefined) {
+                                            // Remove surrounding quotes if they got messed up, wait, we render it with quotes.
+                                            // Let's strip the leading/trailing quote for saving.
+                                            let text = e.currentTarget.textContent || '';
+                                            if (text.startsWith('"')) text = text.slice(1);
+                                            if (text.endsWith('"')) text = text.slice(0, -1);
+                                            onUpdateText(face.pageIndex, 'dialogue', text);
+                                        }
+                                    }}
+                                    onClick={(e) => !!onUpdateText && e.stopPropagation()}
+                                >
+                                    "{face.narrative.dialogue}"
+                                </p>
                             </div>
                         )}
                     </>

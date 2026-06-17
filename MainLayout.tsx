@@ -38,7 +38,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
         };
     }, []);
 
-    const isEditorial = skin === 'writers-journal';
+    const isEditorial = skin === 'writers-journal' && currentView !== 'home';
 
     useEffect(() => {
         if (currentView === 'studio') {
@@ -115,7 +115,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                 <html lang={i18n.language || 'en'} />
             </Helmet>
             {/* Global Navigation */}
-            {currentView !== 'home' && (
+            {currentView !== 'home' && skin === 'comic' && (
                 <nav className={navClass}>
                     <div
                         className="flex items-center gap-3 cursor-pointer group"
@@ -220,6 +220,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             </main>
 
             {/* Global Footer */}
+            {currentView !== 'studio' && (
             <footer className={`w-full py-12 px-6 mt-16 border-t ${isEditorial ? 'border-stone-200 bg-[#f0eee9]' : 'border-gray-800 bg-gray-950/50'}`}>
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div className="col-span-1 md:col-span-2">
@@ -260,6 +261,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                     <p>Designed for the next generation of storytelling.</p>
                 </div>
             </footer>
+            )}
         </div>
     );
 }

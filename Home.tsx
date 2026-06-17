@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { CharacterCreator } from './CharacterCreator';
+import { KidsStoryCreator } from './KidsStoryCreator';
+import { CommunityGallery } from './CommunityGallery';
 import { 
   Sparkles, Layers, Flame, BookOpen, Star, GitMerge, 
   ArrowRight, PenTool, Globe, Zap, Play, Pause, Volume2, 
@@ -11,11 +15,11 @@ import {
   playExplosionSFX, 
   playPageTurnSFX 
 } from './audio';
-import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from './types';
 
 export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
     const { i18n } = useTranslation();
+    const { t } = useTranslation();
     
     // Soundtrack state
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -30,6 +34,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const [selectedStyleTab, setSelectedStyleTab] = useState('anime');
     const [isLightMode, setIsLightMode] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [sandboxMode, setSandboxMode] = useState<'arena' | 'character' | 'kids'>('arena');
 
     const samplePrompts = [
         "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.",
@@ -40,7 +45,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const stylePreviews = {
         anime: {
             title: "Retro Anime 90s",
-            desc: "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay.",
+            desc: t('sandbox6.styleDesc1', "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay."),
             cover: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80",
             badge: "Trending"
         },
@@ -332,11 +337,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     : 'bg-gray-950/60 border-white/10 backdrop-blur-xl'
                 }`}>
                     
-                    {/* Hero grid layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    {/* Hero layout: Stacked for full-screen Interactive Simulator */}
+                    <div className="flex flex-col gap-12">
                         
-                        {/* Left Column: Heading & Value Prop */}
-                        <div className="lg:col-span-7 space-y-8 text-left">
+                        {/* Top Area: Heading & Value Prop */}
+                        <div className="w-full space-y-8 text-center max-w-4xl mx-auto">
                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                                 <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
                                 <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{t('home.hero.badge', 'Live SaaS Production Ready at Story.Menu')}</span>
@@ -349,11 +354,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                               </span>
                             </h1>
 
-                            <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
+                            <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
                               {t('home.hero.subtitle', 'Welcome to Story.Menu—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.')}
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <button 
                                     onClick={handleActionUnlockCloud}
                                     className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:scale-[1.03] transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_40px_rgba(168,85,247,0.5)] cursor-pointer"
@@ -395,8 +400,33 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                             </div>
                         </div>
 
-                        {/* Right Column: Interactive Simulator */}
-                        <div className="lg:col-span-5">
+                        {/* Bottom Area: Interactive Simulator (Full Width) */}
+                        <div className="w-full">
+                            {/* Mode Switcher */}
+                            <div className={`flex gap-2 mb-6 p-2 rounded-2xl border ${isLightMode ? 'bg-white border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                                <button 
+                                    onClick={() => setSandboxMode('arena')}
+                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'arena' ? 'bg-indigo-600 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
+                                >
+                                    Arena Sandbox
+                                </button>
+                                <button 
+                                    onClick={() => setSandboxMode('character')}
+                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'character' ? 'bg-purple-600 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
+                                >
+                                    Character Vault
+                                </button>
+                                <button 
+                                    onClick={() => setSandboxMode('kids')}
+                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${sandboxMode === 'kids' ? 'bg-orange-500 text-white' : (isLightMode ? 'text-slate-500 hover:bg-slate-100' : 'text-gray-400 hover:bg-white/10')}`}
+                                >
+                                    Kids Story
+                                </button>
+                            </div>
+
+                            {sandboxMode === 'character' && <CharacterCreator isLightMode={isLightMode} />}
+                            {sandboxMode === 'kids' && <KidsStoryCreator isLightMode={isLightMode} />}
+                            {sandboxMode === 'arena' && (
                             <div className={`rounded-3xl p-6 border shadow-2xl relative transition-all ${
                                 isLightMode 
                                 ? 'bg-slate-100 border-slate-200 shadow-[0_10px_30px_rgba(0,0,0,0.03)]' 
@@ -555,6 +585,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     </div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -745,7 +776,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <div>
                             <h3 className={`text-2xl font-bold flex items-center gap-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>
                                 <Volume2 className="text-pink-500" />
-                                Spatial SFX Board
+                                {t('sandbox6.sfxTitle', 'Spatial SFX Board')}
                             </h3>
                             <p className={`text-sm mt-2 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>
                                 Click any trigger block to command the sound synthesis engine directly.
@@ -800,7 +831,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
                         <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs ${isLightMode ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-400/80'}`}>
                             <AlertTriangle size={14} className="flex-shrink-0" />
-                            Ensure your system audio is enabled to hear procedural sounds.
+                            {t('sandbox6.audioWarn', 'Ensure your system audio is enabled to hear procedural sounds.')}
                         </div>
                     </div>
                 </div>
@@ -995,15 +1026,15 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Indie Sandbox */}
+                        {/* Free Tier */}
                         <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
                             isLightMode 
                             ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
                             : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
                         }`}>
                             <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Indie Sandbox</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>À La Carte</h3>
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Free Tier</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Hook</h3>
                                 <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Design in transient browser memory. Perfect for casual creators sketching out individual panel frames.</p>
                                 
                                 <div className="flex items-baseline py-2">
@@ -1012,11 +1043,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 </div>
 
                                 <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-300 border-white/5'}`}>
-                                    <li>✓ Standard 10-page generation</li>
-                                    <li>✓ Local JSON state draft files</li>
-                                    <li>✓ Standard voice synthesis</li>
-                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Cloud backup project storage</li>
-                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Enterprise high-res styling</li>
+                                    <li>✓ 50 Credits / month (~5 comics)</li>
+                                    <li>✓ Basic Art Styles</li>
+                                    <li>✓ Standard Generation Speed</li>
+                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Watermarked Exports</li>
+                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Max 4 Panels per Comic</li>
                                 </ul>
                             </div>
                             <button 
@@ -1027,67 +1058,67 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
                                 }`}
                             >
-                                Launch Sandbox Mode
+                                Start Creating Free
                             </button>
                         </div>
 
-                        {/* Multiverse Pro */}
+                        {/* Creator Tier */}
                         <div className={`p-8 rounded-3xl text-left shadow-[0_0_30px_rgba(99,102,241,0.1)] transition-all flex flex-col justify-between relative border-2 ${
                             isLightMode 
                             ? 'bg-white border-indigo-400 hover:shadow-xl' 
                             : 'glass-panel border-indigo-500/50 hover:border-indigo-400/80 hover:-translate-y-1'
                         }`}>
                             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border border-indigo-400/30 shadow-md">
-                                ✨ Popular Best Value
+                                ✨ The Sweet Spot
                             </div>
                             <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Multiverse Pro</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Full Course</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Our signature recipe for continuous multi-chapter epics. Secure Web Cloud Firestore database backing.</p>
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Creator Tier</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Limitless Quality</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Targeted at hobbyists and storytellers who want high quality and consistent characters without limits.</p>
                                 
                                 <div className="flex items-baseline py-2">
-                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$19</span>
+                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$12</span>
                                     <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/ Monthly</span>
                                 </div>
 
                                 <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-250 border-indigo-950 text-gray-200'}`}>
-                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ Secure Web Cloud Firestore database backing</li>
-                                    <li>✓ Dynamic 10-chapter Story Blueprints</li>
-                                    <li>✓ Priority Gemini-3 Image style anchors</li>
-                                    <li>✓ Limitless character biometric vault cards</li>
-                                    <li>✓ Multi-language custom voice output synthesis</li>
+                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ 1,200 Credits / month (~120 comics)</li>
+                                    <li>✓ No Watermarks</li>
+                                    <li>✓ 10 Custom Characters (Consistency AI)</li>
+                                    <li>✓ High-Resolution Exports (PDF, PNG)</li>
+                                    <li>✓ Commercial Usage Rights</li>
                                 </ul>
                             </div>
                             <button 
                                 onClick={() => handleActionCheckout('Pro')}
                                 className="mt-8 w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3.5 rounded-xl border border-indigo-400/30 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
                             >
-                                Access Pro Account
+                                Upgrade to Creator
                             </button>
                         </div>
 
-                        {/* Studio Publisher */}
+                        {/* Pro / Publisher Tier */}
                         <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
                             isLightMode 
                             ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
                             : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
                         }`}>
                             <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Studio Publisher</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Multi-Course</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Our full-suite solution for professional studios managing continuous, Firestore-backed 10-chapter epic blueprints.</p>
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Pro / Publisher Tier</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Power User</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>For independent authors and professional studios needing advanced models, rapid processing, and vector exports.</p>
                                 
                                 <div className="flex items-baseline py-2">
-                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$79</span>
+                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$29</span>
                                     <span className="text-gray-500 text-xs ml-1 font-mono">/ Monthly</span>
                                 </div>
 
                                 <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-350 border-white/5 text-gray-300'}`}>
-                                    <li>✓ Everything in Pro plan</li>
-                                    <li>✓ UHD 4K Vector generation exports</li>
-                                    <li>✓ Custom model tuning weights</li>
-                                    <li>✓ Collaborative publishing workspaces</li>
-                                    <li>✓ Dedicate GCP priority prompt endpoints</li>
+                                    <li>✓ 4,000 Credits / month (~400 comics)</li>
+                                    <li>✓ Unlimited Custom Characters</li>
+                                    <li>✓ Priority GPU Processing (Instant)</li>
+                                    <li>✓ Premium LLMs (GPT-4o / Claude 3.5)</li>
+                                    <li>✓ Vector & Editable Exports</li>
                                 </ul>
                             </div>
                             <button 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema } from './types';
+import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -14,6 +14,7 @@ import {
     deleteProjectFromFirestore, 
     saveProjectToFirestore,
     getDraftsFromFirestore,
+    saveCharacterToFirestore,
     saveDraftToFirestore,
     deleteDraftFromFirestore
 } from './storageFirestore';
@@ -1241,7 +1242,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
             <div className="fixed top-1/2 left-1/2 z-[210] pointer-events-none" style={{ animation: 'pow-enter 1s forwards ease-out' }}>
                 <svg viewBox="0 0 200 150" className="w-[500px] h-[400px] drop-shadow-[0_12px_0_rgba(0,0,0,0.6)]">
                     <path d="M95.7,12.8 L110.2,48.5 L148.5,45.2 L125.6,74.3 L156.8,96.8 L119.4,105.5 L122.7,143.8 L92.5,118.6 L60.3,139.7 L72.1,103.2 L34.5,108.8 L59.9,79.9 L24.7,57.3 L62.5,54.4 L61.2,16.5 z" fill="#FFD700" stroke="black" strokeWidth="5"/>
-                    <text x="100" y="95" textAnchor="middle" fontFamily="'Bangers', cursive" fontSize="72" fill="#DC2626" stroke="black" strokeWidth="2.5" transform="rotate(-6 100 75)">BOOM!</text>
+                    <text x="100" y="95" textAnchor="middle" fontFamily="'Bangers', cursive" fontSize="72" fill="#DC2626" stroke="black" strokeWidth="2.5" transform="rotate(-6 100 75)">{t('setup.auto1', 'BOOM!')}</text>
                 </svg>
             </div>
         )}
@@ -1260,14 +1261,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                 {/* Aesthetic Top Ribbon */}
                 <div className={`absolute top-0 right-0 ${isEditorial ? 'bg-stone-200 text-stone-700 border-b border-l border-stone-300 font-sans text-[10px] uppercase font-bold tracking-widest px-4.5 py-1 z-10' : 'bg-yellow-400 text-black font-comic text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10'}`}>
-                     {isEditorial ? "🖋️ Editorial Workspace v3.11" : "Issue #01 - Multiverse Reborn"}
+                     {isEditorial ? t('setup.dashboard.editorialBadge') : t('setup.dashboard.comicBadge')}
                 </div>
 
                 {/* SKIN COMPILER SELECTOR */}
                 <div className={`flex justify-between items-center mb-6 relative z-10 select-none pb-4 border-b ${isEditorial ? 'border-stone-200 text-stone-900' : 'border-slate-800 text-slate-300'}`}>
                      <div className="flex items-center gap-2">
                           <span className="text-xl">🛠️</span>
-                          <span className={`${isEditorial ? 'text-xs uppercase tracking-widest text-[#5c5449] font-black font-sans' : 'text-xs uppercase tracking-widest text-yellow-400 font-comic font-black'}`}>STUDIO SKIN WORKSPACE</span>
+                          <span className={`${isEditorial ? 'text-xs uppercase tracking-widest text-[#5c5449] font-black font-sans' : 'text-xs uppercase tracking-widest text-yellow-400 font-comic font-black'}`}>{t('setup.dashboard.skinLabel')}</span>
                      </div>
                      <div className={`flex items-center gap-1.5 p-1 rounded-lg text-xs ${isEditorial ? 'bg-stone-200/65' : 'bg-black/40 border border-white/5'}`}>
                           <button
@@ -1275,14 +1276,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                onClick={() => setAppSkin('comic')}
                                className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'comic' ? 'bg-amber-500 text-black font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
                           >
-                               ⚡ Comic Studio
+                               {t('setup.dashboard.skinComic')}
                           </button>
                           <button
                                type="button"
                                onClick={() => setAppSkin('editorial')}
                                className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'editorial' ? 'bg-[#3c3730] text-stone-50 font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
                           >
-                               🖋️ Writer's Journal
+                               {t('setup.dashboard.skinEditorial')}
                           </button>
                      </div>
                 </div>
@@ -1291,20 +1292,20 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 <div className="text-center mb-8 relative z-10 select-none">
                     {isEditorial ? (
                          <div className="py-2">
-                              <span className="block font-sans text-[#786c5f] text-xs font-black tracking-widest uppercase mb-1">PROFESSIONAL COGNITIVE NARRATIVE CREATOR</span>
+                              <span className="block font-sans text-[#786c5f] text-xs font-black tracking-widest uppercase mb-1">{t('setup.dashboard.proSubtitle')}</span>
                               <h1 className="font-serif text-4xl md:text-5xl text-stone-900 font-extrabold tracking-tight leading-none">
-                                   Story<span className="text-[#92400e]">.Menu</span>
+                                   Story<span className="text-[#92400e]">{t('setup.auto2', '.Menu')}</span>
                               </h1>
                               <p className="text-stone-500 text-xs mt-2 font-serif max-w-lg mx-auto leading-relaxed">
-                                   Designed for writers, authors, and narrative designers seeking smart procedural story arcs and high-fidelity speech narration.
+                                   {t('setup.dashboard.proDesc')}
                               </p>
                          </div>
                     ) : (
                          <>
-                              <span className="block font-comic text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">INTELLIGENT DYNAMIC COMICS</span>
+                              <span className="block font-comic text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">{t('setup.dashboard.comicSubtitle')}</span>
                               <div className="inline-flex items-center justify-center gap-1.5 bg-red-600 border-4 border-black px-6 py-2 shadow-[4px_4px_0px_#000] transform -rotate-1">
-                                  <span className="font-comic text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>STORY</span>
-                                  <span className="font-comic text-4xl md:text-6xl text-yellow-300 tracking-wider font-extrabold" style={{ textShadow: '3px 3px 0px black' }}>.MENU</span>
+                                  <span className="font-comic text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto3', 'STORY')}</span>
+                                  <span className="font-comic text-4xl md:text-6xl text-yellow-300 tracking-wider font-extrabold" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto4', '.MENU')}</span>
                               </div>
                          </>
                     )}
@@ -1316,10 +1317,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 ${isEditorial ? 'border-stone-200 pb-4 mb-4' : 'border-slate-800 pb-4 mb-4'}`}>
                             <div>
                                 <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-comic font-black text-xl text-yellow-400 tracking-wider uppercase"}>
-                                     ⚡ CLOUD CREATIVE WORKSPACE ACTIVE
+                                     {t('setup.dashboard.cloudActive')}
                                 </h3>
                                 <p className={isEditorial ? "text-stone-500 font-sans text-xs mt-1" : "text-slate-400 font-mono text-xs mt-1"}>
-                                     Fully Integrated Cloud Storage via Google Firestore. Your characters and epic progress are synchronized live!
+                                     {t('setup.dashboard.cloudDesc')}
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2.5">
@@ -1329,7 +1330,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       onClick={handleSaveDraft}
                                       className={sPrimaryBtn}
                                  >
-                                      {isSavingDraft ? "SNAPSHOT-SAVING..." : "💾 Save WIP Draft"}
+                                      {isSavingDraft ? t('setup.dashboard.saving') : t('setup.dashboard.saveDraft')}
                                  </button>
                                  {props.onLogOut && (
                                       <button
@@ -1337,13 +1338,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            onClick={props.onLogOut}
                                            className={sRedBtn}
                                       >
-                                           🚪 Sign Out & Landing Page
+                                           {t('setup.dashboard.signOut')}
                                       </button>
                                  )}
                                  <div className={isEditorial ? "flex items-center gap-2 bg-stone-200/60 p-2 rounded-lg text-xs font-semibold" : "flex items-center gap-2 bg-slate-900 border-2 border-black/80 px-3 py-2 rounded text-xs select-none"}>
                                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
                                      <span className={isEditorial ? "font-sans text-stone-600 uppercase tracking-wider text-[11px]" : "font-mono text-slate-300 uppercase tracking-widest text-[11px] font-bold"}>
-                                          FIRESTORE CLUSTER LIVE
+                                          {t('setup.dashboard.firestoreLive')}
                                      </span>
                                  </div>
                             </div>
@@ -1353,27 +1354,27 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">🌌</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>AI STORY ENGINE</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f1Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
-                                         Guided by state-of-the-art multimodal context windows to synthesize adaptive scenario dialogues, actions, and captions.
+                                         {t('setup.dashboard.f1Desc')}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">🎭</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>CHARACTER PERSISTENCE</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f2Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
-                                         Cast recurring characters from your Vault. Upload portrait templates to propagate coherent visual traits.
+                                         {t('setup.dashboard.f2Desc')}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">📚</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>SHARED MULTIVERSE</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f3Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
-                                         Publish, preview, review, and organize custom dynamic comic issues in your personal cloud studio library.
+                                         {t('setup.dashboard.f3Desc')}
                                     </p>
                                 </div>
                             </div>
@@ -1392,7 +1393,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'generate' ? 'bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
-                        🌌 {isEditorial ? "NARRATIVE CREATOR" : "Spark Multiverse Generator"}
+                        {isEditorial ? t('setup.tabs.generateEditorial') : t('setup.tabs.generateComic')}
                     </button>
                     <button
                         type="button"
@@ -1400,40 +1401,37 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'blueprint' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-cyan-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-indigo-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
-                        🔮 {isEditorial ? "STORY BLUEPRINTS" : "Story Blueprint Manager"}
-                        {props.storyBlueprint && props.storyBlueprint.length > 0 && (
-                            <span className={isEditorial ? "absolute -top-1 right-2 bg-emerald-600 text-white text-[8px] font-sans font-black px-1.5 py-0.5 rounded-full border border-emerald-500 animate-pulse" : "absolute -top-1 right-2 bg-green-500 text-black text-[9px] font-mono font-black px-1.5 py-0.5 rounded-full border border-black animate-pulse"}>
-                                ACTIVE
-                            </span>
-                        )}
+                        {isEditorial ? t('setup.tabs.blueprintEditorial') : t('setup.tabs.blueprintComic')}
+                        <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-lg">{t('setup.auto5', 'NEW')}</span>
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('persona')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'persona' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-purple-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-green-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
-                        🎭 {isEditorial ? "AI PERSONA ENGINE" : "AI Persona Tuning Studio"}
+                        {isEditorial ? t('setup.tabs.personaEditorial') : t('setup.tabs.personaComic')}
+                        <span className="absolute -top-2 -right-2 bg-yellow-400 text-black font-bold border border-black text-[10px] px-2 py-0.5 rounded shadow-sm">{t('setup.auto6', 'BETA')}</span>
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('library')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'library' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'library' ? 'bg-yellow-500 text-black border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-comic text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'library' ? 'bg-green-500 text-white border-black shadow-[4px_4px_0px_#000]' : 'bg-green-950/40 text-green-300 border-green-900/50 hover:border-green-500 hover:bg-green-900/40'}`
                         }`}
                     >
-                        📚 {isEditorial ? "STORY ARCHIVE" : "My Studio Comic Library"}
-                        {savedProjects.length > 0 && (
-                            <span className={isEditorial ? "absolute -top-1 right-2 bg-red-600 text-white text-[8px] font-sans px-1.5 py-0.5 rounded-full animate-bounce" : "absolute -top-1 right-2 bg-red-600 text-white text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-black animate-bounce"}>
-                                {savedProjects.length}
+                        {isEditorial ? t('setup.tabs.libraryEditorial') : t('setup.tabs.libraryComic')}
+                        {savedDrafts.length > 0 && (
+                            <span className={isEditorial ? "ml-2 bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold" : "ml-2 bg-black text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded"}>
+                                {savedDrafts.length}
                             </span>
                         )}
                     </button>
@@ -1447,14 +1445,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     {/* Section 1: The Cast Grid (7 cols) */}
                     <div className={`lg:col-span-7 flex flex-col ${sCard}`}>
                         <div className={sHeaderBadge}>
-                             {isEditorial ? "1. CAST REGISTRY" : "1. CHOOSE YOUR CAST"}
-                        </div>
-                        
-                        <p className={`text-xs ${isEditorial ? 'text-stone-505 font-sans leading-relaxed' : 'text-gray-300 font-medium'} mb-5 mt-2`}>
-                             {isEditorial 
-                                  ? "Identify characters to participate in the narrative arc. Upload images of your characters to synchronize consistent physical traits recursively during scenario drafts."
-                                  : "Upload custom character images to create coherent comic likenesses throughout the adventure. Include a Villain for high-stakes conflicts!"}
-                        </p>
+                              {isEditorial ? t('setup.cast.titleEditorial') : t('setup.cast.titleComic')}
+                         </div>
+                         
+                         <p className={`text-xs ${isEditorial ? 'text-stone-505 font-sans leading-relaxed' : 'text-gray-300 font-medium'} mb-5 mt-2`}>
+                              {isEditorial 
+                                   ? t('setup.cast.descEditorial')
+                                   : t('setup.cast.descComic')}
+                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                             
@@ -1471,7 +1469,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           {/* Upper portion: Card Artwork with hover overlay */}
                                           <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                    <span className="sr-only">Upload Hero</span>
+                                                    <span className="sr-only">{t('setup.auto7', 'Upload Hero')}</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -1570,7 +1568,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       <label htmlFor="hero-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            {/* Emblem representation */}
                                            <div className="flex justify-between items-center">
-                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2.5 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]"}>REQUIRED</span>
+                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2.5 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
                                                 <span className={`w-2.5 h-2.5 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
                                            </div>
 
@@ -1607,7 +1605,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       <>
                                           <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                    <span className="sr-only">Upload Co-Star</span>
+                                                    <span className="sr-only">{t('setup.auto9', 'Upload Co-Star')}</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -1704,7 +1702,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  ) : (
                                       <label htmlFor="friend-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
-                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>OPTIONAL</span>
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto10', 'OPTIONAL')}</span>
                                                 <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-purple-500'}`} />
                                            </div>
 
@@ -1741,7 +1739,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       <>
                                           <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                                <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                    <span className="sr-only">Upload Villain</span>
+                                                    <span className="sr-only">{t('setup.auto11', 'Upload Villain')}</span>
                                                </label>
                                                <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
@@ -1838,7 +1836,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  ) : (
                                       <label htmlFor="villain-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
                                            <div className="flex justify-between items-center">
-                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>OPTIONAL</span>
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto12', 'OPTIONAL')}</span>
                                                 <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-red-600'}`} />
                                            </div>
 
@@ -2240,7 +2238,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        {isEditorial ? "🕶️ Attire Variations (Scene Clothing Closet)" : "🕶️ Adaptive Dressing (Active Wardrobe Closet)"}
                                                   </span>
                                                   <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
-                                                       <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>Presets:</span>
+                                                       <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>{t('setup.auto13', 'Presets:')}</span>
                                                        <select
                                                             onChange={(e) => {
                                                                  const updated = {
@@ -2336,20 +2334,20 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                   </label>
                                                   <div className="flex flex-wrap gap-1.5 mt-1">
                                                        <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
-                                                            <span>wavy hair</span>
-                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
+                                                            <span>{t('setup.auto14', 'wavy hair')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto15', '1.4 Locked')}</span>
                                                        </span>
                                                        <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
-                                                            <span>calculating hazel eyes</span>
-                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
+                                                            <span>{t('setup.auto16', 'calculating hazel eyes')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto17', '1.4 Locked')}</span>
                                                        </span>
                                                        <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
-                                                            <span>snake ear-cuff</span>
-                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
+                                                            <span>{t('setup.auto18', 'snake ear-cuff')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto19', '1.4 Locked')}</span>
                                                        </span>
                                                        <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-blue-950 border-blue-500/30 text-blue-200'}`}>
-                                                            <span>evening dress</span>
-                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-400 text-stone-100 font-sans' : 'bg-blue-600 text-white'}`}>1.1 Adapt</span>
+                                                            <span>{t('setup.auto20', 'evening dress')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-400 text-stone-100 font-sans' : 'bg-blue-600 text-white'}`}>{t('setup.auto21', '1.1 Adapt')}</span>
                                                        </span>
                                                   </div>
                                              </div>
@@ -2416,7 +2414,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                          {/* Terms Guardrails/* Terms Guardrails disclaimer style */}
                         <div className="mt-4 p-2.5 bg-slate-900/60 border border-slate-700 rounded text-[11px] text-gray-400 leading-tight">
-                             <span className="text-yellow-400 font-bold uppercase tracking-wider">🔒 MULTIVERSE SECURITY:</span> Pictures are parsed server-side to extract spatial vectors for coherent layout synthesis. No files are stored or kept. Build guidelines apply.
+                             <span className="text-yellow-400 font-bold uppercase tracking-wider">{t('setup.auto22', '🔒 MULTIVERSE SECURITY:')}</span> Pictures are parsed server-side to extract spatial vectors for coherent layout synthesis. No files are stored or kept. Build guidelines apply.
                         </div>
                     </div>
 
@@ -3079,13 +3077,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                           
                                                           <div className="space-y-1.5 font-sans">
                                                                <div>
-                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">GARMENT & HAIR DESCRIPTION</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">{t('setup.auto23', 'GARMENT & HAIR DESCRIPTION')}</span>
                                                                     <p className="text-[11px] text-slate-200 leading-relaxed italic pr-4 bg-slate-950/30 p-1.5 rounded">
                                                                          "{pData.desc}"
                                                                     </p>
                                                                </div>
                                                                <div>
-                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">RENDERING ART STYLE DIRECTIVE</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">{t('setup.auto24', 'RENDERING ART STYLE DIRECTIVE')}</span>
                                                                     <p className="text-[10px] text-yellow-300 mt-0.5 font-semibold font-sans">
                                                                          ⚔️ {pData.styleLock}
                                                                     </p>
@@ -3138,7 +3136,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       {/* Left Panel: Creator Workspace */}
                       <div className="lg:col-span-7 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000]">
                            <div>
-                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2">1. Select Character Role</label>
+                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2">{t('setup.auto25', '1. Select Character Role')}</label>
                                 <div className="grid grid-cols-3 gap-3">
                                      <button
                                           type="button"
@@ -3178,7 +3176,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                     <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">Character Name Input</label>
+                                     <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto26', 'Character Name Input')}</label>
                                      <input
                                           type="text"
                                           value={personaStudioName}
@@ -3189,7 +3187,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                                 <div>
                                      <div className="flex justify-between items-center mb-1">
-                                          <label className="block text-xs font-comic text-gray-350 uppercase font-semibold">Creative Art Style</label>
+                                          <label className="block text-xs font-comic text-gray-350 uppercase font-semibold">{t('setup.auto27', 'Creative Art Style')}</label>
                                           {props.selectedGenre !== personaStudioStyle && (
                                                <button
                                                     type="button"
@@ -3214,7 +3212,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            </div>
 
                            <div>
-                                <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">Persona Concept Hint / Keywords</label>
+                                <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto28', 'Persona Concept Hint / Keywords')}</label>
                                 <textarea
                                      rows={2}
                                      value={personaStudioConcept}
@@ -3224,7 +3222,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 />
                                 {/* Custom Style Description Templates */}
                                 <div className="mt-2 text-[10px] text-gray-400">
-                                     <span className="font-mono text-[9px] uppercase font-bold text-purple-400 mr-1.5 block mb-1">💡 Custom Style Presets (Click to insert):</span>
+                                     <span className="font-mono text-[9px] uppercase font-bold text-purple-400 mr-1.5 block mb-1">{t('setup.auto29', '💡 Custom Style Presets (Click to insert):')}</span>
                                      <div className="flex flex-wrap gap-1">
                                           {(() => {
                                                const templatesMap: Record<string, string[]> = {
@@ -3291,25 +3289,25 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            {(personaStudioSuggestedName || personaStudioSuggestedBio || personaStudioSuggestedVisuals) && (
                                 <div className="mt-2 p-4 bg-slate-950 border-2 border-dashed border-purple-500/50 rounded-lg animate-fadeIn text-left">
                                      <div className="flex justify-between border-b border-slate-700 pb-1.5 mb-2">
-                                          <span className="font-comic text-xs uppercase text-purple-300 font-bold">✨ Designed Persona Profile Specs</span>
-                                          <span className="bg-purple-900 text-purple-200 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">GEMINI GENERATED</span>
+                                          <span className="font-comic text-xs uppercase text-purple-300 font-bold">{t('setup.auto30', '✨ Designed Persona Profile Specs')}</span>
+                                          <span className="bg-purple-900 text-purple-200 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">{t('setup.auto31', 'GEMINI GENERATED')}</span>
                                      </div>
                                      <div className="space-y-2.5 text-xs text-gray-300">
                                           <div>
-                                               <strong className="text-white font-semibold">Brainstormed Name:</strong>
+                                               <strong className="text-white font-semibold">{t('setup.auto32', 'Brainstormed Name:')}</strong>
                                                <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 text-yellow-300 font-comic uppercase text-[12px]">{personaStudioSuggestedName}</p>
                                           </div>
                                           <div>
-                                               <strong className="text-white font-semibold flex items-center">Story Backstory / Bio:</strong>
+                                               <strong className="text-white font-semibold flex items-center">{t('setup.auto33', 'Story Backstory / Bio:')}</strong>
                                                <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 leading-relaxed font-sans">{personaStudioSuggestedBio}</p>
                                           </div>
                                           <div>
-                                               <strong className="text-white font-semibold">Dressing & Hairstyle Prompt Descriptors:</strong>
+                                               <strong className="text-white font-semibold">{t('setup.auto34', 'Dressing & Hairstyle Prompt Descriptors:')}</strong>
                                                <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 italic font-sans">{personaStudioSuggestedVisuals}</p>
                                           </div>
                                           {personaStudioRole === 'Villain' && (
                                                <div>
-                                                    <strong className="text-white font-semibold text-red-400">Nemesis DNA & Core Powers Source:</strong>
+                                                    <strong className="text-white font-semibold text-red-400">{t('setup.auto35', 'Nemesis DNA & Core Powers Source:')}</strong>
                                                     <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 font-sans font-semibold text-red-300">{personaStudioSuggestedPowers}</p>
                                                </div>
                                           )}
@@ -3333,7 +3331,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            {/* Biometric Backbone */}
                                            <div className="flex flex-col gap-1.5 text-left font-sans">
                                                 <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>🧬 1. Biometric Backbone (Faces, Eyes, Likeness Core)</span>
+                                                     <span>{t('setup.auto36', '🧬 1. Biometric Backbone (Faces, Eyes, Likeness Core)')}</span>
                                                 </label>
                                                 <textarea
                                                      rows={2}
@@ -3361,7 +3359,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            {/* Structural Constants */}
                                            <div className="flex flex-col gap-1.5 text-left font-sans">
                                                 <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>🔩 2. Structural Constants (Identity Marks & Accessories)</span>
+                                                     <span>{t('setup.auto37', '🔩 2. Structural Constants (Identity Marks & Accessories)')}</span>
                                                 </label>
                                                 <textarea
                                                      rows={2}
@@ -3389,7 +3387,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            {/* Chromatic Anchor */}
                                            <div className="flex flex-col gap-1.5 text-left font-sans">
                                                 <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>🎨 3. Chromatic Anchor (Visual Atmosphere, Palettes, Rim-light)</span>
+                                                     <span>{t('setup.auto38', '🎨 3. Chromatic Anchor (Visual Atmosphere, Palettes, Rim-light)')}</span>
                                                 </label>
                                                 <textarea
                                                      rows={2}
@@ -3543,7 +3541,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       {/* Right Panel: Portrait and Casting Panel */}
                       <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000] text-center min-h-[450px] justify-between font-comic font-bold">
                            <div>
-                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2 text-left">2. Character Avatar Portrait</label>
+                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2 text-left">{t('setup.auto39', '2. Character Avatar Portrait')}</label>
                                 <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-950 border-4 border-black rounded-lg overflow-hidden group shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                                      {personaStudioPortrait ? (
                                           <img
@@ -3555,16 +3553,16 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      ) : (
                                           <div className="w-full h-full flex flex-col items-center justify-center p-4">
                                                <span className="text-5xl mb-2 select-none">🎭</span>
-                                               <span className="font-comic text-sm text-purple-300 uppercase font-extrabold pb-1">AWAITING SUMMONS</span>
-                                               <span className="text-[10px] text-gray-400 uppercase font-mono tracking-widest mt-1">SAGA PORTRAIT PORTAL</span>
+                                               <span className="font-comic text-sm text-purple-300 uppercase font-extrabold pb-1">{t('setup.auto40', 'AWAITING SUMMONS')}</span>
+                                               <span className="text-[10px] text-gray-400 uppercase font-mono tracking-widest mt-1">{t('setup.auto41', 'SAGA PORTRAIT PORTAL')}</span>
                                           </div>
                                      )}
 
                                      {personaStudioGeneratingImg && (
                                           <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-4">
                                                <div className="w-12 h-12 border-4 border-t-purple-500 border-r-purple-500 border-b-transparent border-l-transparent rounded-full animate-spin mb-3" />
-                                               <span className="font-comic text-xs uppercase text-purple-400 tracking-wider">SUMMONING VISUAL CORES</span>
-                                               <span className="text-[9px] font-mono text-gray-400 uppercase mt-1 animate-pulse">GENERATING COMIC PORTRAIT...</span>
+                                               <span className="font-comic text-xs uppercase text-purple-400 tracking-wider">{t('setup.auto42', 'SUMMONING VISUAL CORES')}</span>
+                                               <span className="text-[9px] font-mono text-gray-400 uppercase mt-1 animate-pulse">{t('setup.auto43', 'GENERATING COMIC PORTRAIT...')}</span>
                                           </div>
                                      )}
                                 </div>
@@ -3624,7 +3622,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            Saga Thinking...
                                       </>
                                  ) : (
-                                      <>✨ AI Brainstorm Saga Path</>
+                                      <>{t('setup.auto44', '✨ AI Brainstorm Saga Path')}</>
                                  )}
                             </button>
                             <button
@@ -3647,15 +3645,15 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   {/* ACTIVE SAGA CONTEXT FEED */}
                   <div className="bg-slate-950/80 p-3 rounded-lg border-2 border-black mb-6 flex flex-wrap gap-x-6 gap-y-2 text-xs font-mono">
                        <div>
-                            <span className="text-cyan-400 font-bold uppercase">Active Genre:</span> {props.selectedGenre || "Custom"}
+                            <span className="text-cyan-400 font-bold uppercase">{t('setup.auto45', 'Active Genre:')}</span> {props.selectedGenre || "Custom"}
                        </div>
                        {props.customPremise && (
                             <div className="max-w-md truncate">
-                                 <span className="text-cyan-400 font-bold uppercase">Premise:</span> {props.customPremise}
+                                 <span className="text-cyan-400 font-bold uppercase">{t('setup.auto46', 'Premise:')}</span> {props.customPremise}
                             </div>
                        )}
                        <div>
-                            <span className="text-cyan-400 font-bold uppercase">Language:</span> {props.selectedLanguage || "English"}
+                            <span className="text-cyan-400 font-bold uppercase">{t('setup.auto47', 'Language:')}</span> {props.selectedLanguage || "English"}
                        </div>
                   </div>
 
@@ -3663,7 +3661,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   {!props.storyBlueprint || props.storyBlueprint.length === 0 ? (
                        <div className="text-center py-16 px-4 bg-slate-950/40 rounded-xl border-4 border-dashed border-slate-800">
                             <span className="text-5xl block mb-3">🔮</span>
-                            <h3 className="font-comic text-base font-extrabold text-yellow-500 uppercase mb-2">Saga Blueprint Blank</h3>
+                            <h3 className="font-comic text-base font-extrabold text-yellow-500 uppercase mb-2">{t('setup.auto48', 'Saga Blueprint Blank')}</h3>
                             <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed mb-4">
                                  Your blueprint configuration is currently empty. Click above to auto-generate a custom plot-line tailored to your active genre and characters, or load a default template structure to write goals manually!
                             </p>
@@ -3730,16 +3728,16 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                           {emoji} Page {pageNum} Beat
                                                      </span>
                                                      {pageNum === 1 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-emerald-400 animate-pulse">INCITING</span>
+                                                          <span className="text-[8.5px] font-comic font-semibold text-emerald-400 animate-pulse">{t('setup.auto49', 'INCITING')}</span>
                                                      )}
                                                      {pageNum === 3 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-amber-400 animate-pulse">DECISION POINT</span>
+                                                          <span className="text-[8.5px] font-comic font-semibold text-amber-400 animate-pulse">{t('setup.auto50', 'DECISION POINT')}</span>
                                                      )}
                                                      {pageNum === 9 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-red-405 animate-pulse">CLIMAX CONFLICT</span>
+                                                          <span className="text-[8.5px] font-comic font-semibold text-red-405 animate-pulse">{t('setup.auto51', 'CLIMAX CONFLICT')}</span>
                                                      )}
                                                      {pageNum === 10 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-purple-400 animate-pulse">FINALE RESOLVE</span>
+                                                          <span className="text-[8.5px] font-comic font-semibold text-purple-400 animate-pulse">{t('setup.auto52', 'FINALE RESOLVE')}</span>
                                                      )}
                                                 </div>
                                                 
@@ -3756,7 +3754,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                            {/* Title Input field */}
                                            <div className="flex flex-col gap-1 text-left">
-                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">Beat Title</label>
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">{t('setup.auto53', 'Beat Title')}</label>
                                                 <input 
                                                      type="text"
                                                      value={node.title || ""}
@@ -3778,7 +3776,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                            {/* Goal Textarea */}
                                            <div className="flex flex-col gap-1 text-left">
-                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">Focal Goal & Narrative Guidelines</label>
+                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">{t('setup.auto54', 'Focal Goal & Narrative Guidelines')}</label>
                                                 <textarea 
                                                      rows={2}
                                                      value={node.goal || ""}
@@ -3958,7 +3956,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                 <div className="grid grid-cols-2 gap-2 text-left">
                                      <div>
-                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Genre</label>
+                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto55', 'Genre')}</label>
                                           <select
                                                value={manualComicGenre}
                                                onChange={(e) => setManualComicGenre(e.target.value)}
@@ -3970,7 +3968,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           </select>
                                      </div>
                                      <div>
-                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Language</label>
+                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto56', 'Language')}</label>
                                           <select
                                                value={manualComicLanguage}
                                                onChange={(e) => setManualComicLanguage(e.target.value)}
@@ -3984,7 +3982,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  </div>
 
                                 <div className="text-left">
-                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>Cover Graphic/Image Upload</label>
+                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto57', 'Cover Graphic/Image Upload')}</label>
                                      <div className={isEditorial
                                           ? "relative border border-dashed border-stone-300 hover:border-stone-400 rounded bg-stone-50 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"
                                           : "relative border-2 border-dashed border-slate-700 hover:border-orange-500 rounded bg-slate-900/60 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"}>
@@ -4015,12 +4013,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                               referrerPolicy="no-referrer"
                                                          />
                                                     </div>
-                                                    <span className={isEditorial ? "text-[10px] font-sans text-emerald-750 font-bold" : "text-[10px] font-mono text-green-400 line-clamp-1"}>✓ File Loaded</span>
+                                                    <span className={isEditorial ? "text-[10px] font-sans text-emerald-750 font-bold" : "text-[10px] font-mono text-green-400 line-clamp-1"}>{t('setup.auto58', '✓ File Loaded')}</span>
                                                </div>
                                           ) : (
                                                <>
-                                                    <span className={isEditorial ? "text-[10px] font-sans text-stone-400" : "text-[10px] font-mono text-slate-500"}>Click or drag cover file</span>
-                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-300 mt-1 uppercase" : "text-[8px] font-mono text-slate-600 mt-1 uppercase"}>JPEG, PNG Max 5MB</span>
+                                                    <span className={isEditorial ? "text-[10px] font-sans text-stone-400" : "text-[10px] font-mono text-slate-500"}>{t('setup.auto59', 'Click or drag cover file')}</span>
+                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-300 mt-1 uppercase" : "text-[8px] font-mono text-slate-600 mt-1 uppercase"}>{t('setup.auto60', 'JPEG, PNG Max 5MB')}</span>
                                                </>
                                           )}
                                      </div>

@@ -41,3 +41,78 @@ CREATE TABLE IF NOT EXISTS project_casting (
 -- Create performance indexes for rapid fetching
 CREATE INDEX IF NOT EXISTS idx_character_vault_user ON character_vault(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+
+-- 5. SUBSCRIPTIONS TABLE (Handles SaaS Tiers & Usage Limits)
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tier VARCHAR(50) DEFAULT 'Free', -- 'Free', 'Pro', 'Enterprise'
+    stripe_customer_id VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    token_balance INT DEFAULT 500,
+    renewal_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. CONTENT CATEGORIES (Global Taxonomy managed by Admins)
+CREATE TABLE IF NOT EXISTS content_categories (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_type VARCHAR(50) NOT NULL, -- 'Genre', 'Style', 'Tag'
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. PUBLISHED WORKS (Community Gallery / Feed)
+CREATE TABLE IF NOT EXISTS published_works (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    synopsis TEXT,
+    cover_image_url TEXT,
+    language VARCHAR(50) DEFAULT 'en',
+    region VARCHAR(50) DEFAULT 'global',
+    upvotes INT DEFAULT 0,
+    views INT DEFAULT 0,
+    is_featured BOOLEAN DEFAULT false,
+    published_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. MODERATION FLAGS (Content safety and regional compliance queue)
+CREATE TABLE IF NOT EXISTS moderation_flags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    target_type VARCHAR(50) NOT NULL, -- 'published_work', 'character_vault'
+    target_id UUID NOT NULL,
+    flagged_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Null if automated LLM flag
+    reason TEXT NOT NULL,
+    severity VARCHAR(50) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'resolved_safe', 'resolved_removed'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_published_works_region ON published_works(region);
+CREATE INDEX IF NOT EXISTS idx_published_works_language ON published_works(language);
+CREATE INDEX IF NOT EXISTS idx_moderation_flags_status ON moderation_flags(status);
+
+-- Settings and Integrations Table
+CREATE TABLE IF NOT EXISTS app_settings (
+    key_name VARCHAR(100) PRIMARY KEY,
+    key_value TEXT NOT NULL,
+    is_secret BOOLEAN DEFAULT false,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Dynamic Subscription Plans Table
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,
+    billing_cycle VARCHAR(50) DEFAULT 'monthly',
+    features JSONB DEFAULT '[]',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

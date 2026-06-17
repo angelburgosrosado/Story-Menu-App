@@ -1,0 +1,212 @@
+{
+  "home": {
+    "nav": {
+      "showcase": "Artistic Showcase",
+      "soundscapes": "Soundscapes",
+      "capabilities": "Capabilities",
+      "pricing": "Pricing",
+      "trending": "Trending",
+      "launchStudio": "Launch Studio"
+    },
+    "hero": {
+      "badge": "Live SaaS Production Ready at Story.Menu",
+      "title1": "What universe are you ",
+      "title2": "Craving Today?",
+      "subtitle": "Welcome to Story.Menu—the ultimate interactive AI creator suite where epic multi-agent narrative arcs, locked character DNA, and real-time synth soundtracks are served on-demand.",
+      "unlockCloud": "Unlock Cloud Studio Sync",
+      "trySandbox": "Try sandbox offline"
+    },
+    "stats": {
+      "comics": "Comics Made",
+      "vaults": "Casting Vaults",
+      "cohesion": "Cohesion",
+      "speech": "Synth Speech"
+    },
+    "sandbox": {
+      "title": "🎮 Prompt Sandbox Arena",
+      "desc": "The <1>Prompt Sandbox</1> allows you to prototype universe layouts and story nodes. Input a custom premise or pick a preset below, then synthesize your design.",
+      "placeholder": "A cybernetic samurai defending a neon city gate...",
+      "presetLabel": "Select a preset story prompt:",
+      "preset1": "A neon cyberpunk detective looking at a glowing holographic map on a rainy street.",
+      "preset2": "An astronaut discovering an ancient mystical stone temple on Mars.",
+      "preset3": "A cute wizard apprentice accidentally setting their spellbook on fire.",
+      "generateCard": "⚡ Generate Preview Card",
+      "generateDesc": "Synthesizes a mockup story block demonstrating <1>visual rendering</1>, <1>casting vault identity</1>, and <1>synth soundtracks</1> matching the prompt.",
+      "assembling": "Assembling Panels...",
+      "rendering": "Rendering story frame...",
+      "runGenerator": "Run the generator sandbox above to witness a dynamic preview.",
+      "cohesivePanel": "COHESIVE PANEL",
+      "ok": "100% OK",
+      "castMember": "Cast Member",
+      "soundtrack": "Soundtrack",
+      "openStudio": "Open in Creator Studio"
+    },
+    "showcase": {
+      "badge": "Artistic Diversity",
+      "title": "Artisanal & Storybook Styles",
+      "desc": "Choose a visual framework that aligns with your story's soul. Hand-drawn aesthetics meet modern SaaS tools.",
+      "renderingLock": "Rendering Lock",
+      "engine": "Consistent Art Direction Engine",
+      "launch": "Launch with this Style"
+    },
+    "audio": {
+      "title": "Interactive Soundscapes",
+      "subtitle": "Web Audio procedural synth engine",
+      "desc": "Every multiverse genre carries its own generative procedural theme. Change genres to watch the synthetic frequency arpeggios shift live in your browser's audio nodes.",
+      "statusLabel": "Soundtrack Status",
+      "running": "Procedural Audio Running",
+      "standby": "Synthesizer Standby",
+      "sfxTitle": "Spatial SFX Board",
+      "sfxDesc": "Click any trigger block to command the sound synthesis engine directly.",
+      "sfxLaser": "Laser Beam",
+      "sfxExplosion": "Explosion",
+      "sfxPage": "Page Turn",
+      "sfxCombo": "Combo Synthesis",
+      "warning": "Ensure your system audio is enabled to hear procedural sounds."
+    },
+    "features": {
+      "badge": "Chassis v3.11 Publishing Workshop",
+      "title": "Built For Dynamic Multi-Tenant Publishing",
+      "desc": "A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting.",
+      "f1Title": "Story Blueprint Architect",
+      "f1Desc": "Map chapter goals from inciting incident triggers on page 1 to decision branches on page 3, climbing to the climax on page 9. Strictly structured outline grids.",
+      "f1Status": "● CHAPTER CONTROL ACTIVE",
+      "f2Title": "Multi-Tenant Casting Vault",
+      "f2Desc": "Forge persistent files containing character biometrics, facial weights, clothing references, and style lock keys. Keep heroes and archenemies consistent.",
+      "f2Status": "● MODEL SYNTAX LOCKED",
+      "f3Title": "Multi-Engine Diffusion Router",
+      "f3Desc": "Choose your renderer: LlamaGen.ai (Comic API) for panel grids, Stable Diffusion (via ComfyUI) for raw workflow control, Leonardo.ai (CharRef), or Gemini 2.5 Flash.",
+      "f3Status": "● DIFFUSION ENGINES STABLE",
+      "f4Title": "Synthesized Speech Narration",
+      "f4Desc": "Hear dialogue panels narrated instantly! Generates character text-to-speech outputs in multiple actor voice accents alongside backing audio.",
+      "f4Status": "● VOICE ENGINES READY",
+      "f5Title": "Procedural Soundscapes",
+      "f5Desc": "Generative arpeggios, frequency oscillators, and synthesized background themes that adapt dynamically to your selected story genres.",
+      "f5Status": "● AUDIOPROCESSOR OPERATIONAL",
+      "f6Title": "Unified Book & PDF Export",
+      "f6Desc": "Compile completed comics directly to high-fidelity PDF documents. Automatically packages page layouts, panels, speech bubbles, and text logs.",
+      "f6Status": "● EXPORTER STANDBY"
+    },
+    "trending": {
+      "title": "Trending Multiverses",
+      "create": "Create Your Story",
+      "by": "by",
+      "remix": "Remix"
+    },
+    "pricing": {
+      "title": "Choose Your Multiverse Studio Tier",
+      "desc": "Instantly deploy professional-grade publication features and take your original comics directly to your global audience.",
+      "p1Name": "Indie Sandbox",
+      "p1Title": "À La Carte",
+      "p1Desc": "Design in transient browser memory. Perfect for casual creators sketching out individual panel frames.",
+      "p1Price": "$0",
+      "p1Period": "/ Forever",
+      "p1F1": "✓ Standard 10-page generation",
+      "p1F2": "✓ Local JSON state draft files",
+      "p1F3": "✓ Standard voice synthesis",
+      "p1F4": "✗ Cloud backup project storage",
+      "p1F5": "✗ Enterprise high-res styling",
+      "p1CTA": "Launch Sandbox Mode",
+      "p2Badge": "✨ Popular Best Value",
+      "p2Name": "Multiverse Pro",
+      "p2Title": "The Full Course",
+      "p2Desc": "Our signature recipe for continuous multi-chapter epics. Secure Web Cloud Firestore database backing.",
+      "p2Price": "$19",
+      "p2Period": "/ Monthly",
+      "p2F1": "✓ Secure Web Cloud Firestore database backing",
+      "p2F2": "✓ Dynamic 10-chapter Story Blueprints",
+      "p2F3": "✓ Priority Gemini-3 Image style anchors",
+      "p2F4": "✓ Limitless character biometric vault cards",
+      "p2F5": "✓ Multi-language custom voice output synthesis",
+      "p2CTA": "Access Pro Account",
+      "p3Name": "Studio Publisher",
+      "p3Title": "The Multi-Course",
+      "p3Desc": "Our full-suite solution for professional studios managing continuous, Firestore-backed 10-chapter epic blueprints.",
+      "p3Price": "$79",
+      "p3Period": "/ Monthly",
+      "p3F1": "✓ Everything in Pro plan",
+      "p3F2": "✓ UHD 4K Vector generation exports",
+      "p3F3": "✓ Custom model tuning weights",
+      "p3F4": "✓ Collaborative publishing workspaces",
+      "p3F5": "✓ Dedicate GCP priority prompt endpoints",
+      "p3CTA": "Access Enterprise Account"
+    },
+    "cta": {
+      "title": "Ready to claim your place in the multiverse?",
+      "desc": "Unlock the creative potential of multimodal artificial intelligence. Draft script blueprints, mold actors, and release immersive visual graphic books safely stored in Firestore today.",
+      "console": "Access Creative Console",
+      "sandbox": "Launch local sandbox",
+      "rights": "© 2026 STORY.MENU. ALL RIGHTS RESERVED.",
+      "domainLabel": "DOMAIN:",
+      "chassisLabel": "CHASSIS:"
+    }
+  },
+  "layout": {
+    "nav": {
+      "logoEditorial": "Writer's Journal",
+      "logoComic": "Story Menu",
+      "featuresEditorial": "📖 Features",
+      "featuresComic": "✨ Features",
+      "pricingEditorial": "💳 Pricing",
+      "pricingComic": "💰 Pricing",
+      "discover": "Discover",
+      "explore": "Explore",
+      "signIn": "Sign In",
+      "studioEditorial": "🖋️ Writing Studio",
+      "studioComic": "Studio Hub"
+    },
+    "reader": {
+      "comingSoon": "Reading View (Coming Soon)",
+      "storyId": "You clicked on story ID: {{id}}",
+      "backToFeed": "Back to Feed"
+    }
+  },
+  "setup": {
+    "dashboard": {
+      "editorialBadge": "🖋️ Editorial Workspace v3.11",
+      "comicBadge": "Issue #01 - Multiverse Reborn",
+      "skinLabel": "STUDIO SKIN WORKSPACE",
+      "skinComic": "⚡ Comic Studio",
+      "skinEditorial": "🖋️ Writer's Journal",
+      "proSubtitle": "PROFESSIONAL COGNITIVE NARRATIVE CREATOR",
+      "proDesc": "Designed for writers, authors, and narrative designers seeking smart procedural story arcs and high-fidelity speech narration.",
+      "comicSubtitle": "INTELLIGENT DYNAMIC COMICS",
+      "cloudActive": "⚡ CLOUD CREATIVE WORKSPACE ACTIVE",
+      "cloudDesc": "Fully Integrated Cloud Storage via Google Firestore. Your characters and epic progress are synchronized live!",
+      "saveDraft": "💾 Save WIP Draft",
+      "saving": "SNAPSHOT-SAVING...",
+      "signOut": "🚪 Sign Out & Landing Page",
+      "firestoreLive": "FIRESTORE CLUSTER LIVE",
+      "f1Title": "AI STORY ENGINE",
+      "f1Desc": "Guided by state-of-the-art multimodal context windows to synthesize adaptive scenario dialogues, actions, and captions.",
+      "f2Title": "CHARACTER PERSISTENCE",
+      "f2Desc": "Cast recurring characters from your Vault. Upload portrait templates to propagate coherent visual traits.",
+      "f3Title": "SHARED MULTIVERSE",
+      "f3Desc": "Publish, preview, review, and organize custom dynamic comic issues in your personal cloud studio library."
+    },
+    "tabs": {
+      "generateEditorial": "🌌 NARRATIVE CREATOR",
+      "generateComic": "Spark Multiverse Generator",
+      "blueprintEditorial": "🗺️ STORY BLUEPRINT ARCHITECT",
+      "blueprintComic": "Epic Story Blueprint",
+      "personaEditorial": "🎭 AI PERSONA TUNING STUDIO",
+      "personaComic": "Cast DNA Studio",
+      "libraryEditorial": "📚 PUBLICATION ARCHIVE",
+      "libraryComic": "My Story Library"
+    },
+    "cast": {
+      "titleEditorial": "1. CAST REGISTRY",
+      "titleComic": "1. CHOOSE YOUR CAST",
+      "descEditorial": "Identify characters to participate in the narrative arc. Upload images of your characters to synchronize consistent physical traits recursively during scenario drafts.",
+      "descComic": "Upload custom character images to create coherent comic likenesses throughout the adventure. Include a Villain for high-stakes conflicts!"
+    },
+    "buttons": {
+      "launchEditorial": "🖋️ LAUNCH STORY ENVIRONMENTS",
+      "launchComic": "🔥 START ADVENTURE !",
+      "compiling": "COMPILING COGNITIVE BLUEPRINT...",
+      "crafting": "CRAFTING DIVERSE REALITY...",
+      "reqEditorial": "⚠️ HERO CAST REQUIRED TO BEGIN",
+      "reqComic": "⚠️ AWAITING HERO INITIATION..."
+    }
+  }
+}

@@ -1382,7 +1382,212 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ success: true, message: `Successfully deleted user "${email}" from Saas registration.` });
     });
 
+    // --- NEW SAAS DASHBOARD ENDPOINTS ---
+
+    // --- INTEGRATIONS AND SETTINGS ---
+    app.get('/api/admin/settings', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+        try {
+            await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (key_name VARCHAR(100) PRIMARY KEY, key_value TEXT NOT NULL, is_secret BOOLEAN DEFAULT false, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            const result = await pool.query('SELECT key_name as "keyName", key_value as "keyValue", is_secret as "isSecret" FROM app_settings');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/settings', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+        try {
+            const { keyName, keyValue, isSecret } = req.body;
+            await pool.query(`
+                INSERT INTO app_settings (key_name, key_value, is_secret) 
+                VALUES ($1, $2, $3) 
+                ON CONFLICT (key_name) DO UPDATE SET key_value = EXCLUDED.key_value, is_secret = EXCLUDED.is_secret, updated_at = CURRENT_TIMESTAMP
+            `, [keyName, keyValue, isSecret || false]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // --- SUBSCRIPTION PLANS ---
+    app.get('/api/admin/plans', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.json([ // Fallback if no db
+            { id: 'mock-1', name: 'Pro', price: 19.99, billing_cycle: 'monthly', features: JSON.stringify(['7000 Tokens/mo', 'Priority Queue', 'Basic Models']) },
+            { id: 'mock-2', name: 'Enterprise', price: 79.99, billing_cycle: 'monthly', features: JSON.stringify(['Unlimited Tokens', 'Instant Queue', 'All Models']) }
+        ]);
+        try {
+            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100) NOT NULL, price NUMERIC(10, 2) NOT NULL, billing_cycle VARCHAR(50) DEFAULT 'monthly', features JSONB DEFAULT '[]', is_active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            const result = await pool.query('SELECT id, name, price, billing_cycle as "billingCycle", features, is_active as "isActive" FROM subscription_plans WHERE is_active = true ORDER BY price ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            console.error("Failed to load plans", e);
+            return res.json([]);
+        }
+    });
+
+    app.post('/api/admin/plans', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+        try {
+            const { name, price, billingCycle, features } = req.body;
+            await pool.query(`
+                INSERT INTO subscription_plans (name, price, billing_cycle, features) 
+                VALUES ($1, $2, $3, $4)
+            `, [name, price, billingCycle || 'monthly', JSON.stringify(features || [])]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+    
+    app.delete('/api/admin/plans/:id', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+        try {
+            await pool.query('DELETE FROM subscription_plans WHERE id = $1', [req.params.id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.get('/api/admin/categories', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const result = await pool.query(`SELECT * FROM content_categories ORDER BY created_at DESC`);
+                return res.json(result.rows);
+            } catch(e) { }
+        }
+        return res.json([
+            { id: '1', category_type: 'Genre', name: 'Sci-Fi Cyberpunk' },
+            { id: '2', category_type: 'Style', name: 'Cell-Shaded Anime' }
+        ]);
+    });
+
+    app.post('/api/admin/categories', async (req, res): Promise<any> => {
+        const { name, category_type } = req.body;
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query(`INSERT INTO content_categories (name, category_type) VALUES ($1, $2)`, [name, category_type]);
+            } catch(e) { }
+        }
+        return res.json({ success: true });
+    });
+
+    app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query(`DELETE FROM content_categories WHERE id = $1`, [req.params.id]);
+            } catch(e) { }
+        }
+        return res.json({ success: true });
+    });
+
+    app.get('/api/admin/moderation', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const result = await pool.query(`SELECT * FROM moderation_flags WHERE status = 'pending' ORDER BY created_at DESC`);
+                return res.json(result.rows);
+            } catch(e) { }
+        }
+        return res.json([
+            { id: 'flag-1', severity: 'high', reason: 'Automated NSFW detection triggered on image.', target_id: 'proj-123', target_type: 'published_work' }
+        ]);
+    });
+
+    app.post('/api/admin/moderation/:id/resolve', async (req, res): Promise<any> => {
+        const { action } = req.body; // 'safe' or 'remove'
+        const status = action === 'safe' ? 'resolved_safe' : 'resolved_removed';
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query(`UPDATE moderation_flags SET status = $1 WHERE id = $2`, [status, req.params.id]);
+            } catch(e) { }
+        }
+        return res.json({ success: true });
+    });
+
     // SaaS Analytics stats
+    app.get('/api/admin/health', async (req, res): Promise<any> => {
+        const start = Date.now();
+        const health: any = {
+            status: 'ok',
+            database: { status: 'offline', message: 'Sandbox Mode' },
+            storage: { status: 'unknown' },
+            integrations: {
+                gemini: { status: 'missing', message: 'API Key not configured in .env' },
+                stripe: { status: 'missing', message: 'Not configured' },
+                paypal: { status: 'missing', message: 'Not configured' },
+                square: { status: 'missing', message: 'Not configured' }
+            },
+            environment: {
+                port: port,
+                nodeEnv: process.env.NODE_ENV || 'development',
+                memoryUsage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB'
+            }
+        };
+
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const client = await pool.connect();
+                await client.query('SELECT 1');
+                client.release();
+                health.database = { status: 'ok', message: 'Connected to PostgreSQL' };
+            } catch (e: any) {
+                health.database = { status: 'error', message: e.message };
+                health.status = 'warning';
+            }
+        } else {
+            health.status = 'warning';
+        }
+
+        if (process.env.GEMINI_API_KEY || process.env.API_KEY) health.integrations.gemini = { status: 'ok', message: 'Configured in .env' };
+        if (process.env.STRIPE_SECRET_KEY) health.integrations.stripe = { status: 'ok', message: 'Configured in .env' };
+        if (process.env.PAYPAL_CLIENT_ID) health.integrations.paypal = { status: 'ok', message: 'Configured in .env' };
+        if (process.env.SQUARE_ACCESS_TOKEN) health.integrations.square = { status: 'ok', message: 'Configured in .env' };
+
+        if (pool && health.database.status === 'ok') {
+            try {
+               const settingsRes = await pool.query("SELECT key_name, key_value FROM app_settings WHERE key_name IN ('stripe_secret_key', 'paypal_client_id', 'square_access_token', 'gemini_api_key')");
+               settingsRes.rows.forEach(r => {
+                   if (r.key_value && r.key_value.trim() !== '') {
+                       const key = r.key_name.replace('_secret_key', '').replace('_client_id', '').replace('_access_token', '').replace('_api_key', '');
+                       if (health.integrations[key]) {
+                           health.integrations[key] = { status: 'ok', message: 'Configured in DB' };
+                       }
+                   }
+               });
+            } catch(e) {}
+        }
+
+        try {
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const testFile = path.join(process.cwd(), 'health_check.tmp');
+            await fs.writeFile(testFile, 'ok');
+            await fs.unlink(testFile);
+            health.storage = { status: 'ok', message: 'Read/Write access verified' };
+        } catch (e: any) {
+            health.storage = { status: 'error', message: e.message };
+            health.status = 'error';
+        }
+
+        health.uptime = Math.round(process.uptime()) + 's';
+        health.responseTimeMs = Date.now() - start;
+
+        res.json(health);
+    });
+
     app.get('/api/admin/stats', async (req, res): Promise<any> => {
         let customersList: any[] = [];
         const pool = getDbPool();

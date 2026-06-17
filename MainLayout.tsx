@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Home } from './Home';
+import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx / Account.tsx logic). */
 const getActiveSkin = (): 'comic' | 'editorial' => {
@@ -13,6 +15,7 @@ const getActiveSkin = (): 'comic' | 'editorial' => {
 // This acts as the main router shell for the new UI.
 // It wraps your existing App (Creator Studio) inside the 'studio' route.
 export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNode }) => {
+    const { t, i18n } = useTranslation();
     const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
     const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
@@ -94,6 +97,9 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
 
     return (
         <div className={bgClass}>
+            <Helmet>
+                <html lang={i18n.language || 'en'} />
+            </Helmet>
             {/* Global Navigation */}
             {currentView !== 'home' && (
                 <nav className={navClass}>
@@ -107,7 +113,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             </span>
                         </div>
                         <span className={logoText}>
-                            {isEditorial ? "Writer's Journal" : 'Story Menu'}
+                            {isEditorial ? t('layout.nav.logoEditorial', "Writer's Journal") : t('layout.nav.logoComic', 'Story Menu')}
                         </span>
                     </div>
 
@@ -121,7 +127,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             }} 
                             className={linkHover}
                         >
-                            {isEditorial ? '📖 Features' : '✨ Features'}
+                            {isEditorial ? t('layout.nav.featuresEditorial', '📖 Features') : t('layout.nav.featuresComic', '✨ Features')}
                         </button>
                         <button 
                             onClick={() => {
@@ -132,16 +138,21 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             }} 
                             className={linkHover}
                         >
-                            {isEditorial ? '💳 Pricing' : '💰 Pricing'}
+                            {isEditorial ? t('layout.nav.pricingEditorial', '💳 Pricing') : t('layout.nav.pricingComic', '💰 Pricing')}
                         </button>
                         <button 
                             onClick={() => handleNavigate('home')} 
                             className={`${linkHover} ${currentView === 'home' ? (isEditorial ? 'text-stone-800 font-bold' : 'text-indigo-400 font-bold') : ''}`}
                         >
-                            {isEditorial ? 'Discover' : 'Explore'}
+                            {isEditorial ? t('layout.nav.discover', 'Discover') : t('layout.nav.explore', 'Explore')}
                         </button>
                         
                         <span className={navSeparator}></span>
+
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${isEditorial ? 'bg-stone-100 border-stone-200 text-stone-700' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
+                            <span className="text-[10px] font-mono font-bold">50</span>
+                            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70">Credits</span>
+                        </div>
 
                         <button 
                             onClick={() => {
@@ -150,7 +161,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             }}
                             className={linkHover}
                         >
-                            {isEditorial ? 'Sign In' : 'Sign In'}
+                            {t('layout.nav.signIn', 'Sign In')}
                         </button>
 
                         <button
@@ -160,7 +171,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             }}
                             className={primaryCTA}
                         >
-                            {isEditorial ? '🖋️ Writing Studio' : 'Studio Hub'}
+                            {isEditorial ? t('layout.nav.studioEditorial', '🖋️ Writing Studio') : t('layout.nav.studioComic', 'Studio Hub')}
                         </button>
                     </div>
                 </nav>
@@ -172,15 +183,15 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                 {currentView === 'studio' && StudioComponent}
                 {currentView === 'reader' && (
                     <div className="max-w-4xl mx-auto py-24 text-center">
-                        <h2 className="text-3xl font-bold mb-4">Reading View (Coming Soon)</h2>
+                        <h2 className="text-3xl font-bold mb-4">{t('layout.reader.comingSoon', 'Reading View (Coming Soon)')}</h2>
                         <p className={isEditorial ? 'text-stone-500' : 'text-gray-400'}>
-                            You clicked on story ID: {selectedStoryId}
+                            {t('layout.reader.storyId', 'You clicked on story ID: {{id}}', { id: selectedStoryId })}
                         </p>
                         <button 
                             onClick={() => handleNavigate('home')}
                             className={`mt-8 px-6 py-2 rounded-full transition-colors ${isEditorial ? 'bg-stone-200 text-stone-800 hover:bg-stone-300' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
                         >
-                            Back to Feed
+                            {t('layout.reader.backToFeed', 'Back to Feed')}
                         </button>
                     </div>
                 )}

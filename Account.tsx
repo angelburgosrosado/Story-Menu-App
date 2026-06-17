@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { auth, signInWithGoogle, signOutUser } from './firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, User as FirebaseUser } from 'firebase/auth';
 import { LogOut, LogIn, User, Mail, Lock, Shield, Sparkles, BookOpen, Trash2, X, PlusCircle, CheckCircle, Feather } from 'lucide-react';
@@ -34,6 +35,7 @@ const getActiveSkin = (): 'comic' | 'editorial' => {
 };
 
 export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) => {
+  const { t } = useTranslation();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -343,6 +345,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
 };
 
 export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> = ({ currentUser, onUserChange, onOpenAuth, onOpenCheckout, onOpenAdmin }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
 
@@ -445,7 +448,7 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
         <span className={creatorLabel}>{isEditorial ? 'Author:' : 'Creator:'}</span>
         <span className={creatorName}>{currentUser.displayName || currentUser.email.split('@')[0]}</span>
         {hasSubscription && (
-          <span className={proBadge}>PRO</span>
+          <span className={proBadge}>{t('account.auto1', 'PRO')}</span>
         )}
       </button>
 
@@ -455,7 +458,7 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
             <h4 className={panelHeading}>
               <span>{isEditorial ? 'Author Profile' : 'CREATOR MATRIX'}</span>
               {hasSubscription && (
-                <span className={proBadge}>PRO ACCOUNT</span>
+                <span className={proBadge}>{t('account.auto2', 'PRO ACCOUNT')}</span>
               )}
             </h4>
             <p className={`text-xs ${isEditorial ? 'text-stone-700 font-medium' : 'text-gray-300 font-bold'} truncate mt-1`}>
@@ -529,8 +532,8 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
               className={upgradeBtn}
             >
               {isEditorial
-                ? <><Feather size={11} /> Upgrade Membership</>
-                : <><Sparkles size={11} className="animate-pulse" /> UPGRADE MEMBERSHIP</>
+                ? <><Feather size={11} /> {t('account.auto3', 'Upgrade Membership')}</>
+                : <><Sparkles size={11} className="animate-pulse" /> {t('account.auto4', 'UPGRADE MEMBERSHIP')}</>
               }
             </button>
           )}

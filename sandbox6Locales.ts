@@ -1,0 +1,62 @@
+export const sandbox6Locales = {
+  en: {
+    "styleDesc1": "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay.",
+    "genre1": "Sci-Fi Cyberpunk",
+    "genre2": "Magic Fantasy",
+    "genreDesc": "Every multiverse genre carries its own generative aesthetic and structural pacing. Mix and match to discover new sub-genres.",
+    "sfxTitle": "Spatial SFX Board",
+    "sfxDesc": "Audition the generative sounds directly from the synthesis engine directly.",
+    "audioWarn": "Ensure your system audio is enabled to hear procedural sounds.",
+    "readyTitle": "Ready to claim your corner of the continuum?",
+    "launchBtn": "Launch local sandbox",
+    "mockupStart": "Synthesizes a mockup story block demonstrating ",
+    "mockupEnd": " matching the prompt.",
+    "sandboxDesc1": "The ",
+    "sandboxDesc3": " allows you to prototype universe layouts and story nodes. Input a custom premise or pick a preset below, then synthesize your design."
+},
+  es: {
+    "styleDesc1": "Fondos de acuarela pintados a mano con sombreado de celdas, gradientes cinematográficos dramáticos y profundos, superposición clásica vintage.",
+    "genre1": "Ciberpunk de ciencia ficción",
+    "genre2": "Fantasía mágica",
+    "genreDesc": "Cada género del multiverso lleva su propia estética generativa y ritmo estructural. Mezcla y combina para descubrir nuevos subgéneros.",
+    "sfxTitle": "Tablero SFX Espacial",
+    "sfxDesc": "Prueba los sonidos generativos directamente desde el motor de síntesis.",
+    "audioWarn": "Asegúrese de que el audio del sistema esté habilitado para escuchar sonidos procedimentales.",
+    "readyTitle": "¿Listo para reclamar tu rincón del continuo?",
+    "launchBtn": "Iniciar zona de pruebas local",
+    "mockupStart": "Sintetiza un bloque de historia de maqueta demostrando ",
+    "mockupEnd": " que coincide con el mensaje.",
+    "sandboxDesc1": "La ",
+    "sandboxDesc3": " le permite crear prototipos de diseños de universos y nodos de historia. Ingrese una premisa personalizada o elija un preajuste a continuación, luego sintetice su diseño."
+},
+  it: {
+    "styleDesc1": "Sfondi ad acquerello dipinti a mano in cel-shading, gradienti cinematografici profondi e drammatici, overlay vintage classico.",
+    "genre1": "Fantascienza Cyberpunk",
+    "genre2": "Fantasia Magica",
+    "genreDesc": "Ogni genere del multiverso porta con sé un'estetica generativa e un ritmo strutturale. Mescola e abbina per scoprire nuovi sottogeneri.",
+    "sfxTitle": "Scheda SFX Spaziale",
+    "sfxDesc": "Ascolta i suoni generativi direttamente dal motore di sintesi.",
+    "audioWarn": "Assicurati che l'audio del sistema sia abilitato per ascoltare i suoni procedurali.",
+    "readyTitle": "Pronto a rivendicare il tuo angolo del continuum?",
+    "launchBtn": "Avvia sandbox locale",
+    "mockupStart": "Sintetizza un blocco di storia di mockup che dimostra ",
+    "mockupEnd": " corrispondente al prompt.",
+    "sandboxDesc1": "Il ",
+    "sandboxDesc3": " ti consente di prototipare layout dell'universo e nodi della storia. Inserisci una premessa personalizzata o scegli un preset di seguito, quindi sintetizza il tuo design."
+},
+  he: {
+    "styleDesc1": "רקעי צבעי מים צבועים ביד עם הצללת תאים, גרדיאנטים קולנועיים עמוקים ודרמטיים, כיסוי וינטג' קלאסי.",
+    "genre1": "סייברפאנק מדע בדיוני",
+    "genre2": "פנטזיה קסומה",
+    "genreDesc": "כל ז'אנר במולטיוורס נושא אסתטיקה גנרטיבית וקצב מבני משלו. ערבבו והתאימו כדי לגלות תתי-ז'אנרים חדשים.",
+    "sfxTitle": "לוח SFX מרחבי",
+    "sfxDesc": "האזינו לצלילים הגנרטיביים ישירות ממנוע הסינתזה.",
+    "audioWarn": "וודא ששמע המערכת שלך מופעל כדי לשמוע צלילים פרוצדורליים.",
+    "readyTitle": "מוכן לתבוע את הפינה שלך ברצף?",
+    "launchBtn": "הפעל ארגז חול מקומי",
+    "mockupStart": "מסנתז בלוק סיפור מדומה המדגים ",
+    "mockupEnd": " התואם להנחיה.",
+    "sandboxDesc1": "ה-",
+    "sandboxDesc3": " מאפשר לך ליצור אבות טיפוס לפריסות יקום ולצמתי סיפור. הזן הנחת יסוד מותאמת אישית או בחר קביעה מוגדרת מראש למטה, ואז סנתז את העיצוב שלך."
+}
+};

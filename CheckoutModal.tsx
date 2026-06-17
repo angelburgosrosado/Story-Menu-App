@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreditCard, Shield, Lock, CheckCircle2, X, AlertCircle, Sparkles, Send, Globe, Star, ShoppingCart } from 'lucide-react';
 import { logAnalyticsEvent } from './firebase';
@@ -24,8 +25,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   currentUser,
   onUpgradeSuccessful,
 }) => {
+  const { t } = useTranslation();
   const [tier, setTier] = useState<'Pro' | 'Enterprise'>(initialTier);
-  const [paymentMethod, setPaymentMethod] = useState<'Stripe' | 'PayPal'>('Stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'Stripe' | 'PayPal' | 'Square'>('Stripe');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,25 +44,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const pricing = {
     Pro: {
-      price: '$19',
-      label: 'The Full Course (Pro)',
+      price: '12',
+      label: 'Creator Tier',
       features: [
-        'Secure Web Cloud Firestore database backing',
-        'Dynamic 10-chapter Story Blueprints',
-        'Priority Gemini-3 Image style anchors',
-        'Limitless character biometric vault cards',
-        'Multi-language custom voice output synthesis',
+        '1,200 Credits / month (~120 comics)',
+        'No Watermarks',
+        '10 Custom Characters (Consistency AI)',
+        'High-Resolution Exports (PDF, PNG)',
+        'Commercial Usage Rights',
       ],
     },
     Enterprise: {
-      price: '$79',
-      label: 'The Multi-Course (Enterprise)',
+      price: '29',
+      label: 'Pro / Publisher Tier',
       features: [
-        'Everything in Pro plan details',
-        'UHD 4K Vector generation exports',
-        'Custom model tuning weights',
-        'Collaborative publishing workspaces',
-        'Dedicated GCP priority endpoints',
+        '4,000 Credits / month (~400 comics)',
+        'Unlimited Custom Characters',
+        'Priority GPU Processing (Instant)',
+        'Premium LLMs (GPT-4o / Claude 3.5)',
+        'Vector & Editable Exports',
       ],
     },
   };
@@ -88,7 +90,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      setError('Please provide your emails coordinates for checkout registration.');
+      setError(t('checkout.errEmail'));
       return;
     }
 
@@ -201,8 +203,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
             
             <div className="space-y-2">
-              <span className="text-[10px] font-mono tracking-widest text-yellow-500 uppercase font-black">TRANSACTION AUTHORIZED</span>
-              <h2 className="text-3xl font-black font-sans uppercase tracking-wider text-yellow-400">MULTIVERSE UNLOCKED!</h2>
+              <span className="text-[10px] font-mono tracking-widest text-yellow-500 uppercase font-black">{t('checkout.auto1', 'TRANSACTION AUTHORIZED')}</span>
+              <h2 className="text-3xl font-black font-sans uppercase tracking-wider text-yellow-400">{t('checkout.auto2', 'MULTIVERSE UNLOCKED!')}</h2>
               <p className="text-xs text-slate-300 font-mono max-w-md mx-auto leading-relaxed">
                 Your credentials have been authenticated. story.menu subscription for <span className="text-white font-bold">{success.email}</span> is now active.
               </p>
@@ -210,20 +212,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
             <div className="w-full max-w-sm bg-slate-900 border-2 border-slate-800 p-4 font-mono text-[11px] text-left space-y-2">
               <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500">SUBSCRIPTION ID:</span>
+                <span className="text-slate-500">{t('checkout.auto3', 'SUBSCRIPTION ID:')}</span>
                 <span className="text-yellow-400 font-bold">{success.subscriptionId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">UPGRADE TIER:</span>
+                <span className="text-slate-500">{t('checkout.auto4', 'UPGRADE TIER:')}</span>
                 <span className="text-white font-bold uppercase">{success.tier}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">PAYMENT PROXY:</span>
+                <span className="text-slate-500">{t('checkout.auto5', 'PAYMENT PROXY:')}</span>
                 <span className="text-cyan-400 font-bold">{success.paymentMethod} Express Sync</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">AUTOPAY FREQUENCY:</span>
-                <span className="text-green-400 font-bold">Monthly $19 recurring</span>
+                <span className="text-slate-500">{t('checkout.auto6', 'AUTOPAY FREQUENCY:')}</span>
+                <span className="text-green-400 font-bold">{t('checkout.auto7', 'Monthly $19 recurring')}</span>
               </div>
             </div>
 
@@ -278,7 +280,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">ACTIVATED INITIATIVES:</h4>
+                  <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{t('checkout.auto8', 'ACTIVATED INITIATIVES:')}</h4>
                   <ul className="space-y-1.5 text-[11px] font-mono text-slate-300">
                     {pricing[tier].features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-1.5">
@@ -292,7 +294,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
               <div className="pt-6 border-t border-slate-900 mt-6 flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
                 <Lock size={12} className="text-slate-400" />
-                <span>PCI-Compliant 256-bit Encrypted Tunneling</span>
+                <span>{t('checkout.auto9', 'PCI-Compliant 256-bit Encrypted Tunneling')}</span>
               </div>
             </div>
 
@@ -335,7 +337,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">
                     Select Gateway System
                   </span>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('Stripe')}
@@ -346,7 +348,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       }`}
                     >
                       <CreditCard size={14} className={paymentMethod === 'Stripe' ? 'text-yellow-400' : 'text-slate-500'} />
-                      <span>Stripe Link</span>
+                      <span>{t('checkout.auto10', 'Stripe Link')}</span>
                     </button>
                     <button
                       type="button"
@@ -362,7 +364,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <path d="M57.4 1H46.2C45.6 1 45 1.6 45 2.2V25.8C45 26.4 45.6 27 46.2 27H57.4C65.4 27 70 22.8 70 14C70 5.2 65.4 1 57.4 1Z" fill="#0079C1"/>
                         <path d="M85.4 1H74.2C73.6 1 73 1.6 73 2.2V25.8C73 26.4 73.6 27 74.2 27H85.4C93.4 27 98 22.8 98 14C98 5.2 93.4 1 85.4 1Z" fill="#00457C"/>
                       </svg>
-                      <span>PayPal Sandbox</span>
+                      <span>{t('checkout.auto11', 'PayPal Sandbox')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('Square')}
+                      className={`flex items-center justify-center gap-2 py-2.5 border transition-all text-xs font-mono font-bold ${
+                        paymentMethod === 'Square'
+                          ? 'bg-slate-800 text-white border-yellow-400 shadow-[2px_2px_0px_#000]'
+                          : 'bg-black text-slate-400 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <svg className="h-3.5 w-auto" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 5H5V19H19V5ZM21 3V21H3V3H21ZM15 9H9V15H15V9ZM17 7V17H7V7H17Z"/>
+                      </svg>
+                      <span>Square</span>
                     </button>
                   </div>
                 </div>
@@ -382,11 +398,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           onChange={handleCardNumberChange}
                           className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono tracking-widest"
                         />
-                        <span className="absolute right-2 top-2 text-[10px] text-slate-600 font-mono font-bold">Visa/MC</span>
+                        <span className="absolute right-2 top-2 text-[10px] text-slate-600 font-mono font-bold">{t('checkout.auto12', 'Visa/MC')}</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
                         <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
                           EXPIRY DATE
@@ -429,7 +445,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       />
                     </div>
                   </div>
-                ) : (
+                ) : paymentMethod === 'PayPal' ? (
                   <div className="space-y-3 p-4 bg-black/60 border border-slate-900">
                     <div className="space-y-1.5">
                       <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
@@ -437,7 +453,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="email"
-                        required
+                        required={paymentMethod === 'PayPal'}
                         placeholder="paypal-collector@sandbox.paypal.com"
                         value={paypalEmail}
                         onChange={(e) => setPaypalEmail(e.target.value)}
@@ -446,6 +462,71 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <span className="block text-[10px] text-yellow-500 font-mono italic">
                         * Clicking proceed launches safe sandbox credentials verification.
                       </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-3 bg-black/60 border border-slate-900">
+                    <div className="flex items-center gap-2 mb-2">
+                       <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5H5V19H19V5ZM21 3V21H3V3H21ZM15 9H9V15H15V9ZM17 7V17H7V7H17Z"/></svg>
+                       <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Square POS Virtual Terminal</span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
+                        CARD NUMBER (SQUARE)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required={paymentMethod === 'Square'}
+                          placeholder="0000 0000 0000 0000"
+                          value={cardNumber}
+                          onChange={handleCardNumberChange}
+                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono tracking-widest"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
+                          EXPIRY
+                        </label>
+                        <input
+                          type="text"
+                          required={paymentMethod === 'Square'}
+                          placeholder="MM/YY"
+                          value={expiry}
+                          onChange={handleExpiryChange}
+                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
+                          CVV
+                        </label>
+                        <input
+                          type="text"
+                          required={paymentMethod === 'Square'}
+                          placeholder="123"
+                          value={cvc}
+                          onChange={handleCvcChange}
+                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
+                        POSTAL CODE
+                      </label>
+                      <input
+                        type="text"
+                        required={paymentMethod === 'Square'}
+                        placeholder="ZIP"
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value.substring(0, 10))}
+                        className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
+                      />
                     </div>
                   </div>
                 )}
@@ -459,12 +540,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   id="btn-checkout-submit"
                 >
                   <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
-                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${tier === 'Pro' ? '19' : '79'} SUBSCRIPTION`}</span>
+                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${pricing[tier]?.price || '...'} SUBSCRIPTION`}</span>
                 </button>
 
                 <div className="flex justify-center items-center gap-4 text-[10px] font-mono text-slate-500">
-                  <span className="flex items-center gap-1"><Shield size={12} /> SECURE GATEWAY</span>
-                  <span className="flex items-center gap-1"><Globe size={12} /> GLOBAL CURRENCY ACCEPTS</span>
+                  <span className="flex items-center gap-1"><Shield size={12} /> {t('checkout.auto13', 'SECURE GATEWAY')}</span>
+                  <span className="flex items-center gap-1"><Globe size={12} /> {t('checkout.auto14', 'GLOBAL CURRENCY ACCEPTS')}</span>
                 </div>
               </div>
             </form>

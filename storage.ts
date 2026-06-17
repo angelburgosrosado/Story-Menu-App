@@ -170,3 +170,6 @@ export function recordPageGenerated(): number {
     return 0;
   }
 }
+
+
+// CDN Strategy: Replace direct local file paths with https://cdn.story.menu/... for production

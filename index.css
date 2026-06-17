@@ -1,4 +1,7 @@
 /* index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Core Styling & Custom Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
@@ -13,58 +16,30 @@ body {
 
 /* Custom Keyframe Animations */
 @keyframes float {
-  0% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-20px) scale(1.05);
-  }
-  100% {
-    transform: translateY(0px) scale(1);
-  }
+  0% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+  100% { transform: translateY(0px) scale(1); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.3;
-    filter: blur(100px);
-  }
-  50% {
-    opacity: 0.6;
-    filter: blur(120px);
-  }
+  0%, 100% { opacity: 0.3; filter: blur(100px); }
+  50% { opacity: 0.6; filter: blur(120px); }
 }
 
 @keyframes wave {
-  0%, 100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* Animation classes */
-.animate-float-slow {
-  animation: float 8s ease-in-out infinite;
-}
-
-.animate-float-medium {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 10s ease-in-out infinite;
-}
+.animate-float-slow { animation: float 8s ease-in-out infinite; }
+.animate-float-medium { animation: float 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 10s ease-in-out infinite; }
 
 /* Glassmorphism Classes */
 .glass-panel {
@@ -74,10 +49,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.glass-panel-hover {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+.glass-panel-hover { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 .glass-panel-hover:hover {
   background: rgba(17, 24, 39, 0.6);
   border-color: rgba(255, 255, 255, 0.15);
@@ -90,48 +62,59 @@ body {
   transform-origin: bottom;
   animation: wave 1.2s ease-in-out infinite;
 }
+.waveform-bar-delayed-1 { animation-delay: 0.15s; }
+.waveform-bar-delayed-2 { animation-delay: 0.3s; }
+.waveform-bar-delayed-3 { animation-delay: 0.45s; }
 
-.waveform-bar-delayed-1 {
-  animation-delay: 0.15s;
+/* Glowing Text Utilities */
+.text-glow { text-shadow: 0 0 20px rgba(236, 72, 153, 0.5); }
+.text-glow-cyan { text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); }
+
+/* Shimmer Button Effect */
+.btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(236, 72, 153, 1) 0%,
+    rgba(34, 211, 238, 1) 50%,
+    rgba(236, 72, 153, 1) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 4s linear infinite;
 }
 
-.waveform-bar-delayed-2 {
-  animation-delay: 0.3s;
+/* Custom scrollbar for modern feel */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(3, 7, 18, 1); }
+::-webkit-scrollbar-thumb {
+  background: rgba(31, 41, 55, 1);
+  border-radius: 4px;
 }
+::-webkit-scrollbar-thumb:hover { background: rgba(55, 65, 81, 1); }
 
-.waveform-bar-delayed-3 {
-  animation-delay: 0.45s;
+/* Print Styles for Kid Storymaker */
+@media print {
+  /* Hide UI elements */
+  body { background-color: white !important; color: black !important; }
+  .no-print { display: none !important; }
+  
+  /* Ensure book layout fills the page nicely */
+  .print-book-container {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Make images break properly across pages */
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 }
-
-.waveform-bar-delayed-4 {
-  animation-delay: 0.6s;
-}
-
-/* Shimmer overlay for loading & generations */
-.shimmer-bg {
-  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.03) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Cinematic Glowing Inputs, Textareas, and Dropdowns */
-.cinematic-input {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
-  color: #fff;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.cinematic-input:focus {
-  border-color: rgba(99, 102, 241, 0.5); /* indigo-500 equivalent */
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.6);
-  outline: none;
-}
-
-.cinematic-input:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-

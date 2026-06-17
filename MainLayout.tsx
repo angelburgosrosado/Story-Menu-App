@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Home } from './Home';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
+import { PrivacyPolicy, TermsOfService, CookiePolicy, DMCA } from './LegalPages';
+import { WritersJournalDashboard } from './WritersJournalDashboard';
+import { KidStoryDashboard } from './KidStoryDashboard';
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx / Account.tsx logic). */
-const getActiveSkin = (): 'comic' | 'editorial' => {
+const getActiveSkin = (): 'comic' | 'writers-journal' | 'kid-story' => {
     try {
-        return (localStorage.getItem('story_menu_skin') as any) || 'comic';
+        const saved = localStorage.getItem('story_menu_skin');
+        if (saved === 'editorial' || saved === 'short-story') return 'writers-journal';
+        if (saved === 'comic' || saved === 'writers-journal' || saved === 'kid-story') return saved;
+        return 'comic';
     } catch {
         return 'comic';
     }
@@ -16,9 +22,9 @@ const getActiveSkin = (): 'comic' | 'editorial' => {
 // It wraps your existing App (Creator Studio) inside the 'studio' route.
 export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNode }) => {
     const { t, i18n } = useTranslation();
-    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader'>('home');
+    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
-    const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
+    const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
     const [tokenBalance, setTokenBalance] = useState<number | null>(null);
 
     // Sync skin from localStorage reactively
@@ -32,7 +38,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
         };
     }, []);
 
-    const isEditorial = skin === 'editorial';
+    const isEditorial = skin === 'writers-journal';
 
     useEffect(() => {
         if (currentView === 'studio') {
@@ -69,15 +75,15 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             setCurrentView('studio');
             window.scrollTo(0, 0);
         } else {
-            setCurrentView(view as 'home' | 'studio');
+            setCurrentView(view as any);
             window.scrollTo(0, 0);
         }
     };
 
     // ── Nav style tokens ─────────────────────────────────────────────────────
     const navClass = isEditorial
-        ? 'sticky top-0 z-50 flex justify-between items-center px-6 py-4 border-b border-stone-200 bg-[#faf8f5]/90 backdrop-blur-lg'
-        : 'sticky top-0 z-50 flex justify-between items-center px-6 py-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur-lg';
+        ? 'sticky top-0 z-[100] flex justify-between items-center px-6 py-4 border-b border-stone-200 bg-[#faf8f5]/90 backdrop-blur-lg'
+        : 'sticky top-0 z-[100] flex justify-between items-center px-6 py-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur-lg';
 
     const logoBox = isEditorial
         ? 'w-10 h-10 rounded-xl bg-gradient-to-br from-stone-600 to-stone-800 flex items-center justify-center shadow-sm group-hover:shadow-stone-500/20 transition-all'
@@ -190,7 +196,13 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             {/* Router View */}
             <main>
                 {currentView === 'home' && <Home onNavigate={handleNavigate} />}
-                {currentView === 'studio' && StudioComponent}
+                {currentView === 'studio' && skin === 'writers-journal' && <WritersJournalDashboard onNavigate={handleNavigate} />}
+                {currentView === 'studio' && skin === 'kid-story' && <KidStoryDashboard onNavigate={handleNavigate} />}
+                {currentView === 'studio' && skin === 'comic' && StudioComponent}
+                {currentView === 'privacy' && <PrivacyPolicy />}
+                {currentView === 'terms' && <TermsOfService />}
+                {currentView === 'cookies' && <CookiePolicy />}
+                {currentView === 'dmca' && <DMCA />}
                 {currentView === 'reader' && (
                     <div className="max-w-4xl mx-auto py-24 text-center">
                         <h2 className="text-3xl font-bold mb-4">{t('layout.reader.comingSoon', 'Reading View (Coming Soon)')}</h2>
@@ -206,6 +218,48 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                     </div>
                 )}
             </main>
+
+            {/* Global Footer */}
+            <footer className={`w-full py-12 px-6 mt-16 border-t ${isEditorial ? 'border-stone-200 bg-[#f0eee9]' : 'border-gray-800 bg-gray-950/50'}`}>
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div className="col-span-1 md:col-span-2">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className={logoBox}>
+                                <span className="font-extrabold text-lg tracking-tighter text-white">
+                                    {isEditorial ? 'WJ' : 'SM'}
+                                </span>
+                            </div>
+                            <span className={logoText}>
+                                {isEditorial ? t('layout.nav.logoEditorial', "Writer's Journal") : t('layout.nav.logoComic', 'Story Menu')}
+                            </span>
+                        </div>
+                        <p className={`text-sm max-w-sm ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                            The ultimate interactive AI creator suite. Epic multi-agent narrative arcs, locked character DNA, and real-time soundtracks served on-demand.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>Product</h4>
+                        <ul className={`space-y-2 text-sm ${isEditorial ? 'text-stone-600' : 'text-gray-400'}`}>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Features</button></li>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Pricing</button></li>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Showcase</button></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>Legal & Compliance</h4>
+                        <ul className={`space-y-2 text-sm ${isEditorial ? 'text-stone-600' : 'text-gray-400'}`}>
+                            <li><button onClick={() => handleNavigate('privacy')} className="hover:underline">Privacy Policy</button></li>
+                            <li><button onClick={() => handleNavigate('terms')} className="hover:underline">Terms of Service</button></li>
+                            <li><button onClick={() => handleNavigate('cookies')} className="hover:underline">Cookie Policy</button></li>
+                            <li><button onClick={() => handleNavigate('dmca')} className="hover:underline">DMCA & Copyright</button></li>
+                        </ul>
+                    </div>
+                </div>
+                <div className={`max-w-6xl mx-auto mt-12 pt-8 border-t flex flex-col md:flex-row items-center justify-between text-xs ${isEditorial ? 'border-stone-200 text-stone-500' : 'border-gray-800 text-gray-500'}`}>
+                    <p>&copy; {new Date().getFullYear()} Story.Menu. All rights reserved.</p>
+                    <p>Designed for the next generation of storytelling.</p>
+                </div>
+            </footer>
         </div>
     );
 }

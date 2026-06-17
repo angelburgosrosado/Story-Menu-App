@@ -26,9 +26,12 @@ interface AccountProps {
 }
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx logic). */
-const getActiveSkin = (): 'comic' | 'editorial' => {
+const getActiveSkin = (): 'comic' | 'writers-journal' | 'kid-story' => {
   try {
-    return (localStorage.getItem('story_menu_skin') as any) || 'comic';
+    const saved = localStorage.getItem('story_menu_skin');
+    if (saved === 'editorial' || saved === 'short-story') return 'writers-journal';
+    if (saved === 'comic' || saved === 'writers-journal' || saved === 'kid-story') return saved;
+    return 'comic';
   } catch {
     return 'comic';
   }
@@ -43,7 +46,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
+  const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
 
   // Sync skin from localStorage reactively
   useEffect(() => {
@@ -57,7 +60,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
     };
   }, []);
 
-  const isEditorial = skin === 'editorial';
+  const isEditorial = skin === 'writers-journal';
 
   // Clear errors when toggling modes
   useEffect(() => {
@@ -347,7 +350,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
 export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> = ({ currentUser, onUserChange, onOpenAuth, onOpenCheckout, onOpenAdmin }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [skin, setSkin] = useState<'comic' | 'editorial'>(getActiveSkin);
+  const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
 
   // Sync skin from localStorage reactively
   useEffect(() => {
@@ -360,7 +363,7 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
     };
   }, []);
 
-  const isEditorial = skin === 'editorial';
+  const isEditorial = skin === 'writers-journal';
 
   const handleLogout = async () => {
     try {

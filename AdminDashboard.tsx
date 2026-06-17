@@ -101,15 +101,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
       }
   };
 
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
-    if (isOpen) fetchData();
+    if (isOpen) {
+      dialogRef.current?.showModal();
+      fetchData();
+    } else {
+      dialogRef.current?.close();
+    }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-sm z-[10000] p-4 flex items-center justify-center">
-      <div className="w-full max-w-5xl bg-slate-900 border-4 border-cyan-800 shadow-[8px_8px_0px_#000] text-white p-6 max-h-[90vh] overflow-y-auto">
+    <dialog
+      ref={dialogRef}
+      className="dialog-backdrop p-0 m-auto bg-transparent backdrop:bg-slate-950/90 backdrop:backdrop-blur-sm overflow-visible w-full max-w-5xl"
+      onClose={onClose}
+    >
+      <div className="dialog-content w-full h-full bg-slate-900 border-4 border-cyan-800 shadow-[8px_8px_0px_#000] text-white p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black uppercase text-cyan-400 flex items-center gap-2">
             <Shield className="animate-pulse" /> SaaS Admin Control Panel
@@ -442,6 +451,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             </div>
         )}
       </div>
-    </div>
+    </dialog>
   );
 };

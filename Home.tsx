@@ -168,7 +168,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
         <div className={`min-h-screen w-full transition-colors duration-500 relative ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-gray-950 text-white'}`}>
             
             {/* Main Header / Navigation Bar */}
-            <header className={`sticky top-0 z-45 w-full backdrop-blur-md border-b transition-all ${
+            <header className={`sticky top-0 z-[100] w-full backdrop-blur-md border-b transition-all ${
                 isLightMode 
                 ? 'bg-white/80 border-slate-200/80 shadow-[0_2px_15px_rgba(0,0,0,0.02)]' 
                 : 'bg-gray-950/80 border-white/10 shadow-[0_2px_15px_rgba(0,0,0,0.2)]'
@@ -327,8 +327,8 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
             <div className="max-w-7xl mx-auto px-6 py-12 relative">
 
                 {/* Background glowing ambient grids */}
-                <div className={`absolute top-24 left-1/4 w-[500px] h-[500px] rounded-full blur-[140px] animate-pulse-glow pointer-events-none -z-10 transition-colors ${isLightMode ? 'bg-indigo-500/5' : 'bg-indigo-600/10'}`}></div>
-                <div className={`absolute top-1/2 right-1/4 w-[600px] h-[600px] rounded-full blur-[160px] animate-pulse-glow pointer-events-none -z-10 transition-colors ${isLightMode ? 'bg-pink-500/5' : 'bg-pink-600/10'}`} style={{ animationDelay: '3s' }}></div>
+                <div className="ambient-orb cyan w-[500px] h-[500px] top-24 left-1/4 animate-pulse-glow -z-10 transition-colors"></div>
+                <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/2 right-1/4 animate-pulse-glow -z-10 transition-colors" style={{ animationDelay: '3s' }}></div>
 
                 {/* Cinematic Hero Section */}
                 <div className={`relative rounded-[2.5rem] overflow-hidden border shadow-2xl transition-all mb-24 p-8 md:p-16 ${
@@ -961,14 +961,14 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
+                <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 mb-24 pb-8 -mx-6 px-6 hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
                     {trendingStories.map(story => (
                         <div 
                             key={story.id} 
                             onClick={() => onNavigate('reader', { id: story.id })}
-                            className={`rounded-2xl overflow-hidden border transition-all duration-300 group cursor-pointer flex flex-col ${
+                            className={`min-w-[85vw] sm:min-w-[45vw] lg:min-w-[22vw] snap-center shrink-0 rounded-2xl overflow-hidden border transition-all duration-300 group cursor-pointer flex flex-col ${
                                 isLightMode 
-                                ? 'bg-white border-slate-250 border-slate-200 hover:border-indigo-400 hover:shadow-lg' 
+                                ? 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-lg' 
                                 : 'glass-panel border-white/10 hover:border-indigo-500/40 hover:shadow-[0_10px_30px_rgba(99,102,241,0.15)]'
                             }`}
                         >
@@ -1166,16 +1166,6 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         >
                             Launch local sandbox
                         </button>
-                    </div>
-
-                    <div className={`border-t pt-8 mt-12 flex flex-col sm:flex-row justify-between items-center text-xs gap-4 ${isLightMode ? 'border-slate-100 text-slate-400' : 'border-white/5 text-gray-500'}`}>
-                        <div>
-                            © 2026 STORY.MENU. ALL RIGHTS RESERVED.
-                        </div>
-                        <div className="flex gap-4">
-                            <span>DOMAIN: <span className="text-indigo-500 font-bold">story.menu</span></span>
-                            <span>CHASSIS: <span className="text-purple-500 font-bold">MULTIVERSE v3.11</span></span>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -177,7 +177,7 @@ async function startServer(app: express.Express) {
                              (isCloudRun && !fs.existsSync(path.join(process.cwd(), 'server.ts'))) ||
                              (!fs.existsSync(path.join(process.cwd(), 'server.ts')) && hasCompiledAssets);
 
-    let port = 3000;
+    let port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
     if (process.env.PORT) {
         try {
             const cleanedPortStr = process.env.PORT.toString().replace(/['"]/g, '').trim();
@@ -2045,7 +2045,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     try {
         const serverInstance = app.listen(port, "0.0.0.0", () => {
 
-            console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3000)'})`);
+            console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3001)'})`);
         });
 
         serverInstance.on('error', (err: any) => {

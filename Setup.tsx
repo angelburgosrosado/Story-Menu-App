@@ -111,7 +111,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
 
     // Tab control & Studio Projects Library state
-    const [appSkin, setAppSkinState] = useState<'comic' | 'editorial'>(() => {
+    const [appSkin, setAppSkinState] = useState<'comic' | 'writers-journal' | 'kid-story'>(() => {
         try {
             return (localStorage.getItem('story_menu_skin') as any) || 'comic';
         } catch (e) {
@@ -119,7 +119,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     });
 
-    const setAppSkin = (skin: 'comic' | 'editorial') => {
+    const setAppSkin = (skin: 'comic' | 'writers-journal' | 'kid-story') => {
         setAppSkinState(skin);
         try {
             localStorage.setItem('story_menu_skin', skin);
@@ -131,7 +131,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint'>('generate');
     const [savedProjects, setSavedProjects] = useState<any[]>([]);
 
-    const isEditorial = appSkin === 'editorial';
+    const isEditorial = appSkin === 'writers-journal';
+    const isKidStory = appSkin === 'kid-story';
 
     // Skin computed values
     const sOuterContainer = isEditorial 
@@ -1261,7 +1262,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                 {/* Aesthetic Top Ribbon */}
                 <div className={`absolute top-0 right-0 ${isEditorial ? 'bg-stone-200 text-stone-700 border-b border-l border-stone-300 font-sans text-[10px] uppercase font-bold tracking-widest px-4.5 py-1 z-10' : 'bg-yellow-400 text-black font-comic text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10'}`}>
-                     {isEditorial ? t('setup.dashboard.editorialBadge') : t('setup.dashboard.comicBadge')}
+                     {isKidStory ? "🌟 Kid Storymaker v1.0" : isEditorial ? t('setup.dashboard.editorialBadge') : t('setup.dashboard.comicBadge')}
                 </div>
 
                 {/* SKIN COMPILER SELECTOR */}
@@ -1280,11 +1281,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
                           </button>
                           <button
                                type="button"
-                               onClick={() => setAppSkin('editorial')}
-                               className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'editorial' ? 'bg-[#3c3730] text-stone-50 font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
+                               onClick={() => setAppSkin('writers-journal')}
+                               className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'writers-journal' ? 'bg-[#3c3730] text-stone-50 font-black shadow-sm' : isEditorial ? 'text-stone-500 hover:text-stone-900' : 'text-gray-400 hover:text-white'}`}
                           >
-                               {t('setup.dashboard.skinEditorial')}
+                               Writer's Journal
                           </button>
+                          <button
+                               type="button"
+                               onClick={() => setAppSkin('kid-story')}
+                               className={`px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all cursor-pointer ${appSkin === 'kid-story' ? 'bg-[#10b981] text-white font-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                          >
+                               Kid Story
+                          </button>
+
                      </div>
                 </div>
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreditCard, Shield, Lock, CheckCircle2, X, AlertCircle, Sparkles, Send, Globe, Star, ShoppingCart, Zap, ExternalLink, Check } from 'lucide-react';
@@ -34,6 +34,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<any | null>(null);
+  
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      dialogRef.current?.showModal();
+    } else {
+      dialogRef.current?.close();
+    }
+  }, [isOpen]);
 
   // Stripe form fields
   const [cardNumber, setCardNumber] = useState('');
@@ -201,14 +211,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] overflow-y-auto">
-      <div 
-        id="checkout-panel"
-        className="w-full max-w-2xl bg-slate-900 border-4 border-black shadow-[12px_12px_0px_#000] text-white overflow-hidden flex flex-col md:flex-row rounded-none relative"
-      >
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      className="native-modal w-full max-w-2xl bg-slate-900 border-4 border-black shadow-[12px_12px_0px_#000] text-white flex-col md:flex-row overflow-hidden"
+      id="checkout-panel"
+    >
+      <div className="flex flex-col md:flex-row w-full h-full relative">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-slate-400 hover:text-white hover:bg-slate-800 p-1.5 border border-slate-800 rounded-none z-10 transition-colors"
@@ -651,7 +661,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-black font-sans uppercase text-xs font-black py-3 shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 duration-100 disabled:opacity-50"
+                  className="btn-premium w-full bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-black font-sans uppercase text-xs font-black py-3 shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 duration-100 disabled:opacity-50"
                   id="btn-checkout-submit"
                 >
                   <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
@@ -667,6 +677,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 };

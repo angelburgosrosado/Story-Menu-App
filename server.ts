@@ -8,8 +8,9 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
+import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 
 let startupError: any = null;
 
@@ -436,12 +437,59 @@ Sitemap: https://storymenu.app/sitemap.xml`
     /**
      * GEMINI SERVER-SIDE API SECURE IMPLEMENTATIONS
      */
+
+    // Regional Content Configuration Helper
+    const applyModeration = (req: any, prompt: string) => {
+        // Retrieve regional preference header, defaulting to GLOBAL
+        const region = req.headers['x-region'] || 'GLOBAL';
+        const modConfig = getModerationConfig(region as any);
+
+        if (!passesLocalFilter(prompt)) {
+            throw new Error('MODERATION_BLOCKED:Local keyword filter tripped.');
+        }
+
+        return [
+            {
+                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold: modConfig.strictness
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold: modConfig.strictness
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold: modConfig.strictness
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold: modConfig.strictness
+            }
+        ];
+    };
+
+    /**
+     * Helper to wrap Gemini calls and format safety blocks.
+     */
+    const callGeminiSafely = async (aiParams: any) => {
+        try {
+            return await aiClient!.models.generateContent(aiParams);
+        } catch (e: any) {
+            // Check if it's a safety error from SDK (FinishReason.SAFETY usually throws a specific structure)
+            if (e.message && e.message.includes('safety') || e.message?.includes('MODERATION_BLOCKED')) {
+                throw new Error('MODERATION_BLOCKED');
+            }
+            throw e;
+        }
+    };
+
     app.post('/api/gemini/speech', async (req, res): Promise<any> => {
         const { text, voiceName } = req.body;
         if (!text) return res.status(400).json({ error: 'Text prompt is required.' });
         try {
             const ai = getAIClient();
-            const response = await ai.models.generateContent({
+            const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.1-flash-tts-preview",
                 contents: [{ parts: [{ text }] }],
                 config: {
@@ -467,7 +515,8 @@ Sitemap: https://storymenu.app/sitemap.xml`
         const style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
         try {
             const ai = getAIClient();
-            const response = await ai.models.generateContent({
+            const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash-image',
                 contents: { text: `STYLE: Masterpiece ${style} character sheet, detailed ink, neutral background. FULL BODY. Character: ${desc}` },
                 config: { imageConfig: { aspectRatio: '1:1' } }
@@ -524,7 +573,8 @@ Provide a JSON array containing the 10 finalized chapter-level goals, adhering E
 
 Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no markdown formatting blocks like \`\`\`json or trailing characters.`;
 
-                const response = await ai.models.generateContent({
+                const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
                 });
@@ -575,7 +625,8 @@ Provide a JSON object containing the finalized suggestions for this character's 
 
 Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no markdown formatting blocks like \`\`\`json or trailing characters.`;
 
-                const response = await ai.models.generateContent({
+                const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
                 });
@@ -608,7 +659,8 @@ Rules:
 4. For plot/story directives, offer a compelling narrative direction.
 5. Max 35 words. Keep it concise, focused, and punchy.`;
 
-            const response = await ai.models.generateContent({
+            const response = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
                 contents: { text: promptField }
             });
@@ -791,7 +843,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
         try {
             const ai = getAIClient();
-            const resObj = await ai.models.generateContent({
+            const resObj = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.5-flash",
                 contents: prompt,
                 config: {
@@ -1098,7 +1151,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
         try {
             const ai = getAIClient();
-            const resObj = await ai.models.generateContent({
+            const resObj = await callGeminiSafely({
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
               model: 'gemini-2.5-flash-image',
               contents: contents,
               config: { imageConfig: { aspectRatio: '2:3' } }
@@ -1987,8 +2041,10 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     }
 
     // Start listening on port only when all API endpoints and static assets are fully configured
+
     try {
         const serverInstance = app.listen(port, "0.0.0.0", () => {
+
             console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3000)'})`);
         });
 

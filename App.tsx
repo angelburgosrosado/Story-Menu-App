@@ -497,6 +497,12 @@ const App: React.FC = () => {
   const handleAPIError = (e: any) => {
     const msg = String(e);
     console.error("API Error:", msg);
+    
+    if (msg.includes('MODERATION_BLOCKED')) {
+        alert('⚠️ Generation Blocked: The content triggered our safety guidelines for inappropriate or restricted content.');
+        return;
+    }
+
     if (
       msg.includes('Requested entity was not found') || 
       msg.includes('API_KEY_INVALID') || 

@@ -359,34 +359,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                     <div className="bg-slate-950 border border-slate-700 p-4">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-bold text-sm text-cyan-400">Payment Gateway Integrations</h3>
-                            <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded text-xs font-bold" onClick={async () => {
-                                const keyName = prompt("Key Name (e.g. STRIPE_SECRET_KEY, SQUARE_ACCESS_TOKEN):");
-                                if (keyName) {
-                                    const keyValue = prompt("Token/Secret Value:");
-                                    if (keyValue) {
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName, keyValue, isSecret: true }) });
-                                        fetchData();
-                                    }
-                                }
-                            }}>+ Add Key</button>
+                            <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded text-xs font-bold" onClick={() => fetchData()}>Refresh</button>
                         </div>
                         <div className="text-xs text-yellow-500 font-mono mb-4 italic">
                             * Tokens stored here override sandbox mocks. Leave empty to use local test mode.
                         </div>
-                        {!settings || !Array.isArray(settings) || settings.length === 0 ? (
-                            <div className="text-gray-500 text-xs italic">No integrations configured yet.</div>
-                        ) : (
-                            <ul className="space-y-2">
-                                {(Array.isArray(settings) ? settings : []).map((s: any) => (
-                                    <li key={s.keyName} className="flex flex-col gap-1 p-3 bg-slate-900 border border-slate-800 text-sm font-mono">
-                                        <div className="text-cyan-400 font-bold">{s.keyName}</div>
-                                        <div className="text-gray-500 text-xs truncate">
-                                            {s.isSecret ? '••••••••••••••••••••••••' : s.keyValue}
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Stripe */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
+                                <h4 className="font-bold text-indigo-400 mb-2">Stripe</h4>
+                                <div className="space-y-2">
+                                    <input id="stripe_secret_key" placeholder="Stripe Secret Key" defaultValue={settings.find(s => s.keyName === 'stripe_secret_key')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
+                                    <button onClick={async () => {
+                                        const val = (document.getElementById('stripe_secret_key') as HTMLInputElement).value;
+                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'stripe_secret_key', keyValue: val, isSecret: true }) });
+                                        fetchData();
+                                    }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-1 rounded text-xs font-bold">Save Stripe Key</button>
+                                </div>
+                            </div>
+                            
+                            {/* PayPal */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
+                                <h4 className="font-bold text-blue-400 mb-2">PayPal</h4>
+                                <div className="space-y-2">
+                                    <input id="paypal_client_id" placeholder="Client ID" defaultValue={settings.find(s => s.keyName === 'paypal_client_id')?.keyValue || ''} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
+                                    <input id="paypal_secret" placeholder="Secret" defaultValue={settings.find(s => s.keyName === 'paypal_secret')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
+                                    <button onClick={async () => {
+                                        const cid = (document.getElementById('paypal_client_id') as HTMLInputElement).value;
+                                        const sec = (document.getElementById('paypal_secret') as HTMLInputElement).value;
+                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'paypal_client_id', keyValue: cid, isSecret: false }) });
+                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'paypal_secret', keyValue: sec, isSecret: true }) });
+                                        fetchData();
+                                    }} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 rounded text-xs font-bold">Save PayPal Keys</button>
+                                </div>
+                            </div>
+                            
+                            {/* Square */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
+                                <h4 className="font-bold text-gray-300 mb-2">Square</h4>
+                                <div className="space-y-2">
+                                    <input id="square_access_token" placeholder="Square Access Token" defaultValue={settings.find(s => s.keyName === 'square_access_token')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
+                                    <button onClick={async () => {
+                                        const val = (document.getElementById('square_access_token') as HTMLInputElement).value;
+                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'square_access_token', keyValue: val, isSecret: true }) });
+                                        fetchData();
+                                    }} className="w-full bg-gray-600 hover:bg-gray-500 text-white py-1 rounded text-xs font-bold">Save Square Key</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

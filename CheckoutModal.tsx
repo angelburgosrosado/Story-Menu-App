@@ -134,7 +134,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         paymentMethod,
       };
 
-      if (paymentMethod === 'Stripe') {
+      if (paymentMethod === 'Stripe' || paymentMethod === 'Square') {
         payload.cardDetails = {
           cardNumber,
           expiry,

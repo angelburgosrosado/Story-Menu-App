@@ -532,6 +532,7 @@ export async function initializeDatabaseSchema() {
                         CREATE TABLE IF NOT EXISTS users (
                             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                             email VARCHAR(255) UNIQUE NOT NULL,
+                            tokens INTEGER DEFAULT 0,
                             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                         );
                     `);

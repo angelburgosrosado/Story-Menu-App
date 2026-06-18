@@ -20,7 +20,7 @@ import { CheckoutModal } from './CheckoutModal';
 import { AdminDashboard } from './AdminDashboard';
 import { ModeSelectionScreen } from './ModeSelectionScreen';
 import { recordPageGenerated } from './storage';
-import { saveCharacterToFirestore, saveProjectToFirestore, addTokensToUser } from './storageFirestore';
+import { saveCharacterToFirestore, saveProjectToFirestore } from './storageFirestore';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import { Sparkles, BookOpen, User, CheckCircle, Zap, Shield, Play, Layers, Cpu, Database, Volume2, ArrowRight, Eye, Palette, Flame, Radio, Clock, CloudLightning } from 'lucide-react';
 import i18n from './i18n';
@@ -363,11 +363,20 @@ const App: React.FC = () => {
               u.paymentMethod = data.paymentMethod;
               console.info(`🔥 [Subscription Resolved] Loaded ${data.tier} membership status.`);
             }
-            if (data && data.tokenBalance !== undefined) {
-              u.tokenBalance = data.tokenBalance;
-              window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: data.tokenBalance }));
-            }
           }
+          
+          // Securely fetch tokens from PostgreSQL/Memory backend
+          fetch(`/api/user/tokens?email=${encodeURIComponent(u.email)}`)
+            .then(res => res.json())
+            .then(tokenData => {
+              if (tokenData.tokens !== undefined) {
+                u.tokenBalance = tokenData.tokens;
+                setCurrentUser({...u}); // re-update state to trigger re-renders
+                window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: tokenData.tokens }));
+              }
+            })
+            .catch(err => console.warn("Failed to fetch secure token balance:", err));
+
           setCurrentUser(u);
           setActiveCreator({ id: u.id, email: u.email });
           localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
@@ -464,14 +473,9 @@ const App: React.FC = () => {
     setCurrentUser(prev => prev ? { ...prev, tokenBalance: newBalance } : prev);
     window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: newBalance }));
 
-    try {
-      // Async update to DB
-      await addTokensToUser(currentUser.id, -cost);
-      return true;
-    } catch (e) {
-      console.error("Failed to deduct tokens in DB", e);
-      return false;
-    }
+    // Real deduction happens securely on the backend when the API is hit.
+    // If the API call fails or returns 402, the app will need to resync.
+    return true;
   };
 
   // Sync procedural synthesizer soundtrack
@@ -490,7 +494,7 @@ const App: React.FC = () => {
           const res = await fetch('/api/gemini/speech', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, voiceName })
+              body: JSON.stringify({ text, voiceName, userEmail: currentUser?.email })
           });
           if (!res.ok) {
               const errData = await res.json().catch(() => ({}));
@@ -622,6 +626,7 @@ const App: React.FC = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                userEmail: currentUser?.email,
                 history: relevantHistory,
                 pageNum,
                 isDecisionPage,
@@ -676,7 +681,7 @@ const App: React.FC = () => {
           const response = await fetch('/api/gemini/persona', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ desc, selectedGenre })
+              body: JSON.stringify({ desc, selectedGenre, userEmail: currentUser?.email })
           });
           if (!response.ok) {
               const errData = await response.json().catch(() => ({}));
@@ -699,6 +704,7 @@ const App: React.FC = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                userEmail: currentUser?.email,
                 beat,
                 type,
                 styleEra,
@@ -895,7 +901,7 @@ const App: React.FC = () => {
                      await fetch('/api/project-casting', {
                          method: 'POST',
                          headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id }) // or link specific cast ids
+                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id, userEmail: currentUser?.email }) // or link specific cast ids
                      }).catch(() => {});
                  }
             }

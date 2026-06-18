@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
+import { calculateTokenCost } from './pricingIntelligence';
 import Stripe from 'stripe';
 import squarePkg from 'square';
 const { Client, Environment } = squarePkg;
@@ -79,6 +80,48 @@ if (typeof __dirname !== 'undefined' && __dirname) {
     _dirname = path.dirname(_filename);
 } else {
     _dirname = process.cwd();
+}
+
+/**
+ * TOKEN MANAGEMENT ENGINE
+ * Deducts tokens from PostgreSQL DB or memory fallback for a user.
+ */
+async function consumeTokens(email: string, amount: number): Promise<boolean> {
+    if (!email) return false;
+
+    const pool = getDbPool();
+    if (pool) {
+        try {
+            await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0;');
+            
+            // Check balance
+            const res = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
+            const currentTokens = res.rows.length > 0 ? (res.rows[0].tokens || 0) : 0;
+            
+            if (currentTokens >= amount) {
+                // Deduct
+                await pool.query('UPDATE users SET tokens = tokens - $1 WHERE email = $2', [amount, email]);
+                return true;
+            } else {
+                return false; // Insufficient
+            }
+        } catch (err) {
+            console.warn("Soft-fail consuming tokens in PG, falling back to memory.");
+            if (isConnectionError(err)) {
+                markDatabaseOffline();
+            }
+        }
+    }
+
+    // Memory fallback
+    const matchUser = memoryDb.users.find(u => u.email === email);
+    if (matchUser) {
+        if ((matchUser.tokens || 0) >= amount) {
+            matchUser.tokens = (matchUser.tokens || 0) - amount;
+            return true;
+        }
+    }
+    return false;
 }
 
 // Safely load local .env credentials if they exist in the root folder
@@ -499,7 +542,8 @@ Sitemap: https://storymenu.app/sitemap.xml`
     };
 
     app.post('/api/gemini/speech', async (req, res): Promise<any> => {
-        const { text, voiceName } = req.body;
+        const { text, voiceName, userEmail } = req.body;
+        if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-3.1-flash-tts-preview', 1)))) return res.status(402).json({ error: 'Insufficient tokens' });
         if (!text) return res.status(400).json({ error: 'Text prompt is required.' });
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
@@ -525,7 +569,8 @@ Sitemap: https://storymenu.app/sitemap.xml`
     });
 
     app.post('/api/gemini/persona', async (req, res): Promise<any> => {
-        const { desc, selectedGenre } = req.body;
+        const { desc, selectedGenre, userEmail } = req.body;
+        if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-3.5-flash', 1000)))) return res.status(402).json({ error: 'Insufficient tokens' });
         if (!desc) return res.status(400).json({ error: 'Description is required' });
         const style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
         try {
@@ -548,7 +593,9 @@ Sitemap: https://storymenu.app/sitemap.xml`
     });
 
     app.post('/api/gemini/suggest', async (req, res): Promise<any> => {
-        const { fieldName, currentValue, genre, roleType, characterName, concept } = req.body;
+        const { fieldName, currentValue, genre, roleType, characterName, concept, userEmail } = req.body;
+        if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-3.5-flash', 500)))) return res.status(402).json({ error: 'Insufficient tokens' });
+
         if (!fieldName) {
             return res.status(400).json({ error: 'fieldName is required' });
         }
@@ -688,7 +735,8 @@ Rules:
     });
 
     app.post('/api/gemini/enhance-kid-story', async (req, res): Promise<any> => {
-        const { rawText } = req.body;
+        const { rawText, userEmail } = req.body;
+        if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-2.5-flash', 500)))) return res.status(402).json({ error: 'Insufficient tokens' });
         if (!rawText) return res.status(400).json({ error: "Missing rawText" });
 
         try {
@@ -763,6 +811,7 @@ Your task:
     }
 
     app.post('/api/gemini/beat', async (req, res): Promise<any> => {
+        if (!(await consumeTokens(req.body.userEmail, calculateTokenCost('gemini-2.5-flash', 2000)))) return res.status(402).json({ error: 'Insufficient tokens' });
         const {
             history = [],
             pageNum,
@@ -922,6 +971,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     app.post('/api/gemini/image', async (req, res): Promise<any> => {
+        if (!(await consumeTokens(req.body.userEmail, calculateTokenCost('gemini-2.5-flash-image', 1)))) return res.status(402).json({ error: 'Insufficient tokens' });
         const {
             beat,
             type,
@@ -1273,6 +1323,37 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     /**
+     * FETCH SECURE TOKEN BALANCE
+     */
+    app.get('/api/user/tokens', async (req, res) => {
+        const { email } = req.query;
+        if (!email) {
+            return res.status(400).json({ error: 'Missing email parameter' });
+        }
+
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                // Ensure tokens column exists before querying
+                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0;');
+                const result = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
+                if (result.rows.length > 0) {
+                    return res.json({ tokens: result.rows[0].tokens || 0 });
+                }
+            } catch (err: any) {
+                console.warn("Database get tokens soft-fallback:", err.message);
+                if (isConnectionError(err)) {
+                    markDatabaseOffline();
+                }
+            }
+        }
+        
+        // Fallback to memory
+        const matchUser = memoryDb.users.find(u => u.email === email);
+        return res.json({ tokens: matchUser?.tokens || 0 });
+    });
+
+    /**
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
      */
     app.post('/api/checkout', async (req, res): Promise<any> => {
@@ -1317,7 +1398,6 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             if (stripeKey) {
                 try {
                     const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
-                    // Using raw card details (mock implementation for simulation as Elements aren't configured on the frontend)
                     const pm = await stripeClient.paymentMethods.create({
                         type: 'card',
                         card: {
@@ -1336,14 +1416,11 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     });
                     subscriptionId = intent.id;
                 } catch (stripeErr: any) {
-                    console.warn(`[Stripe] Error using API: ${stripeErr.message}. Falling back to simulated validation.`);
-                    subscriptionId = 'sub_ST_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                    console.warn(`[Stripe] Error using API: ${stripeErr.message}`);
+                    return res.status(400).json({ error: `Stripe transaction failed: ${stripeErr.message}` });
                 }
             } else {
-                if (!cardDetails || !cardDetails.cardNumber || !cardDetails.expiry || !cardDetails.cvc) {
-                    return res.status(400).json({ error: 'Stripe transaction failed: Missing credit card credentials.' });
-                }
-                subscriptionId = 'sub_ST_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                return res.status(500).json({ error: 'Stripe transaction failed: Gateway is not configured.' });
             }
         } else if (paymentMethod === 'PayPal') {
             if (paypalClientId && paypalSecret) {
@@ -1366,35 +1443,43 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     if (!orderRes.ok) throw new Error(orderData.message || 'Order failed');
                     subscriptionId = orderData.id;
                 } catch (paypalErr: any) {
-                    console.warn(`[PayPal] Error using API: ${paypalErr.message}. Falling back to simulated validation.`);
-                    subscriptionId = 'pay_PP_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                    console.warn(`[PayPal] Error using API: ${paypalErr.message}`);
+                    return res.status(400).json({ error: `PayPal transaction failed: ${paypalErr.message}` });
                 }
             } else {
-                if (!paypalEmail || !paypalEmail.includes('@') || paypalEmail.length < 5) {
-                    return res.status(400).json({ error: 'PayPal authorization failed: Invalid profile handle or email credentials.' });
-                }
-                subscriptionId = 'pay_PP_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                return res.status(500).json({ error: 'PayPal transaction failed: Gateway is not configured.' });
             }
         } else if (paymentMethod === 'Square') {
             if (squareToken) {
                 try {
                     const squareClient = new Client({ environment: Environment.Sandbox, accessToken: squareToken });
-                    // Using raw card sourceId mock since web payment SDK is not implemented on the frontend
+                    
+                    if (!cardDetails || !cardDetails.cardNumber || !cardDetails.expiry || !cardDetails.cvc) {
+                        return res.status(400).json({ error: 'Square transaction failed: Missing credit card credentials.' });
+                    }
+                    
+                    let sourceId = 'cnon:card-nonce-ok';
+                    // basic simulation to reject dummy cards since we aren't using the web elements to generate real nonces
+                    if (cardDetails.cardNumber.startsWith('1111') || cardDetails.cardNumber.startsWith('0000')) {
+                        sourceId = 'cnon:card-nonce-declined';
+                    }
+
                     const response = await squareClient.paymentsApi.createPayment({
-                        sourceId: 'cnon:card-nonce-ok',
+                        sourceId: sourceId,
                         idempotencyKey: crypto.randomBytes(12).toString('hex'),
                         amountMoney: { amount: BigInt(amountCents), currency: 'USD' }
                     });
-                    subscriptionId = response.result.payment?.id || ('sq_SQ_' + crypto.randomBytes(6).toString('hex').toUpperCase());
+                    
+                    if (!response.result.payment) {
+                        throw new Error('Payment declined by Square.');
+                    }
+                    subscriptionId = response.result.payment.id || ('sq_SQ_' + crypto.randomBytes(6).toString('hex').toUpperCase());
                 } catch (squareErr: any) {
-                    console.warn(`[Square] Error using API: ${squareErr.message}. Falling back to simulated validation.`);
-                    subscriptionId = 'sq_SQ_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                    console.warn(`[Square] Error using API: ${squareErr.message}`);
+                    return res.status(400).json({ error: `Square transaction failed: ${squareErr.message}` });
                 }
             } else {
-                if (!cardDetails || !cardDetails.cardNumber || !cardDetails.expiry || !cardDetails.cvc) {
-                    return res.status(400).json({ error: 'Square transaction failed: Missing credit card credentials.' });
-                }
-                subscriptionId = 'sq_SQ_' + crypto.randomBytes(6).toString('hex').toUpperCase();
+                return res.status(500).json({ error: 'Square transaction failed: Gateway is not configured.' });
             }
         }
 
@@ -1409,12 +1494,22 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(100);');
                 await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id VARCHAR(100);');
                 await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);');
+                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0;');
 
                 // Update the user's tier details
                 await pool.query(
                     'UPDATE users SET tier = $1, subscription_id = $2, payment_method = $3 WHERE email = $4',
                     [tier, subscriptionId, pMethodName, email]
                 );
+                
+                // Add tokens if awarded
+                if (tokensAwarded > 0) {
+                    await pool.query(
+                        'UPDATE users SET tokens = COALESCE(tokens, 0) + $1 WHERE email = $2',
+                        [tokensAwarded, email]
+                    );
+                }
+                
                 console.info(`🔥 [Postgres] Synced subscription details for ${email} directly in SQL DB.`);
             } catch (pgErr: any) {
                 console.warn("⚠️ Soft-fail on PostgreSQL subscription persist:", pgErr.message);
@@ -1430,6 +1525,9 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             matchUser.tier = tier;
             matchUser.subscriptionId = subscriptionId;
             matchUser.paymentMethod = pMethodName;
+            if (tokensAwarded > 0) {
+                matchUser.tokens = (matchUser.tokens || 0) + tokensAwarded;
+            }
         } else {
             memoryDb.users.push({
                 id: '00000000-0000-0000-0000-000000000000',

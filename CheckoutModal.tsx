@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreditCard, Shield, Lock, CheckCircle2, X, AlertCircle, Sparkles, Send, Globe, Star, ShoppingCart, Zap, ExternalLink, Check } from 'lucide-react';
 import { logAnalyticsEvent } from './firebase';
-import { updateUserSubscriptionInFirestore, addTokensToUser } from './storageFirestore';
+import { updateUserSubscriptionInFirestore } from './storageFirestore';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -172,16 +172,33 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         items: [{ item_name: pricing[tier].label, item_category: 'Subscriptions' }],
       });
 
+      // Emit event to close modal and refresh state
+      window.dispatchEvent(new Event('close-checkout-modal'));
+      window.dispatchEvent(new Event('refresh-subscription-status'));
+      
+      // Fetch latest token balance from backend
+      fetch(`/api/user/tokens?email=${encodeURIComponent(currentUser?.email || '')}`)
+        .then(res => res.json())
+        .then(tokenData => {
+            if (tokenData.tokens !== undefined) {
+                window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: tokenData.tokens }));
+            }
+        }).catch(err => console.warn("Could not fetch new token balance", err));
+
+      if (data.type === 'topup') {
+        alert('Payment successful. Tokens have been added to your account.');
+      } else {
+        alert('Payment successful. Welcome to ' + pricing[tier].label + '!');
+      }
+
       // Update in Firestore database for the active logged user
       if (currentUser && !currentUser.isOffline) {
         try {
           if (data.type === 'topup' && data.tokensAwarded > 0) {
-            await addTokensToUser(currentUser.id, data.tokensAwarded);
+            // tokens awarded on backend natively
           } else {
             // Give subscription tokens initially as well
-            if (data.tokensAwarded > 0) {
-              await addTokensToUser(currentUser.id, data.tokensAwarded);
-            }
+            // tokens awarded on backend natively
             await updateUserSubscriptionInFirestore(currentUser.id, {
               tier: pricing[tier].label,
               subscriptionId: data.subscriptionId,

@@ -270,26 +270,4 @@ export async function getUserTokenBalance(userId: string): Promise<number> {
     console.error("🔥 [Firestore] Error getting token balance", error);
     return 0;
   }
-}
-
-export async function updateUserTokenBalance(userId: string, newBalance: number): Promise<void> {
-  try {
-    const docRef = doc(db, 'users', userId);
-    await setDoc(docRef, {
-      tokenBalance: newBalance,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    console.info(`🔥 [Firestore] Updated token balance for ${userId} to ${newBalance}`);
-  } catch (error) {
-    console.error("🔥 [Firestore] Error setting token balance", error);
-  }
-}
-
-export async function addTokensToUser(userId: string, amount: number): Promise<number> {
-  const current = await getUserTokenBalance(userId);
-  const updated = current + amount;
-  await updateUserTokenBalance(userId, updated);
-  return updated;
-}
-
 

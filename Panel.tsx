@@ -102,6 +102,22 @@ export const Panel: React.FC<PanelProps> = ({
                         className={`w-full h-full object-cover select-none pointer-events-none transition-transform duration-700 group-hover:scale-105 ${isFullBleed ? '!object-cover' : ''}`} 
                     />
                 )}
+                {!face.isLoading && !face.imageUrl && (
+                    <div className="absolute inset-0 bg-stone-900 flex flex-col items-center justify-center p-6 text-center z-20">
+                        <span className="text-5xl mb-4">⚠️</span>
+                        <h4 className="text-red-500 font-comic uppercase text-xl mb-2">Generation Failed</h4>
+                        <p className="text-gray-400 font-sans text-sm mb-6 max-w-xs">
+                            We hit a snag while generating this page. Your API key might be missing, or the service is temporarily down.
+                        </p>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onReset(); }}
+                            className="px-6 py-3 bg-yellow-400 text-black font-comic uppercase text-sm font-bold hover:bg-yellow-300 rounded-lg border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1 transition-all"
+                        >
+                            Return to Setup
+                        </button>
+                    </div>
+                )}
+                {face.isLoading && <LoadingFX />}
 
                 {/* Localized HTML Overlay Boxes for readability & accessibility */}
                 {face.narrative && (
@@ -188,7 +204,7 @@ export const Panel: React.FC<PanelProps> = ({
             </div>
 
             {/* Decision Buttons */}
-            {face.isDecisionPage && face.choices.length > 0 && (
+            {face.isDecisionPage && face.choices && face.choices.length > 0 && (
                 <div className={`absolute bottom-0 inset-x-0 p-4 pb-10 flex flex-col gap-2 items-center justify-end transition-opacity duration-500 ${face.resolvedChoice ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-gradient-to-t from-black/95 via-black/60 to-transparent z-20`}>
                     <p className="text-white font-comic text-lg uppercase tracking-wider animate-pulse mb-1">Make your path:</p>
                     <div className="w-full flex flex-col gap-2">

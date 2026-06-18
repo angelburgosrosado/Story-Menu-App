@@ -97,6 +97,8 @@ const fileToBase64 = (file: File): Promise<string> => {
 export const Setup: React.FC<SetupProps> = (props) => {
     const { t } = useTranslation();
 
+    if (!props.show && !props.isTransitioning) return null;
+
     const [dbConnection, setDbConnection] = useState<{ 
         status: string; 
         mode: string;
@@ -126,25 +128,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     };
 
-    const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint' | 'settings'>('generate');
+    const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint'>('generate');
     const [savedProjects, setSavedProjects] = useState<any[]>([]);
-
-    const [geminiKey, setGeminiKey] = useState<string>(() => {
-        try {
-            return localStorage.getItem('GEMINI_API_KEY') || '';
-        } catch (e) {
-            return '';
-        }
-    });
-
-    const handleGeminiKeyChange = (val: string) => {
-        setGeminiKey(val);
-        try {
-            localStorage.setItem('GEMINI_API_KEY', val);
-        } catch (e) {
-            console.warn(e);
-        }
-    };
 
     const isEditorial = appSkin === 'writers-journal';
     const isKidStory = appSkin === 'kid-story';
@@ -339,7 +324,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         try {
             const response = await fetch('/api/gemini/suggest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fieldName: 'storyBlueprint',
                     genre: props.selectedGenre,
@@ -371,7 +356,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
             const currentGoalObj = props.storyBlueprint ? props.storyBlueprint.find((b: any) => b.chapterNum === pageNum) : null;
             const response = await fetch('/api/gemini/suggest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fieldName: `Chapter ${pageNum} Goal`,
                     genre: props.selectedGenre,
@@ -463,25 +448,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     // AI Suggestions Field state
     const [suggestingFields, setSuggestingFields] = useState<Record<string, boolean>>({});
-
-    // Sync Art Style Lock when Genre changes
-    useEffect(() => {
-        if (props.selectedGenre && props.villain) {
-            const newArtStyle = artStyleLockByGenre[props.selectedGenre] || artStyleLockByGenre['Custom'];
-            if (props.nemesisDNA?.rendering_directives?.art_style_lock !== newArtStyle) {
-                const updated = {
-                    ...props.nemesisDNA,
-                    rendering_directives: {
-                        ...props.nemesisDNA?.rendering_directives,
-                        continuity_weight: props.nemesisDNA?.rendering_directives?.continuity_weight || 'MEDIUM',
-                        art_style_lock: newArtStyle
-                    }
-                } as CharacterIdentitySchema;
-                props.onNemesisDnaChange(updated);
-                props.onVillainDnaChange(JSON.stringify(updated));
-            }
-        }
-    }, [props.selectedGenre, props.villain]);
 
     // Predefined Wardrobe Presets matching specific rendering aesthetics and character role profiles
     const WARDROBE_PRESETS = {
@@ -664,7 +630,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         try {
             const res = await fetch('/api/gemini/suggest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fieldName: 'personaBrainstorm',
                     genre: personaStudioStyle,
@@ -742,7 +708,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         try {
             const res = await fetch('/api/gemini/persona', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     desc: promptDesc,
                     selectedGenre: personaStudioStyle
@@ -840,7 +806,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         try {
             const res = await fetch('/api/gemini/suggest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fieldName,
                     currentValue,
@@ -1084,8 +1050,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
         };
     }, [props.activeCreator.id]);
 
-    if (!props.show && !props.isTransitioning) return null;
-
     const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!creatorEmailInput.trim()) return;
@@ -1225,78 +1189,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
         "Anime Story": "🌸",
         "Historical Archeology Tales": "🏺",
         "Custom": "✨"
-    };
-
-    const wardrobePresetsByGenre: Record<string, string[]> = {
-        "Classic Horror": [
-            "Vintage Victorian mourning attire with distressed lace.",
-            "Asymmetrical asylum straightjacket with heavy leather straps.",
-            "Tattered ceremonial cultist robes with blood-red lining."
-        ],
-        "Superhero Action": [
-            "High-tech tactical nanosuit with glowing energy conduits.",
-            "Flowing majestic cape over reinforced Kevlar body armor.",
-            "Form-fitting athletic spandex with striking geometric patterns."
-        ],
-        "Dark Sci-Fi": [
-            "Cybernetic exo-suit with exposed hydraulic joints and neon wiring.",
-            "Grimy scavenger duster over atmospheric rebreather gear.",
-            "Sleek corporate security armor with mirrored biometric visor."
-        ],
-        "High Fantasy": [
-            "Ornate mythril plate armor with glowing runic etchings.",
-            "Flowing archmage robes woven with starlight and shadow.",
-            "Rugged leather ranger gear with enchanted forest cloaking."
-        ],
-        "Neon Noir Detective": [
-            "Classic heavy trench coat with a popped collar and fedora.",
-            "Sharp tailored pinstripe suit with neon-lit lapel pins.",
-            "Gritty street-level leather jacket over a bloodstained button-down."
-        ],
-        "Wasteland Apocalypse": [
-            "Scavenged rusted metal armor with spiked tire-tread shoulder pads.",
-            "Heavy canvas duster over tactical webbing and gasmask.",
-            "Nomad survivalist gear wrapped in dusty camo netting."
-        ],
-        "Lighthearted Comedy": [
-            "Absurdly oversized novelty costume with bright primary colors.",
-            "Quirky mismatched thrift-store sweater and patterned pants.",
-            "Exaggerated superhero parody suit with a cape that's too long."
-        ],
-        "Teen Drama / Slice of Life": [
-            "Trendy high school varsity jacket over a casual graphic tee.",
-            "Grunge-inspired flannel shirt with ripped denim and combat boots.",
-            "Preppy private school uniform with a perfectly tied blazer."
-        ],
-        "Anime Story": [
-            "Gravity-defying stylized school uniform with combat modifications.",
-            "Mecha-pilot plug-suit with sleek aerodynamic paneling.",
-            "Over-the-top gothic lolita dress with hidden weapon holsters."
-        ],
-        "Historical Archeology Tales": [
-            "Rugged explorer gear with a leather satchel and wide-brimmed hat.",
-            "Elegant 1920s expedition tailoring with brass compass accents.",
-            "Dusty canvas khakis and a utility vest packed with ancient relics."
-        ],
-        "Custom": [
-            "A tailored charcoal evening dress with hidden utility structural seams",
-            "A high-mobility cybernetic stealth bodysuit with integrated cooling lines",
-            "A heavy leather duster coat over high-collar tactical body Kevlar mesh"
-        ]
-    };
-
-    const artStyleLockByGenre: Record<string, string> = {
-        "Classic Horror": "Macabre gothic illustration, high contrast shadows, ink wash, chilling atmosphere",
-        "Superhero Action": "Vibrant comic book style, dynamic action poses, cel-shaded, bold ink lines, halftone patterns",
-        "Dark Sci-Fi": "Cyberpunk concept art, neon lighting, gritty industrial textures, photorealistic sci-fi render",
-        "High Fantasy": "Epic High Fantasy digital painting, intricate details, cinematic lighting, ArtStation concept art",
-        "Neon Noir Detective": "Cinematic neo-noir, moody chiaroscuro lighting, rain-slicked streets, stylized graphic novel",
-        "Wasteland Apocalypse": "Gritty post-apocalyptic concept art, dusty atmosphere, muted desaturated colors, harsh lighting",
-        "Lighthearted Comedy": "Bright and colorful cartoon style, expressive characters, clean vector lines, cheerful atmosphere",
-        "Teen Drama / Slice of Life": "Soft aesthetic indie comic style, pastel color palette, warm lighting, expressive faces",
-        "Anime Story": "High-budget anime studio key visual, vibrant cel-shading, dynamic perspective, stylized fx",
-        "Historical Archeology Tales": "Vintage pulp magazine cover illustration, sepia tones, dramatic adventure lighting",
-        "Custom": "Photorealistic Neon Noir Comic Book Style, sharp cinematic chiaroscuro"
     };
 
     return (
@@ -1552,17 +1444,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             </span>
                         )}
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('settings')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'settings' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'settings' ? 'bg-orange-500 text-white border-black shadow-[4px_4px_0px_#000]' : 'bg-orange-950/40 text-orange-300 border-orange-900/50 hover:border-orange-500 hover:bg-orange-900/40'}`
-                        }`}
-                    >
-                        {isEditorial ? 'Settings' : 'Settings'}
-                    </button>
                 </div>
 
                 {activeTab === 'generate' ? (
@@ -1580,7 +1461,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
                               {isEditorial 
                                    ? t('setup.cast.descEditorial')
                                    : t('setup.cast.descComic')}
-                              <br/><span className="opacity-70 mt-1 block">Supported formats: JPG, PNG, WEBP, GIF (Max 5MB)</span>
                          </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -1591,84 +1471,99 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.hero ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onHeroUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onHeroUpload(e.target.files[0])} />
                                  
                                  {props.hero ? (
-                                      <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
-                                           <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                <span className="sr-only">{t('setup.auto7', 'Upload Hero')}</span>
-                                           </label>
-                                           <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                           
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
-                                                {isEditorial ? "PROTAGONIST ACTIVE" : "HERO ACTIVE"}
-                                           </div>
+                                      <>
+                                          {/* Upper portion: Card Artwork with hover overlay */}
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
+                                               <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">{t('setup.auto7', 'Upload Hero')}</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                                               
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                                    {isEditorial ? "PROTAGONIST ACTIVE" : "HERO ACTIVE"}
+                                               </div>
 
-                                           <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-blue-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
-                                                <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
-                                           </div>
-                                      </div>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-blue-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400 animate-pulse'}`}>
+                                                         {isEditorial ? "🖋️ PROTAGONIST REGISTERED" : "⚡ IDENTITY SCANNED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "PROTAGONIST" : "MAIN HERO"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.hero.desc || (isEditorial ? "A central figure of the narrative..." : "Ready for battle")}</p>
+                                               </div>
+
+                                               {/* Sub-visual layout triggers (Replaced with Text Input) */}
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                         <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-blue-400'}`}>
+                                                              {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
+                                                         </span>
+                                                         <button
+                                                              type="button"
+                                                              onClick={(e) => { e.preventDefault(); handleSuggestField('heroVisuals', props.heroVisuals); }}
+                                                              disabled={suggestingFields['heroVisuals']}
+                                                              className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                                   isEditorial
+                                                                        ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
+                                                                        : 'bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40'
+                                                              }`}
+                                                         >
+                                                              {suggestingFields['heroVisuals'] ? '✨...' : '✨ SUGGEST'}
+                                                         </button>
+                                                    </div>
+                                                    <textarea 
+                                                         rows={2}
+                                                         value={props.heroVisuals} 
+                                                         onChange={(e) => props.onHeroVisualsChange(e.target.value)} 
+                                                         placeholder={isEditorial ? "e.g. classic tweed jacket, wireframe spectacles" : "e.g. silver messy hair, glowing neon nanosuit"} 
+                                                         className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
+                                                              isEditorial
+                                                                   ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                   : 'bg-slate-900 border border-slate-700 text-white focus:border-blue-500'
+                                                         }`}
+                                                    />
+                                               </div>
+                                          </div>
+                                      </>
                                  ) : (
-                                      <label htmlFor="hero-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-blue-800 hover:bg-blue-950/50'} cursor-pointer transition-colors group/upload`}>
-                                           <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
-                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-2 py-0.5 rounded-full shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
-                                                <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
+                                      <label htmlFor="hero-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
+                                           {/* Emblem representation */}
+                                           <div className="flex justify-between items-center">
+                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2.5 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-xs uppercase px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
+                                                <span className={`w-2.5 h-2.5 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
                                            </div>
 
-                                           <div className={`mt-2 mb-1 transform group-hover/upload:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-blue-400'}`}>
-                                                <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-blue-400'}`}>
+                                                     <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                     </svg>
+                                                </div>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-blue-300'}`}>{isEditorial ? "PROTAGONIST PORTRAIT" : "HERO AVATAR"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO SCAN"}</span>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-blue-300'}`}>{isEditorial ? "PORTRAIT" : "HERO AVATAR"}</span>
-                                           <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
+
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-blue-950/80 border border-blue-800 text-blue-200 group-hover:bg-blue-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD PROTAGONIST FILE" : "UPLOAD IMAGE"}
+                                           </div>
                                       </label>
                                  )}
-                                 
-                                 <div className="flex flex-col flex-1 justify-between pt-3">
-                                      <div className="text-left">
-                                           <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400'}`}>
-                                                {isEditorial ? "🖋️ PROTAGONIST DATA" : "⚡ IDENTITY RECORD"}
-                                           </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
-                                                {isEditorial ? "PROTAGONIST" : "MAIN HERO"}
-                                           </p>
-                                           <p className={`text-[9.5px] line-clamp-2 mt-1 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.hero?.desc || (isEditorial ? "A central figure of the narrative..." : "Ready for battle")}</p>
-                                      </div>
-
-                                      <div className={`mt-2 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
-                                           <div className="flex items-center justify-between mb-1.5">
-                                                <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-blue-400'}`}>
-                                                     {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
-                                                </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('heroVisuals', props.heroVisuals); }}
-                                                     disabled={suggestingFields['heroVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['heroVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
-                                           </div>
-                                           <textarea 
-                                                rows={2}
-                                                value={props.heroVisuals} 
-                                                onChange={(e) => props.onHeroVisualsChange(e.target.value)} 
-                                                placeholder={isEditorial ? "e.g. classic tweed jacket, wireframe spectacles" : "e.g. silver messy hair, glowing neon nanosuit"} 
-                                                className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
-                                                     isEditorial
-                                                          ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
-                                                          : 'bg-slate-900 border border-slate-700 text-white focus:border-blue-500'
-                                                }`}
-                                           />
-                                      </div>
-                                 </div>
                             </div>
 
                             {/* CO-STAR CARD (PURPLE THEME) */}
@@ -1677,83 +1572,97 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.friend ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.friend ? 'border-purple-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.5)]' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.3)] hover:border-purple-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="friend-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onFriendUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*" id="friend-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onFriendUpload(e.target.files[0])} />
                                  
                                  {props.friend ? (
-                                      <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
-                                           <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                <span className="sr-only">{t('setup.auto9', 'Upload Co-Star')}</span>
-                                           </label>
-                                           <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                           
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
-                                                {isEditorial ? "SUPPORTING CAST READY" : "CO-STAR READY"}
-                                           </div>
+                                      <>
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
+                                               <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">{t('setup.auto9', 'Upload Co-Star')}</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                                               
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                                    {isEditorial ? "SUPPORTING CAST READY" : "CO-STAR READY"}
+                                               </div>
 
-                                           <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-purple-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
-                                                <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
-                                           </div>
-                                      </div>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-purple-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400 animate-pulse'}`}>
+                                                         {isEditorial ? "📜 SUPPORTING CAST REGISTERED" : "🌟 ALLY DISCOVERED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "CO-STAR / ALLY" : "SOCIUS / SIDEKICK"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.friend.desc || (isEditorial ? "Supporting the main narrative thread..." : "Ready for combat support")}</p>
+                                               </div>
+
+                                               {/* Sub-visual layout triggers (Replaced with Text Input) */}
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                         <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-purple-400'}`}>
+                                                              {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
+                                                         </span>
+                                                         <button
+                                                              type="button"
+                                                              onClick={(e) => { e.preventDefault(); handleSuggestField('friendVisuals', props.friendVisuals); }}
+                                                              disabled={suggestingFields['friendVisuals']}
+                                                              className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                                   isEditorial
+                                                                        ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
+                                                                        : 'bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40'
+                                                              }`}
+                                                         >
+                                                              {suggestingFields['friendVisuals'] ? '✨...' : '✨ SUGGEST'}
+                                                         </button>
+                                                    </div>
+                                                    <textarea 
+                                                         rows={2}
+                                                         value={props.friendVisuals} 
+                                                         onChange={(e) => props.onFriendVisualsChange(e.target.value)} 
+                                                         placeholder={isEditorial ? "e.g. trench coat, slicked back hair" : "e.g. auburn ponytail, leather bomber jacket"} 
+                                                         className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
+                                                              isEditorial
+                                                                   ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                   : 'bg-slate-900 border border-slate-700 text-white focus:border-purple-500'
+                                                         }`}
+                                                    />
+                                               </div>
+                                          </div>
+                                      </>
                                  ) : (
-                                      <label htmlFor="friend-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-purple-800 hover:bg-purple-950/50'} cursor-pointer transition-colors group/upload`}>
-                                           <div className="absolute top-2 left-2 right-2 flex justify-end items-center">
+                                      <label htmlFor="friend-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
+                                           <div className="flex justify-between items-center">
                                                 <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto10', 'OPTIONAL')}</span>
+                                                <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-purple-500'}`} />
                                            </div>
 
-                                           <div className={`mt-2 mb-1 transform group-hover/upload:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-purple-400'}`}>
-                                                <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-purple-400'}`}>
+                                                     <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94-3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                                                     </svg>
+                                                </div>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-purple-300'}`}>{isEditorial ? "SUPPORTING CAST" : "SIDEKICK GRID"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO JOIN"}</span>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-purple-300'}`}>{isEditorial ? "PORTRAIT" : "CO-STAR AVATAR"}</span>
-                                           <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
+
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-purple-950/80 border border-purple-800 text-purple-200 group-hover:bg-purple-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD CAST FILE" : "UPLOAD PHOTO"}
+                                           </div>
                                       </label>
                                  )}
-                                 
-                                 <div className="flex flex-col flex-1 justify-between pt-3">
-                                      <div className="text-left">
-                                           <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-purple-400 animate-pulse'}`}>
-                                                {isEditorial ? "📜 SUPPORTING CAST REGISTERED" : "🌟 ALLY DISCOVERED"}
-                                           </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
-                                                {isEditorial ? "CO-STAR / ALLY" : "SOCIUS / SIDEKICK"}
-                                           </p>
-                                           <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.friend?.desc || (isEditorial ? "Supporting the main narrative thread..." : "Ready for combat support")}</p>
-                                      </div>
-
-                                      <div className={`mt-2 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
-                                           <div className="flex items-center justify-between mb-1">
-                                                <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-purple-400'}`}>
-                                                     {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
-                                                </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('friendVisuals', props.friendVisuals); }}
-                                                     disabled={suggestingFields['friendVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['friendVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
-                                           </div>
-                                           <textarea 
-                                                rows={2}
-                                                value={props.friendVisuals} 
-                                                onChange={(e) => props.onFriendVisualsChange(e.target.value)} 
-                                                placeholder={isEditorial ? "e.g. trench coat, slicked back hair" : "e.g. auburn ponytail, leather bomber jacket"} 
-                                                className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
-                                                     isEditorial
-                                                          ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
-                                                          : 'bg-slate-900 border border-slate-700 text-white focus:border-purple-500'
-                                                }`}
-                                           />
-                                      </div>
-                                 </div>
                             </div>
 
                             {/* VILLAIN CARD (RED THEME) */}
@@ -1762,84 +1671,98 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.villain ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.villain ? 'border-red-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:border-red-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="villain-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onVillainUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*" id="villain-upload-input" className="hidden" onChange={(e) => e.target.files?.[0] && props.onVillainUpload(e.target.files[0])} />
                                  
                                  {props.villain ? (
-                                      <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
-                                           <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
-                                                <span className="sr-only">{t('setup.auto11', 'Upload Villain')}</span>
-                                           </label>
-                                           <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                           
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
-                                                {isEditorial ? "ANTAGONIST ACTIVE" : "NEMESIS ACTIVE"}
-                                           </div>
+                                      <>
+                                          <div className={`relative w-full h-40 mt-3 rounded-lg overflow-hidden group/main min-h-[160px] ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
+                                               <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
+                                                    <span className="sr-only">{t('setup.auto11', 'Upload Villain')}</span>
+                                               </label>
+                                               <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                                               
+                                               <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
+                                                    {isEditorial ? "ANTAGONIST ACTIVE" : "NEMESIS ACTIVE"}
+                                               </div>
 
-                                           <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-red-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
-                                                <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
-                                           </div>
-                                      </div>
+                                               <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-red-950/90'}`}>
+                                                    <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                    <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
+                                               </div>
+                                          </div>
+                                          
+                                          <div className="flex flex-col flex-1 justify-between pt-2">
+                                               <div className="text-left">
+                                                    <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-red-500'}`}>
+                                                         {isEditorial ? "⚖️ CONFLICT CORE REGISTERED" : "⚠️ MENACE UNLEASHED"}
+                                                    </span>
+                                                    <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                                         {isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}
+                                                    </p>
+                                                    <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.villain.desc || (isEditorial ? "The central source of narrative tension..." : "Plotting doom...")}</p>
+                                               </div>
+
+                                               {/* Sub-visual layout triggers (Replaced with Text Input) */}
+                                               <div className={`mt-2.5 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                         <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-red-400'}`}>
+                                                              {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
+                                                         </span>
+                                                         <button
+                                                              type="button"
+                                                              onClick={(e) => { e.preventDefault(); handleSuggestField('villainVisuals', props.villainVisuals); }}
+                                                              disabled={suggestingFields['villainVisuals']}
+                                                              className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
+                                                                   isEditorial
+                                                                        ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
+                                                                        : 'bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-500/40'
+                                                              }`}
+                                                         >
+                                                              {suggestingFields['villainVisuals'] ? '✨...' : '✨ SUGGEST'}
+                                                         </button>
+                                                    </div>
+                                                    <textarea 
+                                                         rows={2}
+                                                         value={props.villainVisuals} 
+                                                         onChange={(e) => props.onVillainVisualsChange(e.target.value)} 
+                                                         placeholder={isEditorial ? "e.g. sharp tailored suit, slicked hair" : "e.g. regal high-collared obsidian armor"} 
+                                                         className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
+                                                              isEditorial
+                                                                   ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
+                                                                   : 'bg-slate-900 border border-slate-700 text-white focus:border-red-500'
+                                                         }`}
+                                                    />
+                                               </div>
+                                          </div>
+                                      </>
                                  ) : (
-                                      <label htmlFor="villain-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-red-800 hover:bg-red-950/50'} cursor-pointer transition-colors group/upload`}>
-                                           <div className="absolute top-2 left-2 right-2 flex justify-end items-center">
+                                      <label htmlFor="villain-upload-input" className="flex flex-col justify-between h-full p-4 relative z-20 min-h-[385px]">
+                                           <div className="flex justify-between items-center">
                                                 <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto12', 'OPTIONAL')}</span>
+                                                <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-300' : 'bg-red-600'}`} />
                                            </div>
 
-                                           <div className={`mt-2 mb-1 transform group-hover/upload:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-red-400'}`}>
-                                                <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m-1.414-1.414a7 7 0 000-9.9" />
-                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
-                                                </svg>
+                                           <div className="flex flex-col items-center my-auto py-2 text-center select-none">
+                                                <div className={`mb-2 transform group-hover:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-red-500'}`}>
+                                                     <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m-1.414-1.414a7 7 0 000-9.9" />
+                                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
+                                                     </svg>
+                                                </div>
+                                                <span className={`text-lg tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-red-300'}`}>{isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}</span>
+                                                <span className={`text-[10px] uppercase tracking-widest font-mono mt-1 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO SELECT" : "CLICK TO ENGAGE"}</span>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-red-300'}`}>{isEditorial ? "PORTRAIT" : "ARC-RIVAL AVATAR"}</span>
-                                           <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
+
+                                           <div className={`text-center py-1.5 rounded text-xs transition-all cursor-pointer ${
+                                                isEditorial
+                                                     ? 'bg-stone-200 border border-stone-300 text-stone-700 group-hover:bg-[#4c443c] group-hover:text-stone-50 font-sans font-bold'
+                                                     : 'bg-red-950/80 border border-red-900 text-red-200 group-hover:bg-red-600 group-hover:text-white font-comic'
+                                           }`}>
+                                                {isEditorial ? "ADD ANTAGONIST FILE" : "UPLOAD PHOTO"}
+                                           </div>
                                       </label>
                                  )}
-                                 
-                                 <div className="flex flex-col flex-1 justify-between pt-3">
-                                      <div className="text-left">
-                                           <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-red-500'}`}>
-                                                {isEditorial ? "⚖️ CONFLICT CORE REGISTERED" : "⚠️ MENACE UNLEASHED"}
-                                           </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
-                                                {isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}
-                                           </p>
-                                           <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.villain?.desc || (isEditorial ? "The central source of narrative tension..." : "Plotting doom...")}</p>
-                                      </div>
-
-                                      <div className={`mt-2 pt-2 border-t ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
-                                           <div className="flex items-center justify-between mb-1">
-                                                <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-red-400'}`}>
-                                                     {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
-                                                </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('villainVisuals', props.villainVisuals); }}
-                                                     disabled={suggestingFields['villainVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['villainVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
-                                           </div>
-                                           <textarea 
-                                                rows={2}
-                                                value={props.villainVisuals} 
-                                                onChange={(e) => props.onVillainVisualsChange(e.target.value)} 
-                                                placeholder={isEditorial ? "e.g. sharp tailored suit, slicked hair" : "e.g. regal high-collared obsidian armor"} 
-                                                className={`w-full text-[10px] p-2 resize-none rounded focus:outline-none font-sans ${
-                                                     isEditorial
-                                                          ? 'bg-white border border-stone-300 text-stone-900 focus:border-stone-500'
-                                                          : 'bg-slate-900 border border-slate-700 text-white focus:border-red-500'
-                                                }`}
-                                           />
-                                      </div>
-                                 </div>
                             </div>
 
                         </div>
@@ -2119,11 +2042,15 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                       : 'bg-slate-900 text-gray-300 border-slate-700/60'
                                                             }`}
                                                        >
-                                                            {(wardrobePresetsByGenre[props.selectedGenre || 'Custom'] || wardrobePresetsByGenre['Custom']).map((preset, idx) => (
-                                                                <option key={idx} value={preset}>
-                                                                    {preset.substring(0, 40)}...
-                                                                </option>
-                                                            ))}
+                                                            <option value="A tailored charcoal evening dress with hidden utility structural seams and a concealed thigh-holster line">
+                                                                 {isEditorial ? "👗 Formal/Elegant Attire" : "👗 Evening Gown: High-Society Couture"}
+                                                            </option>
+                                                            <option value="A high-mobility cybernetic stealth bodysuit with integrated cooling lines and lightweight carbon-fiber plating">
+                                                                 {isEditorial ? "🥷 Minimalist/Tactical Ensemble" : "🥷 Stealth Armor: Shadow-OPS Nanosuit"}
+                                                            </option>
+                                                            <option value="A heavy charcoal leather duster coat over high-collar tactical body Kevlar mesh with holographic communications cuff">
+                                                                 {isEditorial ? "🌋 Outdoor/Heavy Duster Coat" : "🌋 Post-Apocalyptic: Obsidian Combat Trenchcoat"}
+                                                            </option>
                                                        </select>
                                                   </div>
                                              </div>
@@ -2190,21 +2117,22 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                        {isEditorial ? "🔒 Continuity Constraints Locked:" : "🔒 Attention Matrix Descriptors Locked:"}
                                                   </label>
                                                   <div className="flex flex-wrap gap-1.5 mt-1">
-                                                        {(() => {
-                                                            const pLayer = props.nemesisDNA?.persistence_layer;
-                                                            if (!pLayer) return null;
-                                                            const combined = `${pLayer.biometric_backbone || ''}, ${pLayer.structural_constants || ''}`;
-                                                            const keywords = combined.split(/[,.]/).map(s => s.trim()).filter(s => s.length > 3 && s.length < 30).slice(0, 4);
-                                                            if (keywords.length === 0) {
-                                                                return <span className={`text-[9px] font-mono border rounded px-2 py-0.5 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-500' : 'bg-slate-900 border-slate-700 text-gray-500'}`}>Awaiting DNA Input...</span>;
-                                                            }
-                                                            return keywords.map((kw, i) => (
-                                                                <span key={i} className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
-                                                                    <span>{kw}</span>
-                                                                    <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>1.4 Locked</span>
-                                                                </span>
-                                                            ));
-                                                        })()}
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
+                                                            <span>{t('setup.auto14', 'wavy hair')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto15', '1.4 Locked')}</span>
+                                                       </span>
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
+                                                            <span>{t('setup.auto16', 'calculating hazel eyes')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto17', '1.4 Locked')}</span>
+                                                       </span>
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-red-950 border-red-500/30 text-red-200'}`}>
+                                                            <span>{t('setup.auto18', 'snake ear-cuff')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-500 text-stone-100 font-sans' : 'bg-red-700 text-white'}`}>{t('setup.auto19', '1.4 Locked')}</span>
+                                                       </span>
+                                                       <span className={`text-[9px] font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${isEditorial ? 'bg-stone-200 border-stone-300 text-stone-700' : 'bg-blue-950 border-blue-500/30 text-blue-200'}`}>
+                                                            <span>{t('setup.auto20', 'evening dress')}</span>
+                                                            <span className={`text-[7.5px] px-1 font-bold rounded-sm ${isEditorial ? 'bg-stone-400 text-stone-100 font-sans' : 'bg-blue-600 text-white'}`}>{t('setup.auto21', '1.1 Adapt')}</span>
+                                                       </span>
                                                   </div>
                                              </div>
                                              <div className="flex gap-3 items-center w-full md:w-auto mt-2 md:mt-0">
@@ -2266,6 +2194,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                              </div>
                                         </div>
                                    </div>
+                              </div>
 
                          {/* Terms Guardrails/* Terms Guardrails disclaimer style */}
                         <div className="mt-4 p-2.5 bg-slate-900/60 border border-slate-700 rounded text-[11px] text-gray-400 leading-tight">
@@ -2810,24 +2739,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
                      </button>
                 </div>
             </>
-        ) : activeTab === 'settings' ? (
-            <div className="p-8">
-                <div className={sCard}>
-                    <h3 className={sTitle}>Global Settings</h3>
-                    <p className={sSubtitle + " mb-6"}>Configure API keys and global preferences.</p>
-                    <div className="mb-4">
-                        <label className={sLabel}>Gemini API Key</label>
-                        <input
-                            type="password"
-                            value={geminiKey}
-                            onChange={(e) => handleGeminiKeyChange(e.target.value)}
-                            className={sInput}
-                            placeholder="AIzaSy..."
-                        />
-                        <p className="text-[10px] text-gray-500 mt-1">This key is stored locally in your browser and used for AI generations.</p>
-                    </div>
-                </div>
-            </div>
         ) : activeTab === 'persona' ? (
              <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
                   {/* MULTIVERSE WARDROBE DRAWER COMPONENT */}

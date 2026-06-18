@@ -171,6 +171,17 @@ const App: React.FC = () => {
   // --- Project / Studio Library State ---
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
+  useEffect(() => {
+    try {
+      const h = localStorage.getItem('offline_hero');
+      if (h) setHero(JSON.parse(h));
+      const f = localStorage.getItem('offline_friend');
+      if (f) setFriend(JSON.parse(f));
+      const v = localStorage.getItem('offline_villain');
+      if (v) setVillain(JSON.parse(v));
+    } catch (e) { console.error('Failed to load offline characters', e); }
+  }, []);
+
   const [storyBlueprint, setStoryBlueprint] = useState<ChapterGoal[]>([]);
 
   // Load blueprint from localStorage when activeProjectId changes
@@ -443,7 +454,7 @@ const App: React.FC = () => {
 
     if (currentBalance < cost) {
       console.warn(`Insufficient tokens. Needed ${cost}, have ${currentBalance}. Triggering Checkout.`);
-      setCheckoutTier('Starter');
+      setCheckoutTier('Pro');
       setIsCheckoutOpen(true);
       throw new Error(`INSUFFICIENT_TOKENS:${cost}`);
     }
@@ -515,7 +526,58 @@ const App: React.FC = () => {
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onload = () => {
+         const rawBase64 = (reader.result as string).split(',')[1];
+         // Fallback directly to raw base64 for SVGs or HEIC
+         if (file.type.includes('svg') || file.type.includes('heic') || file.type.includes('heif')) {
+             resolve(rawBase64);
+             return;
+         }
+
+         const img = new Image();
+         
+         // Fallback timeout in case img.onload never fires
+         const fallbackTimeout = setTimeout(() => {
+             resolve(rawBase64);
+         }, 1000);
+
+         img.onload = () => {
+             clearTimeout(fallbackTimeout);
+             try {
+                 const canvas = document.createElement('canvas');
+                 const MAX_WIDTH = 800;
+                 const MAX_HEIGHT = 800;
+                 let width = img.width;
+                 let height = img.height;
+
+                 if (width > height) {
+                     if (width > MAX_WIDTH) {
+                         height *= MAX_WIDTH / width;
+                         width = MAX_WIDTH;
+                     }
+                 } else {
+                     if (height > MAX_HEIGHT) {
+                         width *= MAX_HEIGHT / height;
+                         height = MAX_HEIGHT;
+                     }
+                 }
+
+                 canvas.width = width;
+                 canvas.height = height;
+                 const ctx = canvas.getContext('2d');
+                 ctx?.drawImage(img, 0, 0, width, height);
+                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                 resolve(dataUrl.split(',')[1]);
+             } catch (e) {
+                 resolve(rawBase64);
+             }
+         };
+         img.onerror = () => {
+             clearTimeout(fallbackTimeout);
+             resolve(rawBase64);
+         };
+         img.src = reader.result as string;
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
@@ -902,94 +964,50 @@ const App: React.FC = () => {
     doc.save('Infinite-Heroes-Issue.pdf');
   };
 
+  const validateUpload = (file: File): boolean => {
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+          alert("Invalid file format. Please upload JPG, PNG, WEBP, or GIF.");
+          return false;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+          alert("File is too large. Please upload an image under 5MB.");
+          return false;
+      }
+      return true;
+  };
+
   const handleHeroUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           setHero({ base64, desc: "The Main Hero", headBase64: hero?.headBase64, clothesBase64: hero?.clothesBase64 }); 
+           const newHero = { base64, desc: "The Main Hero" };
+           setHero(newHero); 
+           localStorage.setItem('offline_hero', JSON.stringify(newHero));
            await syncCharacterToDb("Main Avatar", "Hero", "The Main Hero", base64);
        } catch (e) { alert("Hero upload failed"); }
   };
-  const handleHeroHeadUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setHero({ base64: hero?.base64 || '', desc: hero?.desc || "The Main Hero", headBase64: b64, clothesBase64: hero?.clothesBase64 });
-       } catch (e) { alert("Hair reference upload failed"); }
-  };
-  const handleHeroHeadClear = () => {
-       if (hero) {
-           setHero({ ...hero, headBase64: undefined });
-       }
-  };
-  const handleHeroClothesUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setHero({ base64: hero?.base64 || '', desc: hero?.desc || "The Main Hero", headBase64: hero?.headBase64, clothesBase64: b64 });
-       } catch (e) { alert("Clothing reference upload failed"); }
-  };
-  const handleHeroClothesClear = () => {
-       if (hero) {
-           setHero({ ...hero, clothesBase64: undefined });
-       }
-  };
 
   const handleFriendUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           setFriend({ base64, desc: "The Sidekick/Rival", headBase64: friend?.headBase64, clothesBase64: friend?.clothesBase64 }); 
+           const newFriend = { base64, desc: "The Sidekick/Rival" };
+           setFriend(newFriend); 
+           localStorage.setItem('offline_friend', JSON.stringify(newFriend));
            await syncCharacterToDb("Socius", "Co-Star", "The Sidekick/Rival", base64);
        } catch (e) { alert("Friend upload failed"); }
   };
-  const handleFriendHeadUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setFriend({ base64: friend?.base64 || '', desc: friend?.desc || "The Sidekick/Rival", headBase64: b64, clothesBase64: friend?.clothesBase64 });
-       } catch (e) { alert("Hair reference upload failed"); }
-  };
-  const handleFriendHeadClear = () => {
-       if (friend) {
-           setFriend({ ...friend, headBase64: undefined });
-       }
-  };
-  const handleFriendClothesUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setFriend({ base64: friend?.base64 || '', desc: friend?.desc || "The Sidekick/Rival", headBase64: friend?.headBase64, clothesBase64: b64 });
-       } catch (e) { alert("Clothing reference upload failed"); }
-  };
-  const handleFriendClothesClear = () => {
-       if (friend) {
-           setFriend({ ...friend, clothesBase64: undefined });
-       }
-  };
 
   const handleVillainUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           setVillain({ base64, desc: "The Arch Nemesis Villain", headBase64: villain?.headBase64, clothesBase64: villain?.clothesBase64 }); 
+           const newVillain = { base64, desc: "The Arch Nemesis Villain" };
+           setVillain(newVillain); 
+           localStorage.setItem('offline_villain', JSON.stringify(newVillain));
            await syncCharacterToDb("Rival Rival", "Villain", "The Arch Nemesis Villain", base64);
        } catch (e) { alert("Villain upload failed"); }
-  };
-  const handleVillainHeadUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setVillain({ base64: villain?.base64 || '', desc: villain?.desc || "The Arch Nemesis Villain", headBase64: b64, clothesBase64: villain?.clothesBase64 });
-       } catch (e) { alert("Hair reference upload failed"); }
-  };
-  const handleVillainHeadClear = () => {
-       if (villain) {
-           setVillain({ ...villain, headBase64: undefined });
-       }
-  };
-  const handleVillainClothesUpload = async (file: File) => {
-       try {
-           const b64 = await fileToBase64(file);
-           setVillain({ base64: villain?.base64 || '', desc: villain?.desc || "The Arch Nemesis Villain", headBase64: villain?.headBase64, clothesBase64: b64 });
-       } catch (e) { alert("Clothing reference upload failed"); }
-  };
-  const handleVillainClothesClear = () => {
-       if (villain) {
-           setVillain({ ...villain, clothesBase64: undefined });
-       }
   };
 
   const handleSheetClick = (index: number) => {
@@ -1067,18 +1085,6 @@ const App: React.FC = () => {
           onHeroUpload={handleHeroUpload}
           onFriendUpload={handleFriendUpload}
           onVillainUpload={handleVillainUpload}
-          onHeroHeadUpload={handleHeroHeadUpload}
-          onHeroHeadClear={handleHeroHeadClear}
-          onHeroClothesUpload={handleHeroClothesUpload}
-          onHeroClothesClear={handleHeroClothesClear}
-          onFriendHeadUpload={handleFriendHeadUpload}
-          onFriendHeadClear={handleFriendHeadClear}
-          onFriendClothesUpload={handleFriendClothesUpload}
-          onFriendClothesClear={handleFriendClothesClear}
-          onVillainHeadUpload={handleVillainHeadUpload}
-          onVillainHeadClear={handleVillainHeadClear}
-          onVillainClothesUpload={handleVillainClothesUpload}
-          onVillainClothesClear={handleVillainClothesClear}
           onGenreChange={setSelectedGenre}
           onLanguageChange={setSelectedLanguage}
           onPremiseChange={setCustomPremise}

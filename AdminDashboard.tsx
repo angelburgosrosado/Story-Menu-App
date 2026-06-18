@@ -42,19 +42,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     setLoading(true);
     try {
       const [statsRes, custRes, catRes, flagRes, plansRes, settingsRes] = await Promise.all([
-        fetch('/api/admin/stats').then(r => r.json()).catch(() => null),
-        fetch('/api/admin/customers').then(r => r.json()).catch(() => []),
-        fetch('/api/admin/categories').then(r => r.json()).catch(() => []),
-        fetch('/api/admin/moderation').then(r => r.json()).catch(() => []),
-        fetch('/api/admin/plans').then(r => r.json()).catch(() => []),
-        fetch('/api/admin/settings').then(r => r.json()).catch(() => [])
+        fetch('/api/admin/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/admin/customers').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/admin/categories').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/admin/moderation').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/admin/plans').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/admin/settings').then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
       if(statsRes) setStats(statsRes);
       setCustomers(custRes);
       setCategories(catRes);
       setFlags(flagRes);
       setPlans(plansRes);
-      setSettings(settingsRes);
+      setSettings(Array.isArray(settingsRes) ? settingsRes : []);
       runDiagnostics();
     } catch (error) {
       console.error('Admin API Error:', error);
@@ -373,11 +373,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         <div className="text-xs text-yellow-500 font-mono mb-4 italic">
                             * Tokens stored here override sandbox mocks. Leave empty to use local test mode.
                         </div>
-                        {settings.length === 0 ? (
+                        {!settings || !Array.isArray(settings) || settings.length === 0 ? (
                             <div className="text-gray-500 text-xs italic">No integrations configured yet.</div>
                         ) : (
                             <ul className="space-y-2">
-                                {settings.map((s: any) => (
+                                {(Array.isArray(settings) ? settings : []).map((s: any) => (
                                     <li key={s.keyName} className="flex flex-col gap-1 p-3 bg-slate-900 border border-slate-800 text-sm font-mono">
                                         <div className="text-cyan-400 font-bold">{s.keyName}</div>
                                         <div className="text-gray-500 text-xs truncate">

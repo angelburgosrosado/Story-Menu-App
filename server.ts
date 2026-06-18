@@ -25,12 +25,24 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 let aiClient: GoogleGenAI | null = null;
-function getAIClient(): GoogleGenAI {
+function getAIClient(customKey?: string): GoogleGenAI {
     // Standard AI Studio secret is GEMINI_API_KEY or we can check alternate API_KEY
-    const key = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    const key = customKey || process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!key) {
         throw new Error('GEMINI_API_KEY environment variable is required. Please set it in Settings > Secrets.');
     }
+    
+    if (customKey) {
+        return new GoogleGenAI({
+            apiKey: key,
+            httpOptions: {
+                headers: {
+                    'User-Agent': 'aistudio-build',
+                }
+            }
+        });
+    }
+
     if (!aiClient) {
         aiClient = new GoogleGenAI({
             apiKey: key,
@@ -487,7 +499,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         const { text, voiceName } = req.body;
         if (!text) return res.status(400).json({ error: 'Text prompt is required.' });
         try {
-            const ai = getAIClient();
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const response = await callGeminiSafely({
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.1-flash-tts-preview",
@@ -514,7 +526,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         if (!desc) return res.status(400).json({ error: 'Description is required' });
         const style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
         try {
-            const ai = getAIClient();
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const response = await callGeminiSafely({
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash-image',
@@ -539,7 +551,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         }
 
         try {
-            const ai = getAIClient();
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
 
             if (fieldName === 'storyBlueprint') {
                 const { storyTone, customPremise } = req.body;
@@ -873,7 +885,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 `;
 
         try {
-            const ai = getAIClient();
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const resObj = await callGeminiSafely({
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.5-flash",
@@ -1181,7 +1193,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
 
         try {
-            const ai = getAIClient();
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const resObj = await callGeminiSafely({
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
               model: 'gemini-2.5-flash-image',

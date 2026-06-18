@@ -91,8 +91,8 @@ export const VOICES = [
 export interface Persona {
   base64: string;
   desc: string;
-  headBase64?: string;
-  clothesBase64?: string;
+  hairText?: string;
+  clothesText?: string;
 }
 
 export interface CharacterIdentitySchema {

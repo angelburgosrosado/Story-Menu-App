@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App'; // <--- Removed the curly braces here!
+import App from './App';
+import { AdminApp } from './AdminApp';
 import { MainLayout } from './MainLayout';
 import './index.css';
 import './i18n';
@@ -34,12 +35,23 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 const container = document.getElementById('root');
 if (container) {
     const root = createRoot(container);
-    // Render the new MainLayout, passing the original App as the StudioComponent
-    root.render(
-        <HelmetProvider>
-            <ErrorBoundary>
-                <MainLayout StudioComponent={<App />} />
-            </ErrorBoundary>
-        </HelmetProvider>
-    );
+    
+    // Simple routing based on pathname
+    if (window.location.pathname.startsWith('/admin')) {
+        root.render(
+            <HelmetProvider>
+                <ErrorBoundary>
+                    <AdminApp />
+                </ErrorBoundary>
+            </HelmetProvider>
+        );
+    } else {
+        root.render(
+            <HelmetProvider>
+                <ErrorBoundary>
+                    <MainLayout StudioComponent={<App />} />
+                </ErrorBoundary>
+            </HelmetProvider>
+        );
+    }
 }

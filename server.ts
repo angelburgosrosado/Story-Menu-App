@@ -15,6 +15,14 @@ import { calculateTokenCost } from './pricingIntelligence';
 import Stripe from 'stripe';
 import squarePkg from 'square';
 const { Client, Environment } = squarePkg;
+import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+
+try {
+    admin.initializeApp();
+} catch (e) {
+    console.warn('Firebase Admin init failed. Default credentials not found. Admin auth will fallback to header email check for local dev.');
+}
 
 let startupError: any = null;
 
@@ -1356,6 +1364,56 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     /**
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
      */
+    app.get('/api/checkout/config', async (req, res) => {
+        let pubKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const settingsRes = await pool.query("SELECT key_value FROM app_settings WHERE key_name = 'stripe_publishable_key'");
+                if (settingsRes.rows.length > 0 && settingsRes.rows[0].key_value) {
+                    pubKey = settingsRes.rows[0].key_value;
+                }
+            } catch (err) {}
+        }
+        res.json({ publishableKey: pubKey });
+    });
+
+    app.post('/api/checkout/intent', async (req, res): Promise<any> => {
+        const { amountCents } = req.body;
+        if (!amountCents) return res.status(400).json({ error: 'Amount is required' });
+
+        let stripeKey = process.env.STRIPE_SECRET_KEY || '';
+        const poolForConfig = getDbPool();
+        if (poolForConfig) {
+            try {
+                const settingsRes = await poolForConfig.query("SELECT key_value FROM app_settings WHERE key_name = 'stripe_secret_key'");
+                if (settingsRes.rows.length > 0 && settingsRes.rows[0].key_value) {
+                    stripeKey = settingsRes.rows[0].key_value;
+                }
+            } catch (err) {}
+        }
+
+        if (!stripeKey) {
+            return res.status(500).json({ error: 'Stripe Gateway is not configured.' });
+        }
+
+        try {
+            const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+            const paymentIntent = await stripeClient.paymentIntents.create({
+                amount: amountCents,
+                currency: 'usd',
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+            });
+
+            res.json({ clientSecret: paymentIntent.client_secret });
+        } catch (e: any) {
+            console.error("Stripe Intent error", e);
+            res.status(400).json({ error: e.message });
+        }
+    });
+
     app.post('/api/checkout', async (req, res): Promise<any> => {
         const { email, tier, paymentMethod, cardDetails, paypalEmail, type, tokensAwarded } = req.body;
 
@@ -1397,27 +1455,24 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         if (paymentMethod === 'Stripe') {
             if (stripeKey) {
                 try {
+                    // For Stripe, the frontend now uses Stripe Elements and confirms the payment intent directly.
+                    // The frontend passes the paymentIntentId (which starts with pi_) to the backend after successful confirmation.
+                    const paymentIntentId = req.body.paymentIntentId;
+                    if (!paymentIntentId) {
+                         return res.status(400).json({ error: 'Stripe paymentIntentId is required.' });
+                    }
+                    
                     const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
-                    const pm = await stripeClient.paymentMethods.create({
-                        type: 'card',
-                        card: {
-                            number: cardDetails.cardNumber.replace(/\s+/g, ''),
-                            exp_month: parseInt(cardDetails.expiry.split('/')[0], 10),
-                            exp_year: parseInt(cardDetails.expiry.split('/')[1] || '25', 10),
-                            cvc: cardDetails.cvc,
-                        }
-                    });
-                    const intent = await stripeClient.paymentIntents.create({
-                        amount: amountCents,
-                        currency: 'usd',
-                        payment_method: pm.id,
-                        confirm: true,
-                        automatic_payment_methods: { enabled: true, allow_redirects: 'never' }
-                    });
+                    const intent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
+                    
+                    if (intent.status !== 'succeeded') {
+                         return res.status(400).json({ error: `Stripe transaction is not successful. Current status: ${intent.status}` });
+                    }
+                    
                     subscriptionId = intent.id;
                 } catch (stripeErr: any) {
                     console.warn(`[Stripe] Error using API: ${stripeErr.message}`);
-                    return res.status(400).json({ error: `Stripe transaction failed: ${stripeErr.message}` });
+                    return res.status(400).json({ error: `Stripe transaction validation failed: ${stripeErr.message}` });
                 }
             } else {
                 return res.status(500).json({ error: 'Stripe transaction failed: Gateway is not configured.' });
@@ -1425,8 +1480,9 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         } else if (paymentMethod === 'PayPal') {
             if (paypalClientId && paypalSecret) {
                 try {
+                    const paypalBaseUrl = process.env.NODE_ENV === 'production' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
                     const auth = Buffer.from(`${paypalClientId}:${paypalSecret}`).toString('base64');
-                    const tokenRes = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+                    const tokenRes = await fetch(`${paypalBaseUrl}/v1/oauth2/token`, {
                         method: 'POST',
                         body: 'grant_type=client_credentials',
                         headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -1434,7 +1490,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     const tokenData = await tokenRes.json();
                     if (!tokenRes.ok) throw new Error(tokenData.error_description || 'Auth failed');
                     
-                    const orderRes = await fetch('https://api-m.sandbox.paypal.com/v2/checkout/orders', {
+                    const orderRes = await fetch(`${paypalBaseUrl}/v2/checkout/orders`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${tokenData.access_token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ intent: 'CAPTURE', purchase_units: [{ amount: { currency_code: 'USD', value: (amountCents / 100).toFixed(2) } }] })
@@ -1452,7 +1508,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         } else if (paymentMethod === 'Square') {
             if (squareToken) {
                 try {
-                    const squareClient = new Client({ environment: Environment.Sandbox, accessToken: squareToken });
+                    const squareEnv = process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox;
+                    const squareClient = new Client({ environment: squareEnv, accessToken: squareToken });
                     
                     if (!cardDetails || !cardDetails.cardNumber || !cardDetails.expiry || !cardDetails.cvc) {
                         return res.status(400).json({ error: 'Square transaction failed: Missing credit card credentials.' });
@@ -1462,6 +1519,15 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     // basic simulation to reject dummy cards since we aren't using the web elements to generate real nonces
                     if (cardDetails.cardNumber.startsWith('1111') || cardDetails.cardNumber.startsWith('0000')) {
                         sourceId = 'cnon:card-nonce-declined';
+                    }
+
+                    if (squareEnv === Environment.Production) {
+                        // In production, we cannot use a sandbox nonce. 
+                        // Because the frontend sends raw cards instead of generating a secure nonce via Web Payments SDK,
+                        // this will fail. We reject fake test cards here explicitly.
+                        if (cardDetails.cardNumber.startsWith('4242') || cardDetails.cardNumber.startsWith('1111') || sourceId === 'cnon:card-nonce-ok') {
+                            return res.status(400).json({ error: 'Square transaction failed: Test cards and Sandbox nonces are not permitted in Production. Please integrate Square Web Payments SDK.' });
+                        }
                     }
 
                     const response = await squareClient.paymentsApi.createPayment({
@@ -1651,12 +1717,54 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             }
         }
 
-        // Memory delete
+                        // Memory delete
         memoryDb.users = memoryDb.users.filter(u => u.email !== email);
         return res.json({ success: true, message: `Successfully deleted user "${email}" from Saas registration.` });
     });
 
-    // --- NEW SAAS DASHBOARD ENDPOINTS ---
+    // --- REQUIRE ADMIN MIDDLEWARE ---
+    const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
+        const authHeader = req.headers.authorization;
+        const fallbackEmail = req.headers['x-admin-email'] as string; // For local dev fallback
+
+        let email = '';
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split('Bearer ')[1];
+            try {
+                const decoded = await getAuth().verifyIdToken(token);
+                email = decoded.email || '';
+            } catch (e) {
+                // If token fails to verify, we can fallback to local header if in dev
+                if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
+                    email = fallbackEmail;
+                } else {
+                    return res.status(401).json({ error: 'Unauthorized: Invalid Firebase token' });
+                }
+            }
+        } else if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
+             email = fallbackEmail;
+        } else {
+            return res.status(401).json({ error: 'Unauthorized: Missing token' });
+        }
+
+        if (!email) {
+            return res.status(401).json({ error: 'Unauthorized: Could not determine email' });
+        }
+
+        const superAdmin = process.env.ADMIN_EMAIL;
+        if (superAdmin && email.toLowerCase() === superAdmin.toLowerCase()) {
+            (req as any).adminEmail = email;
+            return next();
+        }
+
+        // Future expansion: check database for admin_users
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    };
+
+    app.use('/api/admin', requireAdmin);
+
+    // --- SAAS CUSTOMER ENDPOINTS ---
 
     // --- INTEGRATIONS AND SETTINGS ---
     app.get('/api/admin/settings', async (req, res): Promise<any> => {

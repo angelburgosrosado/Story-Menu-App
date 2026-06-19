@@ -17,7 +17,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { AuthScreen, AccountPanel } from './Account';
 import { CheckoutModal } from './CheckoutModal';
-import { AdminDashboard } from './AdminDashboard';
 import { ModeSelectionScreen } from './ModeSelectionScreen';
 import { recordPageGenerated } from './storage';
 import { saveCharacterToFirestore, saveProjectToFirestore } from './storageFirestore';
@@ -69,7 +68,6 @@ const App: React.FC = () => {
   // --- Checkout Modal States ---
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutTier, setCheckoutTier] = useState<'Pro' | 'Enterprise'>('Pro');
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const [hero, setHeroState] = useState<Persona | null>(null);
   const [friend, setFriendState] = useState<Persona | null>(null);
@@ -491,9 +489,10 @@ const App: React.FC = () => {
   const generateSpeech = async (text: string, voiceName: string): Promise<string> => {
       try {
           await handleTokenDeduction('gemini-3.1-flash-tts-preview', 1); // 1 generation
+          const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
           const res = await fetch('/api/gemini/speech', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
               body: JSON.stringify({ text, voiceName, userEmail: currentUser?.email })
           });
           if (!res.ok) {
@@ -515,6 +514,24 @@ const App: React.FC = () => {
     
     if (msg.includes('MODERATION_BLOCKED')) {
         alert('⚠️ Generation Blocked: The content triggered our safety guidelines for inappropriate or restricted content.');
+        return;
+    }
+
+    if (msg.includes('Insufficient tokens')) {
+        alert('⚠️ Insufficient Tokens. Please add more tokens to continue.');
+        setCheckoutTier('Pro');
+        setIsCheckoutOpen(true);
+        if (currentUser && currentUser.email) {
+            fetch(`/api/user/tokens?email=${encodeURIComponent(currentUser.email)}`)
+              .then(res => res.json())
+              .then(data => {
+                  if (data.tokens !== undefined) {
+                      setCurrentUser(prev => prev ? { ...prev, tokenBalance: data.tokens } : prev);
+                      window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: data.tokens }));
+                  }
+              })
+              .catch(console.error);
+        }
         return;
     }
 
@@ -622,9 +639,10 @@ const App: React.FC = () => {
     }
 
     try {
+        const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
         const response = await fetch('/api/gemini/beat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
             body: JSON.stringify({
                 userEmail: currentUser?.email,
                 history: relevantHistory,
@@ -678,9 +696,10 @@ const App: React.FC = () => {
   const generatePersona = async (desc: string): Promise<Persona> => {
       try {
           await handleTokenDeduction('gemini-3.5-flash', 1000);
+          const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
           const response = await fetch('/api/gemini/persona', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
               body: JSON.stringify({ desc, selectedGenre, userEmail: currentUser?.email })
           });
           if (!response.ok) {
@@ -700,9 +719,10 @@ const App: React.FC = () => {
     await handleTokenDeduction('gemini-2.5-flash-image', 1);
     const styleEra = selectedGenre === 'Custom' ? "Modern American" : selectedGenre;
     try {
+        const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
         const response = await fetch('/api/gemini/image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
             body: JSON.stringify({
                 userEmail: currentUser?.email,
                 beat,
@@ -1145,7 +1165,7 @@ const App: React.FC = () => {
               setCheckoutTier(tier);
               setIsCheckoutOpen(true);
           }}
-          onOpenAdmin={() => setIsAdminOpen(true)}
+          onOpenAdmin={() => window.location.href = '/admin'}
       />
 
       {showAuthModal && (
@@ -1175,12 +1195,7 @@ const App: React.FC = () => {
           />
       )}
       
-      {isAdminOpen && (
-          <AdminDashboard 
-              isOpen={isAdminOpen}
-              onClose={() => setIsAdminOpen(false)}
-          />
-      )}
+      
       
       <Book 
           comicFaces={comicFaces}

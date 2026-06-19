@@ -255,19 +255,3 @@ export async function updateUserSubscriptionInFirestore(userId: string, subscrip
   }
 }
 
-/**
- * --- Token Economy Operations ---
- */
-export async function getUserTokenBalance(userId: string): Promise<number> {
-  try {
-    const docRef = doc(db, 'users', userId);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      return snap.data().tokenBalance || 0;
-    }
-    return 0;
-  } catch (error) {
-    console.error("🔥 [Firestore] Error getting token balance", error);
-    return 0;
-  }
-

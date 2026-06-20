@@ -28,12 +28,25 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const [isLightMode, setIsLightMode] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [landingConfig, setLandingConfig] = useState<any>(null);
+    const [plans, setPlans] = useState<any[]>([]);
+    const [isSubscription, setIsSubscription] = useState(true);
 
     useEffect(() => {
         fetch('/api/public/landing')
             .then(res => res.json())
             .then(data => setLandingConfig(data))
             .catch(err => console.error("Failed to load landing config", err));
+            
+        fetch('/api/public/plans')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    // Sort by price
+                    data.sort((a, b) => (a.priceSubscription || 0) - (b.priceSubscription || 0));
+                    setPlans(data);
+                }
+            })
+            .catch(err => console.error("Failed to load plans", err));
     }, []);
 
     const defaultStylePreviews = {
@@ -151,6 +164,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <a href="#capabilities" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.capabilities', 'Capabilities')}</a>
                         <a href="#pricing" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.pricing', 'Pricing')}</a>
                         <a href="#trending" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.trending', 'Trending')}</a>
+                        <button onClick={() => window.location.href='/admin'} className={`transition-colors font-bold text-indigo-500 hover:text-indigo-400`}>Admin Dashboard</button>
                     </nav>
 
                     {/* Right side items */}
@@ -810,116 +824,69 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Instantly deploy professional-grade publication features and take your original comics directly to your global audience.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Free Tier */}
-                        <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
-                            isLightMode 
-                            ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
-                            : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
-                        }`}>
-                            <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Free Tier</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Hook</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Design in transient browser memory. Perfect for casual creators sketching out individual panel frames.</p>
-                                
-                                <div className="flex items-baseline py-2">
-                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$0</span>
-                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Forever</span>
-                                </div>
-
-                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-300 border-white/5'}`}>
-                                    <li>✓ 50 Credits / month (~5 comics)</li>
-                                    <li>✓ Basic Art Styles</li>
-                                    <li>✓ Standard Generation Speed</li>
-                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Watermarked Exports</li>
-                                    <li className={isLightMode ? 'text-slate-300' : 'text-gray-600'}>✗ Max 4 Panels per Comic</li>
-                                </ul>
-                            </div>
+                    <div className="flex justify-center mb-8">
+                        <div className={`p-1 rounded-xl flex items-center gap-2 border ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
                             <button 
-                                onClick={handleActionLaunchSandbox}
-                                className={`mt-8 w-full font-semibold py-3.5 rounded-xl border transition-all cursor-pointer ${
-                                    isLightMode 
-                                    ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800 shadow-sm' 
-                                    : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
-                                }`}
+                                onClick={() => setIsSubscription(true)}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${isSubscription ? (isLightMode ? 'bg-white shadow text-indigo-600' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20') : (isLightMode ? 'text-slate-500 hover:text-slate-700' : 'text-gray-400 hover:text-gray-200')}`}
                             >
-                                Start Creating Free
+                                Monthly Subscription
                             </button>
-                        </div>
-
-                        {/* Creator Tier */}
-                        <div className={`p-8 rounded-3xl text-left shadow-[0_0_30px_rgba(99,102,241,0.1)] transition-all flex flex-col justify-between relative border-2 ${
-                            isLightMode 
-                            ? 'bg-white border-indigo-400 hover:shadow-xl' 
-                            : 'glass-panel border-indigo-500/50 hover:border-indigo-400/80 hover:-translate-y-1'
-                        }`}>
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border border-indigo-400/30 shadow-md">
-                                ✨ The Sweet Spot
-                            </div>
-                            <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Starter Tier</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Sweet Spot</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Targeted at hobbyists and storytellers who want high quality without limits. Upgrade capabilities a la carte.</p>
-                                
-                                <div className="flex items-baseline py-2">
-                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$8</span>
-                                    <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/ Monthly Base</span>
-                                </div>
-
-                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-250 border-indigo-950 text-gray-200'}`}>
-                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ 1,000 Credits / month (~100 comics)</li>
-                                    <li>✓ Basic Art Styles</li>
-                                    <li>✓ Standard Generation Queue</li>
-                                    <li>+ Add Watermark Removal ($4/mo)</li>
-                                    <li>+ Add Priority GPU Queue ($9/mo)</li>
-                                    <li>+ Add Premium LLMs ($14/mo)</li>
-                                </ul>
-                            </div>
                             <button 
-                                onClick={() => handleActionCheckout('Pro')}
-                                className="mt-8 w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3.5 rounded-xl border border-indigo-400/30 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                                onClick={() => setIsSubscription(false)}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${!isSubscription ? (isLightMode ? 'bg-white shadow text-indigo-600' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20') : (isLightMode ? 'text-slate-500 hover:text-slate-700' : 'text-gray-400 hover:text-gray-200')}`}
                             >
-                                Build Your Plan
-                            </button>
-                        </div>
-
-                        {/* Pro / Publisher Tier */}
-                        <div className={`rounded-3xl p-8 text-left transition-all flex flex-col justify-between border ${
-                            isLightMode 
-                            ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' 
-                            : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
-                        }`}>
-                            <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Pro Tier</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Power User</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>For independent authors and professional studios needing commercial rights and advanced models.</p>
-                                
-                                <div className="flex items-baseline py-2">
-                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$15</span>
-                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Monthly Base</span>
-                                </div>
-
-                                <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-350 border-white/5 text-gray-300'}`}>
-                                    <li>✓ 2,500 Credits / month (~250 comics)</li>
-                                    <li>✓ Advanced Art Styles</li>
-                                    <li>✓ Commercial Usage Rights</li>
-                                    <li>+ Add Watermark Removal ($4/mo)</li>
-                                    <li>+ Add Priority GPU Queue ($9/mo)</li>
-                                    <li>+ Add Premium LLMs ($14/mo)</li>
-                                </ul>
-                            </div>
-                            <button 
-                                onClick={() => handleActionCheckout('Enterprise')}
-                                className={`mt-8 w-full font-semibold py-3.5 rounded-xl border transition-all cursor-pointer ${
-                                    isLightMode 
-                                    ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800' 
-                                    : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
-                                }`}
-                            >
-                                Build Your Plan
+                                One-Time Purchase
                             </button>
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {plans.length > 0 ? plans.map((plan, idx) => {
+                            const isMiddle = idx === 1; // Highlight the middle tier
+                            const price = isSubscription ? plan.priceSubscription : plan.priceOneTime;
+                            
+                            return (
+                                <div key={plan.id} className={`p-8 rounded-3xl text-left transition-all flex flex-col justify-between relative border ${
+                                    isMiddle 
+                                        ? (isLightMode ? 'bg-white border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.1)] border-2 hover:shadow-xl' : 'glass-panel border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.1)] border-2 hover:border-indigo-400/80 hover:-translate-y-1')
+                                        : (isLightMode ? 'bg-white border-slate-200 shadow-md hover:border-slate-350' : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1')
+                                }`}>
+                                    {isMiddle && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border border-indigo-400/30 shadow-md">
+                                            ✨ Recommended
+                                        </div>
+                                    )}
+                                    <div className="space-y-4">
+                                        <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Tier {idx + 1}</span>
+                                        <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{plan.name}</h3>
+                                        <div className="flex items-baseline py-2">
+                                            <span className={`text-4xl font-extrabold font-mono ${isMiddle ? 'text-indigo-500' : (isLightMode ? 'text-slate-800' : 'text-white')}`}>${price}</span>
+                                            <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/{isSubscription ? 'month' : 'forever'}</span>
+                                        </div>
+
+                                        <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'border-white/5 text-gray-300'}`}>
+                                            {plan.features.map((f: string, i: number) => (
+                                                <li key={i} className={isMiddle && i === 0 ? (isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300 font-semibold') : ''}>✓ {f}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleActionCheckout(plan.name)}
+                                        className={`mt-8 w-full font-semibold py-3.5 rounded-xl border transition-all cursor-pointer ${
+                                            isMiddle
+                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-indigo-400/30 shadow-lg shadow-indigo-600/20'
+                                            : (isLightMode ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800 shadow-sm' : 'bg-white/5 hover:bg-white/10 text-white border-white/15')
+                                        }`}
+                                    >
+                                        {price === 0 ? 'Start Creating Free' : 'Build Your Plan'}
+                                    </button>
+                                </div>
+                            );
+                        }) : (
+                            <div className="col-span-3 text-center text-gray-500">Loading plans...</div>
+                        )}
+                </div>
                 </div>
 
                 {/* Bottom CTA Section */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, X, Users, DollarSign, Activity, Trash2, RefreshCw, Layers, CreditCard, Layout, AlertTriangle, Cpu, TrendingUp } from 'lucide-react';
+import { Users, AlertTriangle, Shield, Layers, Layout, CreditCard, DollarSign, Activity, Settings, Cpu, TrendingUp, X, RefreshCw, Trash2, CheckCircle, Search, Globe } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -29,21 +29,48 @@ import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { AuthScreen } from "./Account";
 
+const MONETIZABLE_FEATURES = [
+    'Basic Art Styles',
+    'Advanced Art Styles (e.g. Noir, Pixar, Anime)',
+    'Standard Generation Queue',
+    'Priority GPU Queue (Faster generation)',
+    'Watermark Removal',
+    'Commercial Usage Rights',
+    'Premium LLMs (e.g. Gemini Pro, Claude 3 Opus)',
+    'Procedural Soundscapes (Dynamic audio)',
+    'Synthesized Speech Narration',
+    'Unified Book & PDF Export',
+    'Multi-Tenant Casting Vault (Persistent character tracking)'
+];
+
 export const AdminApp: React.FC = () => {
   const [adminToken, setAdminToken] = useState<string>("");
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authLoading, setAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'diagnostics' | 'features' | 'ai_config' | 'ai_costs' | 'administrators'>('memberships');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'diagnostics' | 'features' | 'ai_config' | 'ai_costs' | 'administrators'>('dashboard');
   const [customLoginUsername, setCustomLoginUsername] = useState('');
   const [customLoginPassword, setCustomLoginPassword] = useState('');
   const [customLoginError, setCustomLoginError] = useState('');
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
+
+    // --- New State for Overhaul ---
+    const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({ email: '', tier: 'Free', firstName: '', lastName: '', phone: '', company: '', internalNotes: '' });
+    
+    const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
+    const [newFeature, setNewFeature] = useState({ keyName: 'feature_', keyValue: 'true' });
+    
+    const [isSuggestingCategories, setIsSuggestingCategories] = useState(false);
+    const [aiSuggestedCategories, setAiSuggestedCategories] = useState<string[]>([]);
+    
   const [newAdminUsername, setNewAdminUsername] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [healthData, setHealthData] = useState<any>(null);
   const [runningDiagnostics, setRunningDiagnostics] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
   const [settings, setSettings] = useState<any[]>([]);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any>({ name: "", priceSubscription: 0, priceOneTime: 0, features: [] });
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -298,6 +325,7 @@ export const AdminApp: React.FC = () => {
         
         <div className="flex-1 overflow-y-auto py-6 space-y-1">
            <div className="px-6 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">Core Engine</div>
+           <NavItem tab="dashboard" icon={Activity} label="Dashboard" />
            <NavItem tab="memberships" icon={Users} label="Memberships" />
            <NavItem tab="plans" icon={DollarSign} label="Subscription Plans" />
            <NavItem tab="categories" icon={Layers} label="Taxonomy" />
@@ -324,7 +352,14 @@ export const AdminApp: React.FC = () => {
                    <div className="text-[10px] text-slate-500 uppercase">Super Admin</div>
                </div>
            </div>
-           <button onClick={() => signOut(auth)} className="w-full bg-slate-800 hover:bg-red-500/10 text-slate-300 hover:text-red-400 py-2 rounded-lg text-xs font-bold border border-slate-700 hover:border-red-500/30 transition-all">TERMINATE SESSION</button>
+           <div className="flex flex-col gap-2">
+               <button onClick={() => window.location.href = "/"} className="w-full bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 py-2 rounded-lg text-xs font-bold border border-indigo-500/30 transition-all flex items-center justify-center gap-2">
+                   <Globe size={14} /> LIVE APP / DASHBOARD
+               </button>
+               <button onClick={() => signOut(auth)} className="w-full bg-slate-800 hover:bg-red-500/10 text-slate-300 hover:text-red-400 py-2 rounded-lg text-xs font-bold border border-slate-700 hover:border-red-500/30 transition-all flex items-center justify-center gap-2">
+                   <X size={14} /> TERMINATE SESSION
+               </button>
+           </div>
         </div>
       </div>
 
@@ -338,28 +373,6 @@ export const AdminApp: React.FC = () => {
          <div className="flex-1 overflow-y-auto">
             <div className="max-w-6xl mx-auto p-8 pt-12 pb-24">
                 
-                {/* Global Stats Dashboard - Always Visible */}
-                {stats && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                        {[
-                            { label: 'Total Creators', value: stats.totalUsers, icon: Users, color: 'blue' },
-                            { label: 'Pro Memberships', value: stats.proUsers, icon: Shield, color: 'indigo' },
-                            { label: 'Enterprise', value: stats.enterpriseUsers, icon: DollarSign, color: 'emerald' },
-                            { label: 'MRR Estimate', value: `$${stats.mrrEstimate}`, icon: TrendingUp, color: 'purple' },
-                        ].map((s, i) => (
-                            <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center gap-5 hover:shadow-md transition-shadow">
-                                <div className={`w-12 h-12 rounded-xl bg-${s.color}-50 flex items-center justify-center border border-${s.color}-100`}>
-                                    <s.icon size={24} className={`text-${s.color}-600`} />
-                                </div>
-                                <div>
-                                    <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{s.label}</div>
-                                    <div className="text-2xl font-black text-slate-800 tracking-tight">{s.value}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
                 {/* Tab Content Header */}
                 <div className="mb-6 flex justify-between items-end">
                     <h1 className="text-2xl font-black text-slate-800 capitalize tracking-tight flex items-center gap-3">
@@ -370,6 +383,30 @@ export const AdminApp: React.FC = () => {
                 {/* Active Tab Panel */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     
+                    {/* Dashboard Panel */}
+                    {activeTab === 'dashboard' && stats && (
+                        <div className="p-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {[
+                                    { label: 'Total Creators', value: stats.totalUsers, icon: Users, color: 'blue' },
+                                    { label: 'Pro Memberships', value: stats.proUsers, icon: Shield, color: 'indigo' },
+                                    { label: 'Enterprise', value: stats.enterpriseUsers, icon: DollarSign, color: 'emerald' },
+                                    { label: 'MRR Estimate', value: `$${stats.mrrEstimate}`, icon: TrendingUp, color: 'purple' },
+                                ].map((s, i) => (
+                                    <div key={i} className={`bg-${s.color}-50 rounded-2xl shadow-sm border border-${s.color}-100 p-6 flex items-center gap-5 hover:shadow-md transition-shadow`}>
+                                        <div className={`w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-${s.color}-200`}>
+                                            <s.icon size={24} className={`text-${s.color}-600`} />
+                                        </div>
+                                        <div>
+                                            <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">{s.label}</div>
+                                            <div className="text-2xl font-black text-slate-800 tracking-tight">{s.value}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Memberships Panel */}
                     {activeTab === 'memberships' && (
                         <div>
@@ -523,22 +560,16 @@ export const AdminApp: React.FC = () => {
 
                     {/* Subscription Plans Panel */}
                     {activeTab === 'plans' && (
-                        <div className="p-8 bg-slate-50">
+                        <div className="p-8 bg-slate-50 relative">
                             <div className="flex justify-between items-center mb-8">
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-800 mb-1">Monetization Engine</h3>
                                     <p className="text-sm text-slate-500">Configure public subscription tiers and limits.</p>
                                 </div>
-                                <button className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2" onClick={async () => {
-                                    const name = prompt("Plan Name (e.g. Pro, Enterprise):");
-                                    if (name) {
-                                        const price = prompt("Monthly Price (e.g. 19.99):");
-                                        const featuresRaw = prompt("Features (comma separated):");
-                                        const features = featuresRaw ? featuresRaw.split(',').map(f => f.trim()) : [];
-                                        await adminFetch('/api/admin/plans', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name, price, features }) });
-                                        fetchData();
-                                    }
-                                }}>+ Deploy New Tier</button>
+                                <button className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2" onClick={() => {
+                                    setEditingPlan({ name: "", priceSubscription: 0, priceOneTime: 0, features: [] });
+                                    setShowPlanModal(true);
+                                }}>+ Create Plan</button>
                             </div>
                             
                             {plans.length === 0 ? (
@@ -558,8 +589,10 @@ export const AdminApp: React.FC = () => {
                                             
                                             <div className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">{p.name}</div>
                                             <div className="flex items-baseline gap-1 mb-6">
-                                                <span className="text-3xl font-bold text-blue-600">${p.price}</span>
-                                                <span className="text-sm font-medium text-slate-500">/{p.billingCycle || 'mo'}</span>
+                                                <div className="flex flex-col text-left">
+                                                    <span className="text-3xl font-bold text-blue-600">${p.priceSubscription}<span className="text-sm font-medium text-slate-500">/mo</span></span>
+                                                    <span className="text-xs font-medium text-emerald-600 font-mono">or ${p.priceOneTime} one-time</span>
+                                                </div>
                                             </div>
                                             
                                             <div className="flex-1">
@@ -575,6 +608,66 @@ export const AdminApp: React.FC = () => {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {showPlanModal && (
+                                <div className="absolute top-0 left-0 w-full h-full bg-slate-900/50 z-10 flex items-center justify-center p-4">
+                                    <div className="bg-white border border-slate-200 p-6 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                                        <h3 className="font-black text-xl mb-6 text-slate-800 uppercase tracking-tight">Configure Plan</h3>
+                                        
+                                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Plan Name</label>
+                                        <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={editingPlan.name} onChange={e => setEditingPlan({...editingPlan, name: e.target.value})} placeholder="e.g. Creator Pro" />
+
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Monthly Sub Price ($)</label>
+                                                <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={editingPlan.priceSubscription} onChange={e => setEditingPlan({...editingPlan, priceSubscription: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">One-Time Price ($)</label>
+                                                <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" value={editingPlan.priceOneTime} onChange={e => setEditingPlan({...editingPlan, priceOneTime: e.target.value})} />
+                                            </div>
+                                        </div>
+
+                                        <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Monetizable Features</label>
+                                        <div className="space-y-2 mb-8 border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-60 overflow-y-auto">
+                                            {MONETIZABLE_FEATURES.map((feature) => (
+                                                <label key={feature} className="flex items-center space-x-3 text-sm text-slate-700 cursor-pointer p-1 hover:bg-slate-100 rounded transition-colors">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                        checked={editingPlan.features.includes(feature)}
+                                                        onChange={(e) => {
+                                                            const newFeatures = e.target.checked 
+                                                                ? [...editingPlan.features, feature] 
+                                                                : editingPlan.features.filter((f: string) => f !== feature);
+                                                            setEditingPlan({...editingPlan, features: newFeatures});
+                                                        }}
+                                                    />
+                                                    <span className="font-medium">{feature}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 p-4 bg-slate-100 rounded-lg text-sm text-slate-700">
+                                            <p className="font-bold mb-1">Estimated AI Cost Baseline</p>
+                                            <p>Based on selected features: <strong className="text-emerald-600">${(editingPlan.features.length * 0.05).toFixed(2)}</strong> per active user/month.</p>
+                                        </div>
+            
+
+                                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                            <button className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm hover:bg-slate-200 transition-colors" onClick={() => setShowPlanModal(false)}>Cancel</button>
+                                            <button className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 transition-all" onClick={async () => {
+                                                await adminFetch('/api/admin/plans', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(editingPlan)
+                                                });
+                                                setShowPlanModal(false);
+                                                fetchData();
+                                            }}>Save Plan</button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -666,12 +759,14 @@ export const AdminApp: React.FC = () => {
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {['feature_comic_generator', 'feature_writers_journal', 'feature_sandbox_mode', 'feature_story_board'].map(f => {
-                                    const isEnabled = settings.find((s:any) => s.keyName === f)?.keyValue === 'true';
+                                
+                                {settings.filter((s:any) => s.keyName && s.keyName.startsWith('feature_')).map((s:any) => {
+                                    const f = s.keyName;
+                                    const isEnabled = s.keyValue === 'true';
                                     return (
                                         <div key={f} className={`p-5 rounded-2xl border transition-all ${isEnabled ? 'bg-white border-blue-200 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
                                             <div className="flex justify-between items-center mb-3">
-                                                <div className="font-bold text-sm text-slate-800">{f.split('_').slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div>
+                                                <div className="font-bold text-sm text-slate-800">{f.split('_').slice(1).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</div>
                                                 <button 
                                                     onClick={() => handleUpdateSetting(f, isEnabled ? 'false' : 'true')}
                                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
@@ -683,6 +778,28 @@ export const AdminApp: React.FC = () => {
                                         </div>
                                     );
                                 })}
+                                
+                                <div className="p-5 rounded-2xl border border-dashed border-slate-300 bg-transparent flex flex-col items-center justify-center text-slate-500 cursor-pointer hover:bg-slate-50 hover:text-blue-600 transition-colors" onClick={() => setShowAddFeatureModal(true)}>
+                                    <span className="font-bold text-sm">+ New Feature Flag</span>
+                                </div>
+                                
+                                {showAddFeatureModal && (
+                                    <div className="absolute top-0 left-0 w-full h-full bg-slate-900/50 z-10 flex items-center justify-center p-4">
+                                        <div className="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
+                                            <h3 className="font-bold text-lg mb-4">Add Custom Feature Flag</h3>
+                                            <input type="text" placeholder="feature_name" className="w-full border p-2 rounded mb-4" value={newFeature.keyName} onChange={e => setNewFeature({...newFeature, keyName: e.target.value})} />
+                                            <div className="flex justify-end gap-3">
+                                                <button className="px-4 py-2 bg-slate-100 rounded" onClick={() => setShowAddFeatureModal(false)}>Cancel</button>
+                                                <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={async () => {
+                                                    await adminFetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: newFeature.keyName, keyValue: 'false', isSecret: false }) });
+                                                    setShowAddFeatureModal(false);
+                                                    fetchData();
+                                                }}>Create Flag</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+            
                             </div>
                         </div>
                     )}
@@ -700,6 +817,11 @@ export const AdminApp: React.FC = () => {
                                     { key: 'ai_system_prompt_comic', label: 'Comic Panel Director Prompt', height: 'h-32' },
                                     { key: 'ai_system_prompt_journal', label: 'Writers Journal Persona Prompt', height: 'h-32' },
                                     { key: 'ai_model_default_text', label: 'Default LLM Model Name', height: 'h-12' },
+                                    { key: 'ai_model_temperature', label: 'Model Temperature (0.0 - 1.0)', height: 'h-12' },
+                                    { key: 'ai_model_top_p', label: 'Top-P Sampling (0.0 - 1.0)', height: 'h-12' },
+                                    { key: 'ai_model_top_k', label: 'Top-K Sampling (Int)', height: 'h-12' },
+                                    { key: 'moderation_rules', label: 'Global Moderation Parameters / Restrictions', height: 'h-24' },
+            
                                 ].map(setting => (
                                     <div key={setting.key} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                                         <div className="flex justify-between items-end mb-3">
@@ -725,7 +847,16 @@ export const AdminApp: React.FC = () => {
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                    <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Tokens In</div>
+                                    <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Total Tokens In</div><div className="mt-6 bg-white p-6 border border-slate-200 rounded-2xl shadow-sm">
+                                    <h4 className="font-bold text-sm text-slate-800 mb-4">Token Cost Simulator (Unquantified Loss Analysis)</h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                        <div className="p-3 bg-slate-50 rounded"><strong>Comic Panel:</strong> ~300 tokens ($0.015)</div>
+                                        <div className="p-3 bg-slate-50 rounded"><strong>Journal Entry:</strong> ~800 tokens ($0.04)</div>
+                                        <div className="p-3 bg-slate-50 rounded"><strong>Taxonomy Scan:</strong> ~150 tokens ($0.007)</div>
+                                        <div className="p-3 bg-slate-50 rounded"><strong>Moderation Scan:</strong> ~50 tokens ($0.002)</div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic">* Monitor features closely to ensure subscription revenue outpaces active generative token draw.</p>
+                                </div>
                                     <div className="text-3xl font-black text-slate-800 tracking-tight">{costAnalytics?.totals?.tokensIn?.toLocaleString() || 0}</div>
                                 </div>
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -747,7 +878,7 @@ export const AdminApp: React.FC = () => {
                                         <thead className="bg-white text-slate-400 font-medium text-[10px] uppercase tracking-wider border-b border-slate-100">
                                             <tr>
                                                 <th className="p-4">Timestamp</th>
-                                                <th className="p-4">Account</th>
+                                                <th className="p-4">Account</th><th className="p-4">Name</th><th className="p-4">Company</th>
                                                 <th className="p-4">Action</th>
                                                 <th className="p-4">Model Used</th>
                                                 <th className="p-4 text-right">Tokens In</th>

@@ -17,8 +17,9 @@ import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import Stripe from 'stripe';
 
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 try {
     admin.initializeApp();
@@ -100,7 +101,7 @@ async function consumeTokens(email: string, amount: number): Promise<boolean> {
     if (!email) return false;
 
     try {
-        const db = require('firebase-admin').firestore();
+        const db = getFirestore();
         const snapshot = await db.collection('users').where('email', '==', email).get();
         if (snapshot.empty) return false;
         
@@ -142,7 +143,7 @@ try {
 
 async function getSettingValue(key: string): Promise<string> {
     try {
-        const db = require('firebase-admin').firestore();
+        const db = getFirestore();
         const docSnap = await db.collection('app_settings').doc(key.toLowerCase()).get();
         if (docSnap.exists) {
             return docSnap.data().key_value;
@@ -1377,7 +1378,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
 
         try {
-            const db = require('firebase-admin').firestore();
+            const db = getFirestore();
             const snapshot = await db.collection('users').where('email', '==', email).get();
             if (!snapshot.empty) {
                 return res.json({ tokens: snapshot.docs[0].data()?.tokens || 0 });
@@ -1769,7 +1770,44 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     app.use('/api/admin', requireAdmin);
 
     // View SaaS Customers and checkout tracking
-    app.get('/api/admin/customers', async (req, res): Promise<any> => {
+    
+    app.post('/api/admin/customers', async (req, res): Promise<any> => {
+        try {
+            const { email, tier, firstName, lastName, phone, company, internalNotes } = req.body;
+            if (!email) return res.status(400).json({ error: 'Email required' });
+            
+            const db = getFirestore();
+            const newCustomer = {
+                email,
+                subscriptionTier: tier || 'Free',
+                tokens: 0,
+                created_at: new Date().toISOString(),
+                firstName: firstName || '',
+                lastName: lastName || '',
+                phone: phone || '',
+                company: company || '',
+                internalNotes: internalNotes || ''
+            };
+            
+            try {
+                await db.collection('users').doc(email).set(newCustomer, { merge: true });
+            } catch (err: any) {
+                // Fallback to memory
+                const existingIdx = memoryDb.users.findIndex((u:any) => u.email === email);
+                if (existingIdx >= 0) {
+                    memoryDb.users[existingIdx] = { ...memoryDb.users[existingIdx], ...newCustomer };
+                } else {
+                    memoryDb.users.push(newCustomer);
+                }
+            }
+            
+            return res.json({ success: true, customer: newCustomer });
+        } catch (error: any) {
+            console.error("Admin API Error - Add Customer:", error);
+            return res.status(500).json({ error: error.message });
+        }
+    });
+app.get('/api/admin/customers', async (req, res): Promise<any> => {
         const pool = getDbPool();
         if (pool) {
             try {
@@ -1926,7 +1964,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     // --- DYNAMIC LANDING PAGE ---
     app.get('/api/public/landing', async (req, res): Promise<any> => {
         try {
-            const db = require('firebase-admin').firestore();
+            const db = getFirestore();
             const docSnap = await db.collection('app_settings').doc('landing_page_config').get();
             if (docSnap.exists) {
                 return res.json(docSnap.data());
@@ -1939,7 +1977,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
     app.post('/api/admin/landing', requireAdmin, async (req, res): Promise<any> => {
         try {
-            const db = require('firebase-admin').firestore();
+            const db = getFirestore();
             await db.collection('app_settings').doc('landing_page_config').set(req.body, { merge: true });
             return res.json({ success: true });
         } catch (e: any) {
@@ -2017,43 +2055,49 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    // --- SUBSCRIPTION PLANS ---
-    app.get('/api/admin/plans', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (!pool) return res.json([ // Fallback if no db
-            { id: 'mock-1', name: 'Pro', price: 19.99, billing_cycle: 'monthly', features: JSON.stringify(['7000 Tokens/mo', 'Priority Queue', 'Basic Models']) },
-            { id: 'mock-2', name: 'Enterprise', price: 79.99, billing_cycle: 'monthly', features: JSON.stringify(['Unlimited Tokens', 'Instant Queue', 'All Models']) }
-        ]);
+    // --- SUBSCRIPTION PLANS (FIRESTORE) ---
+    app.get('/api/public/plans', async (req, res): Promise<any> => {
         try {
-            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100) NOT NULL, price NUMERIC(10, 2) NOT NULL, billing_cycle VARCHAR(50) DEFAULT 'monthly', features JSONB DEFAULT '[]', is_active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-            const result = await pool.query('SELECT id, name, price, billing_cycle as "billingCycle", features, is_active as "isActive" FROM subscription_plans WHERE is_active = true ORDER BY price ASC');
-            return res.json(result.rows);
+            const snapshot = await getFirestore().collection('subscription_plans').get();
+            const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return res.json(plans);
         } catch (e: any) {
-            console.error("Failed to load plans", e);
+            console.error("Failed to load public plans from Firestore", e);
+            return res.json([]);
+        }
+    });
+
+    app.get('/api/admin/plans', async (req, res): Promise<any> => {
+        try {
+            const snapshot = await getFirestore().collection('subscription_plans').get();
+            const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return res.json(plans);
+        } catch (e: any) {
+            console.error("Failed to load admin plans from Firestore", e);
             return res.json([]);
         }
     });
 
     app.post('/api/admin/plans', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
         try {
-            const { name, price, billingCycle, features } = req.body;
-            await pool.query(`
-                INSERT INTO subscription_plans (name, price, billing_cycle, features) 
-                VALUES ($1, $2, $3, $4)
-            `, [name, price, billingCycle || 'monthly', JSON.stringify(features || [])]);
-            return res.json({ success: true });
+            const { name, priceSubscription, priceOneTime, features } = req.body;
+            const newPlan = {
+                name,
+                priceSubscription: Number(priceSubscription) || 0,
+                priceOneTime: Number(priceOneTime) || 0,
+                features: features || [],
+                createdAt: FieldValue.serverTimestamp()
+            };
+            const docRef = await getFirestore().collection('subscription_plans').add(newPlan);
+            return res.json({ success: true, id: docRef.id });
         } catch (e: any) {
             return res.status(500).json({ error: e.message });
         }
     });
     
     app.delete('/api/admin/plans/:id', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
         try {
-            await pool.query('DELETE FROM subscription_plans WHERE id = $1', [req.params.id]);
+            await getFirestore().collection('subscription_plans').doc(req.params.id).delete();
             return res.json({ success: true });
         } catch (e: any) {
             return res.status(500).json({ error: e.message });
@@ -2085,7 +2129,42 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ success: true });
     });
 
-    app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
+    
+    app.put('/api/admin/categories/:id', async (req, res): Promise<any> => {
+        try {
+            const id = req.params.id;
+            const updates = req.body;
+            const db = getFirestore();
+            try {
+                await db.collection('categories').doc(id).update(updates);
+            } catch (err: any) {
+                const idx = memoryDb.categories.findIndex((c:any) => c.id === id);
+                if (idx >= 0) {
+                    memoryDb.categories[idx] = { ...memoryDb.categories[idx], ...updates };
+                }
+            }
+            return res.json({ success: true });
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message });
+        }
+    });
+
+    app.post('/api/admin/categories/suggest', async (req, res): Promise<any> => {
+        try {
+            const { currentCategories } = req.body;
+            const ai = getAIClient();
+            const model = ai.models.get({ model: "gemini-2.5-flash" });
+            const prompt = `Analyze these current categories and suggest 5 new relevant tags or genres to expand the catalog. Return ONLY a JSON array of strings. Current: ${JSON.stringify(currentCategories)}`;
+            const response = await model.generateContent(prompt);
+            let text = response.text || "[]";
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const suggestions = JSON.parse(text);
+            return res.json({ suggestions });
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message, suggestions: [] });
+        }
+    });
+app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
         const pool = getDbPool();
         if (pool) {
             try {
@@ -2681,6 +2760,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     // Start listening on port only when all API endpoints and static assets are fully configured
 
     try {
+
         const serverInstance = app.listen(port, "0.0.0.0", () => {
 
             console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3001)'})`);

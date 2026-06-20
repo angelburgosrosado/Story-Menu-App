@@ -26,7 +26,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'diagnostics'>('memberships');
+  const [activeTab, setActiveTab] = useState<'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'landing' | 'diagnostics'>('memberships');
   const [healthData, setHealthData] = useState<any>(null);
   const [runningDiagnostics, setRunningDiagnostics] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
@@ -36,18 +36,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [flags, setFlags] = useState<any[]>([]);
+  const [landingConfig, setLandingConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, custRes, catRes, flagRes, plansRes, settingsRes] = await Promise.all([
+      const [statsRes, custRes, catRes, flagRes, plansRes, settingsRes, landingRes] = await Promise.all([
         fetch('/api/admin/stats').then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/admin/customers').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/categories').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/moderation').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/plans').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/admin/settings').then(r => r.ok ? r.json() : []).catch(() => [])
+        fetch('/api/admin/settings').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/public/landing').then(r => r.ok ? r.json() : {}).catch(() => ({}))
       ]);
       if(statsRes) setStats(statsRes);
       setCustomers(custRes);
@@ -55,6 +57,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
       setFlags(flagRes);
       setPlans(plansRes);
       setSettings(Array.isArray(settingsRes) ? settingsRes : []);
+      setLandingConfig(landingRes || {});
       runDiagnostics();
     } catch (error) {
       console.error('Admin API Error:', error);
@@ -83,8 +86,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
           console.log("[VERIFICATION] Starting live app verification...");
           // Check health
           const health = await fetch('/api/admin/health').then(r => r.json());
-          if (health.database.status !== 'ok') throw new Error("DB not OK");
-          console.log("[VERIFICATION] Database and API connectivity OK.");
+          if (health.database.status !== 'ok' && health.database.status !== 'offline') throw new Error("DB not OK: " + health.database.message);
+          console.log("[VERIFICATION] Database connectivity:", health.database.status);
+          
+          if (health.integrations?.gemini?.status === 'error') throw new Error(health.integrations.gemini.message);
+          if (health.integrations?.stripe?.status === 'error') throw new Error(health.integrations.stripe.message);
           
           // Test token read
           import('./storageFirestore').then(async (m) => {
@@ -93,11 +99,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
           });
           
           setTimeout(() => {
-              alert("✅ VERIFICATION COMPLETE\n\nAll components are verified live.\n- Database: OK\n- Storage: OK\n- Workflows: Completed & Invoiceable.");
+              alert(`✅ VERIFICATION COMPLETE\n\nAll components are verified live.\n- Database: ${health.database.status}\n- Gemini: ${health.integrations?.gemini?.status}\n- Stripe: ${health.integrations?.stripe?.status}`);
           }, 3000);
-      } catch (e) {
+      } catch (e: any) {
           console.error("[VERIFICATION] FAILED", e);
-          alert("❌ VERIFICATION FAILED. See console.");
+          alert(`❌ VERIFICATION FAILED.\n\nReason: ${e.message}\n\nPlease check your API keys or database status and try again.`);
       }
   };
 
@@ -180,6 +186,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         className={`px-4 py-2 font-bold uppercase text-xs flex items-center gap-2 ${activeTab === 'moderation' ? 'border-b-2 border-red-500 text-red-500' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         Moderation Queue {flags.length > 0 && <span className="bg-red-500 text-white px-1.5 rounded-full text-[9px]">{flags.length}</span>}
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('landing')} 
+                        className={`px-4 py-2 font-bold uppercase text-xs ${activeTab === 'landing' ? 'border-b-2 border-green-400 text-green-400' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        Landing Page
                     </button>
                     <button 
                         onClick={() => setActiveTab('diagnostics')} 
@@ -397,18 +409,109 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     }} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 rounded text-xs font-bold">Save PayPal Keys</button>
                                 </div>
                             </div>
-                            
-                            {/* Square */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
-                                <h4 className="font-bold text-gray-300 mb-2">Square</h4>
-                                <div className="space-y-2">
-                                    <input id="square_access_token" placeholder="Square Access Token" defaultValue={settings.find(s => s.keyName === 'square_access_token')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
-                                    <button onClick={async () => {
-                                        const val = (document.getElementById('square_access_token') as HTMLInputElement).value;
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'square_access_token', keyValue: val, isSecret: true }) });
-                                        fetchData();
-                                    }} className="w-full bg-gray-600 hover:bg-gray-500 text-white py-1 rounded text-xs font-bold">Save Square Key</button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'landing' && (
+                    <div className="bg-slate-950 border border-slate-700 p-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-sm text-green-400">Dynamic Landing Page Configuration</h3>
+                            <button className="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded text-xs font-bold transition-colors shadow-lg" onClick={async () => {
+                                const payload = {
+                                    heroBadge: (document.getElementById('lp_hero_badge') as HTMLInputElement).value,
+                                    heroTitle: (document.getElementById('lp_hero_title') as HTMLInputElement).value,
+                                    heroTitleHighlight: (document.getElementById('lp_hero_highlight') as HTMLInputElement).value,
+                                    heroSubtitle: (document.getElementById('lp_hero_sub') as HTMLTextAreaElement).value,
+                                    pathComicTitle: (document.getElementById('lp_path_comic_title') as HTMLInputElement).value,
+                                    pathComicDesc: (document.getElementById('lp_path_comic_desc') as HTMLTextAreaElement).value,
+                                    pathComicBtn: (document.getElementById('lp_path_comic_btn') as HTMLInputElement).value,
+                                    pathKidTitle: (document.getElementById('lp_path_kid_title') as HTMLInputElement).value,
+                                    pathKidDesc: (document.getElementById('lp_path_kid_desc') as HTMLTextAreaElement).value,
+                                    pathKidBtn: (document.getElementById('lp_path_kid_btn') as HTMLInputElement).value,
+                                    pathWriterTitle: (document.getElementById('lp_path_writer_title') as HTMLInputElement).value,
+                                    pathWriterDesc: (document.getElementById('lp_path_writer_desc') as HTMLTextAreaElement).value,
+                                    pathWriterBtn: (document.getElementById('lp_path_writer_btn') as HTMLInputElement).value,
+                                };
+                                await fetch('/api/admin/landing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                                fetchData();
+                                alert("Landing Page Updated!");
+                            }}>Save Changes</button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Hero Section */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
+                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">🦸</span> Hero Section</h4>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Badge Text (e.g., The Ultimate AI Publishing Platform)</label>
+                                        <input id="lp_hero_badge" defaultValue={landingConfig?.heroBadge || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Main Title (e.g., Create the Stories You've...)</label>
+                                            <input id="lp_hero_title" defaultValue={landingConfig?.heroTitle || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Title Highlight (e.g., Always Imagined)</label>
+                                            <input id="lp_hero_highlight" defaultValue={landingConfig?.heroTitleHighlight || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Subtitle Description</label>
+                                        <textarea id="lp_hero_sub" defaultValue={landingConfig?.heroSubtitle || ''} rows={3} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
+                                    </div>
                                 </div>
+                            </div>
+                            
+                            <div className="p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-xl text-xs text-yellow-500 italic">
+                                Note: Additional sections like Features, Capabilities, and Visual Styles can be managed via the database directly or extended here in future updates. Currently, managing the Hero and Paths sections natively overrides the hardcoded text immediately.
+                            </div>
+                            
+                            {/* Paths Section */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
+                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">🛤️</span> The 3 Paths</h4>
+                                <div className="space-y-4">
+                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
+                                        <h5 className="text-xs font-bold text-indigo-400 mb-2">Comic Studio</h5>
+                                        <input id="lp_path_comic_title" defaultValue={landingConfig?.pathComicTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <textarea id="lp_path_comic_desc" defaultValue={landingConfig?.pathComicDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <input id="lp_path_comic_btn" defaultValue={landingConfig?.pathComicBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
+                                    </div>
+                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
+                                        <h5 className="text-xs font-bold text-emerald-400 mb-2">Kid Storymaker</h5>
+                                        <input id="lp_path_kid_title" defaultValue={landingConfig?.pathKidTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <textarea id="lp_path_kid_desc" defaultValue={landingConfig?.pathKidDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <input id="lp_path_kid_btn" defaultValue={landingConfig?.pathKidBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
+                                    </div>
+                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
+                                        <h5 className="text-xs font-bold text-amber-400 mb-2">Writer's Journal</h5>
+                                        <input id="lp_path_writer_title" defaultValue={landingConfig?.pathWriterTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <textarea id="lp_path_writer_desc" defaultValue={landingConfig?.pathWriterDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
+                                        <input id="lp_path_writer_btn" defaultValue={landingConfig?.pathWriterBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Advanced Capabilities & Styles JSON Section */}
+                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
+                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">⚙️</span> Advanced JSON Configuration</h4>
+                                <p className="text-xs text-gray-400">Override the raw `capabilitiesBadge`, `capabilitiesTitle`, `capabilitiesDesc`, or the `stylePreviews` and `capabilities` objects by providing a valid JSON payload. This will be merged into the config.</p>
+                                <textarea id="lp_advanced_json" rows={6} placeholder={`{\n  "capabilitiesBadge": "Custom Badge",\n  "stylePreviews": { "custom": { "title": "...", "desc": "...", "cover": "...", "badge": "..." } }\n}`} className="w-full bg-slate-950 font-mono text-xs text-white p-3 rounded border border-slate-700"></textarea>
+                                <button className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-xs font-bold" onClick={async () => {
+                                    try {
+                                        const raw = (document.getElementById('lp_advanced_json') as HTMLTextAreaElement).value;
+                                        if (!raw.trim()) { alert("Please enter valid JSON"); return; }
+                                        const parsed = JSON.parse(raw);
+                                        await fetch('/api/admin/landing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(parsed) });
+                                        fetchData();
+                                        alert("Advanced Configuration Saved!");
+                                        (document.getElementById('lp_advanced_json') as HTMLTextAreaElement).value = '';
+                                    } catch (e: any) {
+                                        alert("Invalid JSON: " + e.message);
+                                    }
+                                }}>Save JSON Config</button>
                             </div>
                         </div>
                     </div>
@@ -459,13 +562,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 {/* Payment Gateways Check */}
                                 <div className="border border-slate-700 p-3 bg-slate-900 rounded">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${(healthData.integrations.stripe.status === 'ok' || healthData.integrations.paypal.status === 'ok' || healthData.integrations.square.status === 'ok') ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                                        <div className={`w-3 h-3 rounded-full ${(healthData.integrations.stripe.status === 'ok' || healthData.integrations.paypal.status === 'ok') ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                                         <h4 className="font-bold text-xs uppercase text-gray-300">Payment Gateways</h4>
                                     </div>
                                     <p className="text-xs text-gray-400">
                                         Stripe: {healthData.integrations.stripe.status === 'ok' ? '✅' : '❌'} | 
-                                        PayPal: {healthData.integrations.paypal.status === 'ok' ? '✅' : '❌'} | 
-                                        Square: {healthData.integrations.square.status === 'ok' ? '✅' : '❌'}
+                                        PayPal: {healthData.integrations.paypal.status === 'ok' ? '✅' : '❌'}
                                     </p>
                                 </div>
                             </div>

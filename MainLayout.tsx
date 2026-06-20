@@ -170,15 +170,17 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             </div>
                         )}
 
-                        <button 
-                            onClick={() => {
-                                window.dispatchEvent(new Event('trigger-auth-dialog'));
-                                handleNavigate('studio');
-                            }}
-                            className={linkHover}
-                        >
-                            {t('layout.nav.signIn', 'Sign In')}
-                        </button>
+                        {(!localStorage.getItem('infinite_heroes_creator')) && (
+                            <button 
+                                onClick={() => {
+                                    window.dispatchEvent(new Event('trigger-auth-dialog'));
+                                    handleNavigate('studio');
+                                }}
+                                className={linkHover}
+                            >
+                                {t('layout.nav.signIn', 'Sign In')}
+                            </button>
+                        )}
 
                         <button
                             onClick={() => {

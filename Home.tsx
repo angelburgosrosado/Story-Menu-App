@@ -27,7 +27,16 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const [selectedStyleTab, setSelectedStyleTab] = useState('anime');
     const [isLightMode, setIsLightMode] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const stylePreviews = {
+    const [landingConfig, setLandingConfig] = useState<any>(null);
+
+    useEffect(() => {
+        fetch('/api/public/landing')
+            .then(res => res.json())
+            .then(data => setLandingConfig(data))
+            .catch(err => console.error("Failed to load landing config", err));
+    }, []);
+
+    const defaultStylePreviews = {
         anime: {
             title: "Retro Anime 90s",
             desc: t('sandbox6.styleDesc1', "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay."),
@@ -53,6 +62,8 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
             badge: "Artisanal"
         }
     };
+
+    const stylePreviews = landingConfig?.stylePreviews || defaultStylePreviews;
 
     // Extended mock data for trending stories
     const trendingStories = [
@@ -89,7 +100,9 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
     // Actions triggering state changes inside App.tsx
     const handleActionUnlockCloud = () => {
-        window.dispatchEvent(new Event('trigger-auth-dialog'));
+        if (!localStorage.getItem('infinite_heroes_creator')) {
+            window.dispatchEvent(new Event('trigger-auth-dialog'));
+        }
         onNavigate('studio');
     };
 
@@ -279,18 +292,18 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div className="w-full space-y-8 text-center max-w-4xl mx-auto mb-20 relative z-10">
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                         <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
-                        <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{t('home.hero.badge', 'The Ultimate AI Publishing Platform')}</span>
+                        <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{landingConfig?.heroBadge || t('home.hero.badge', 'The Ultimate AI Publishing Platform')}</span>
                     </div>
 
                     <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
-                        Create the Stories You've <br />
+                        {landingConfig?.heroTitle || "Create the Stories You've "} <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
-                        Always Imagined
+                        {landingConfig?.heroTitleHighlight || "Always Imagined"}
                         </span>
                     </h1>
 
                     <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                        Whether you're crafting complex manga, creating magical picture books for kids, or journaling your next great short story, Story.Menu gives you the AI tools to bring your imagination to life.
+                        {landingConfig?.heroSubtitle || "Whether you're crafting complex manga, creating magical picture books for kids, or journaling your next great short story, Story.Menu gives you the AI tools to bring your imagination to life."}
                     </p>
                 </div>
 
@@ -306,15 +319,15 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
                             ✍️
                         </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Comic Studio</h3>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathComicTitle || "Comic Studio"}</h3>
                         <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            Make complex comic books including anime and manga with simple tools and deep AI integration to maximize your output.
+                            {landingConfig?.pathComicDesc || "Make complex comic books including anime and manga with simple tools and deep AI integration to maximize your output."}
                         </p>
                         <button 
                             onClick={() => handleLaunchStudio('comic')}
                             className="w-full py-4 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 transition-all"
                         >
-                            Launch Studio
+                            {landingConfig?.pathComicBtn || "Launch Studio"}
                         </button>
                     </div>
 
@@ -327,15 +340,15 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
                             🌟
                         </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Kid Storymaker</h3>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathKidTitle || "Kid Storymaker"}</h3>
                         <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            A fun, wizard-driven picture book creator. Pick a theme, name your hero, and generate a story to share or print instantly.
+                            {landingConfig?.pathKidDesc || "A fun, wizard-driven picture book creator. Pick a theme, name your hero, and generate a story to share or print instantly."}
                         </p>
                         <button 
                             onClick={() => handleLaunchStudio('kid-story')}
                             className="w-full py-4 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 transition-all"
                         >
-                            Start Adventure
+                            {landingConfig?.pathKidBtn || "Start Adventure"}
                         </button>
                     </div>
 
@@ -348,15 +361,15 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
                             📖
                         </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Writer's Journal</h3>
+                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathWriterTitle || "Writer's Journal"}</h3>
                         <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            Write 10-page short stories in a structured journal format, generate matching visuals for each scene, and publish online.
+                            {landingConfig?.pathWriterDesc || "Write 10-page short stories in a structured journal format, generate matching visuals for each scene, and publish online."}
                         </p>
                         <button 
                             onClick={() => handleLaunchStudio('writers-journal')}
                             className="w-full py-4 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/30 transition-all"
                         >
-                            Open Journal
+                            {landingConfig?.pathWriterBtn || "Open Journal"}
                         </button>
                     </div>
 
@@ -612,10 +625,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div id="capabilities" className="mb-24">
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
-                            <Cpu size={12} /> Chassis v3.11 Publishing Workshop
+                            <Cpu size={12} /> {landingConfig?.capabilitiesBadge || "Chassis v3.11 Publishing Workshop"}
                         </div>
-                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Built For Dynamic Multi-Tenant Publishing</h2>
-                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting.</p>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.capabilitiesTitle || "Built For Dynamic Multi-Tenant Publishing"}</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{landingConfig?.capabilitiesDesc || "A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting."}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -844,28 +857,29 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 ✨ The Sweet Spot
                             </div>
                             <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Creator Tier</span>
-                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Limitless Quality</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Targeted at hobbyists and storytellers who want high quality and consistent characters without limits.</p>
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'}`}>Starter Tier</span>
+                                <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Sweet Spot</h3>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>Targeted at hobbyists and storytellers who want high quality without limits. Upgrade capabilities a la carte.</p>
                                 
                                 <div className="flex items-baseline py-2">
-                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$12</span>
-                                    <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/ Monthly</span>
+                                    <span className="text-4xl font-extrabold font-mono text-indigo-500">$8</span>
+                                    <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/ Monthly Base</span>
                                 </div>
 
                                 <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-250 border-indigo-950 text-gray-200'}`}>
-                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ 1,200 Credits / month (~120 comics)</li>
-                                    <li>✓ No Watermarks</li>
-                                    <li>✓ 10 Custom Characters (Consistency AI)</li>
-                                    <li>✓ High-Resolution Exports (PDF, PNG)</li>
-                                    <li>✓ Commercial Usage Rights</li>
+                                    <li className={isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300'}>✓ 1,000 Credits / month (~100 comics)</li>
+                                    <li>✓ Basic Art Styles</li>
+                                    <li>✓ Standard Generation Queue</li>
+                                    <li>+ Add Watermark Removal ($4/mo)</li>
+                                    <li>+ Add Priority GPU Queue ($9/mo)</li>
+                                    <li>+ Add Premium LLMs ($14/mo)</li>
                                 </ul>
                             </div>
                             <button 
                                 onClick={() => handleActionCheckout('Pro')}
                                 className="mt-8 w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3.5 rounded-xl border border-indigo-400/30 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
                             >
-                                Upgrade to Creator
+                                Build Your Plan
                             </button>
                         </div>
 
@@ -876,21 +890,22 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                             : 'glass-panel border-white/10 hover:border-indigo-500/20 shadow-2xl hover:-translate-y-1'
                         }`}>
                             <div className="space-y-4">
-                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Pro / Publisher Tier</span>
+                                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Pro Tier</span>
                                 <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>The Power User</h3>
-                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>For independent authors and professional studios needing advanced models, rapid processing, and vector exports.</p>
+                                <p className={`text-xs font-light leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>For independent authors and professional studios needing commercial rights and advanced models.</p>
                                 
                                 <div className="flex items-baseline py-2">
-                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$29</span>
-                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Monthly</span>
+                                    <span className={`text-4xl font-extrabold font-mono ${isLightMode ? 'text-slate-800' : 'text-white'}`}>$15</span>
+                                    <span className="text-gray-500 text-xs ml-1 font-mono">/ Monthly Base</span>
                                 </div>
 
                                 <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'text-gray-350 border-white/5 text-gray-300'}`}>
-                                    <li>✓ 4,000 Credits / month (~400 comics)</li>
-                                    <li>✓ Unlimited Custom Characters</li>
-                                    <li>✓ Priority GPU Processing (Instant)</li>
-                                    <li>✓ Premium LLMs (GPT-4o / Claude 3.5)</li>
-                                    <li>✓ Vector & Editable Exports</li>
+                                    <li>✓ 2,500 Credits / month (~250 comics)</li>
+                                    <li>✓ Advanced Art Styles</li>
+                                    <li>✓ Commercial Usage Rights</li>
+                                    <li>+ Add Watermark Removal ($4/mo)</li>
+                                    <li>+ Add Priority GPU Queue ($9/mo)</li>
+                                    <li>+ Add Premium LLMs ($14/mo)</li>
                                 </ul>
                             </div>
                             <button 
@@ -901,7 +916,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     : 'bg-white/5 hover:bg-white/10 text-white border-white/15'
                                 }`}
                             >
-                                Access Enterprise Account
+                                Build Your Plan
                             </button>
                         </div>
                     </div>

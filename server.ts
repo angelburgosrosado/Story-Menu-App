@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -11,10 +14,9 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
-import { calculateTokenCost } from './pricingIntelligence';
+import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import Stripe from 'stripe';
-import squarePkg from 'square';
-const { Client, Environment } = squarePkg;
+
 import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -97,45 +99,68 @@ if (typeof __dirname !== 'undefined' && __dirname) {
 async function consumeTokens(email: string, amount: number): Promise<boolean> {
     if (!email) return false;
 
-    const pool = getDbPool();
-    if (pool) {
-        try {
-            await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0;');
+    try {
+        const db = require('firebase-admin').firestore();
+        const snapshot = await db.collection('users').where('email', '==', email).get();
+        if (snapshot.empty) return false;
+        
+        const userRef = snapshot.docs[0].ref;
+        
+        return await db.runTransaction(async (transaction: any) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists) return false;
             
-            // Check balance
-            const res = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
-            const currentTokens = res.rows.length > 0 ? (res.rows[0].tokens || 0) : 0;
-            
+            const currentTokens = userDoc.data()?.tokens || 0;
             if (currentTokens >= amount) {
-                // Deduct
-                await pool.query('UPDATE users SET tokens = tokens - $1 WHERE email = $2', [amount, email]);
+                transaction.update(userRef, { tokens: currentTokens - amount });
                 return true;
-            } else {
-                return false; // Insufficient
             }
-        } catch (err) {
-            console.warn("Soft-fail consuming tokens in PG, falling back to memory.");
-            if (isConnectionError(err)) {
-                markDatabaseOffline();
+            return false;
+        });
+    } catch (err: any) {
+        console.warn("Failed to consume tokens in Firestore:", err.message);
+        
+        // Memory fallback
+        const matchUser = memoryDb.users.find(u => u.email === email);
+        if (matchUser) {
+            if ((matchUser.tokens || 0) >= amount) {
+                matchUser.tokens = (matchUser.tokens || 0) - amount;
+                return true;
             }
         }
+        return false;
     }
-
-    // Memory fallback
-    const matchUser = memoryDb.users.find(u => u.email === email);
-    if (matchUser) {
-        if ((matchUser.tokens || 0) >= amount) {
-            matchUser.tokens = (matchUser.tokens || 0) - amount;
-            return true;
-        }
-    }
-    return false;
 }
 
 // Safely load local .env credentials if they exist in the root folder
 try {
     const envPath = path.join(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
+     if (!fs.existsSync(envPath)) {
+        fs.mkdirSync(envPath, { recursive: true });
+    }
+} catch (err) {}
+
+async function getSettingValue(key: string): Promise<string> {
+    try {
+        const db = require('firebase-admin').firestore();
+        const docSnap = await db.collection('app_settings').doc(key.toLowerCase()).get();
+        if (docSnap.exists) {
+            return docSnap.data().key_value;
+        }
+    } catch (err: any) {
+        console.warn(`Failed to fetch setting ${key} from Firestore:`, err.message);
+    }
+    
+    // Fallback to memory
+    const memorySetting = memoryDb.app_settings?.find((s:any) => s.key_name === key.toLowerCase());
+    if (memorySetting) return memorySetting.key_value;
+    
+    return process.env[key.toUpperCase()] || '';
+}
+
+export default function setupServer(app: express.Application) {
+    try {
+        const envPath = path.join(process.cwd(), '.env');
         const envContent = fs.readFileSync(envPath, 'utf8');
         envContent.split('\n').forEach((line) => {
             const trimmed = line.trim();
@@ -151,9 +176,9 @@ try {
             }
         });
         console.info("💡 Local .env configuration loaded successfully.");
+    } catch (err) {
+        console.warn("Could not read local .env file:", err);
     }
-} catch (err) {
-    console.warn("Could not read local .env file:", err);
 }
 
 // Ensure any quotes or whitespace in DATABASE_URL are sanitized on startup
@@ -186,6 +211,12 @@ const memoryDb = {
     character_vault: [] as any[],
     projects: [] as any[],
     project_casting: [] as any[],
+    app_settings: [
+        { key_name: 'stripe_publishable_key', key_value: process.env.STRIPE_PUBLISHABLE_KEY || '', is_secret: false },
+        { key_name: 'stripe_secret_key', key_value: process.env.STRIPE_SECRET_KEY || '', is_secret: true },
+        { key_name: 'paypal_client_id', key_value: process.env.PAYPAL_CLIENT_ID || '', is_secret: false },
+        { key_name: 'paypal_secret', key_value: process.env.PAYPAL_SECRET || '', is_secret: true }
+    ] as any[],
 };
 
 // Insert a default anonymous creator in-memory
@@ -537,9 +568,15 @@ Sitemap: https://storymenu.app/sitemap.xml`
     /**
      * Helper to wrap Gemini calls and format safety blocks.
      */
-    const callGeminiSafely = async (aiParams: any) => {
+    const callGeminiSafely = async (aiParams: any, reqEmail?: string, operationName?: string) => {
         try {
-            return await aiClient!.models.generateContent(aiParams);
+            const response = await aiClient!.models.generateContent(aiParams);
+            if (reqEmail && operationName && aiParams.model) {
+                const tokensIn = response.usageMetadata?.promptTokenCount || 0;
+                const tokensOut = response.usageMetadata?.candidatesTokenCount || 0;
+                logAiUsage(reqEmail, operationName, aiParams.model, tokensIn, tokensOut).catch(e => console.error("Log usage err:", e));
+            }
+            return response;
         } catch (e: any) {
             // Check if it's a safety error from SDK (FinishReason.SAFETY usually throws a specific structure)
             if (e.message && e.message.includes('safety') || e.message?.includes('MODERATION_BLOCKED')) {
@@ -1339,21 +1376,14 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             return res.status(400).json({ error: 'Missing email parameter' });
         }
 
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                // Ensure tokens column exists before querying
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens INTEGER DEFAULT 0;');
-                const result = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
-                if (result.rows.length > 0) {
-                    return res.json({ tokens: result.rows[0].tokens || 0 });
-                }
-            } catch (err: any) {
-                console.warn("Database get tokens soft-fallback:", err.message);
-                if (isConnectionError(err)) {
-                    markDatabaseOffline();
-                }
+        try {
+            const db = require('firebase-admin').firestore();
+            const snapshot = await db.collection('users').where('email', '==', email).get();
+            if (!snapshot.empty) {
+                return res.json({ tokens: snapshot.docs[0].data()?.tokens || 0 });
             }
+        } catch (err: any) {
+            console.warn("Database get tokens soft-fallback:", err.message);
         }
         
         // Fallback to memory
@@ -1365,16 +1395,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
      */
     app.get('/api/checkout/config', async (req, res) => {
-        let pubKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const settingsRes = await pool.query("SELECT key_value FROM app_settings WHERE key_name = 'stripe_publishable_key'");
-                if (settingsRes.rows.length > 0 && settingsRes.rows[0].key_value) {
-                    pubKey = settingsRes.rows[0].key_value;
-                }
-            } catch (err) {}
-        }
+        const pubKey = await getSettingValue('stripe_publishable_key');
         res.json({ publishableKey: pubKey });
     });
 
@@ -1382,16 +1403,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         const { amountCents } = req.body;
         if (!amountCents) return res.status(400).json({ error: 'Amount is required' });
 
-        let stripeKey = process.env.STRIPE_SECRET_KEY || '';
-        const poolForConfig = getDbPool();
-        if (poolForConfig) {
-            try {
-                const settingsRes = await poolForConfig.query("SELECT key_value FROM app_settings WHERE key_name = 'stripe_secret_key'");
-                if (settingsRes.rows.length > 0 && settingsRes.rows[0].key_value) {
-                    stripeKey = settingsRes.rows[0].key_value;
-                }
-            } catch (err) {}
-        }
+        const stripeKey = await getSettingValue('stripe_secret_key');
 
         if (!stripeKey) {
             return res.status(500).json({ error: 'Stripe Gateway is not configured.' });
@@ -1415,7 +1427,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     app.post('/api/checkout', async (req, res): Promise<any> => {
-        const { email, tier, paymentMethod, cardDetails, paypalEmail, type, tokensAwarded } = req.body;
+        const { email, tier, paymentMethod, paypalEmail, type, tokensAwarded } = req.body;
 
         if (!email) {
             return res.status(400).json({ error: 'Email coordinate is required for checkout verification' });
@@ -1423,31 +1435,15 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         if (!tier) {
             return res.status(400).json({ error: 'Subscription tier choice is required' });
         }
-        if (!paymentMethod || !['Stripe', 'PayPal', 'Square'].includes(paymentMethod)) {
-            return res.status(400).json({ error: 'Valid payment method (Stripe, PayPal, or Square) is required' });
+        if (!paymentMethod || !['Stripe', 'PayPal'].includes(paymentMethod)) {
+            return res.status(400).json({ error: 'Valid payment method (Stripe or PayPal) is required' });
         }
 
         console.info(`💳 [Gateway Initiated] New subscription request for "${email}" choosing "${tier}" via ${paymentMethod}`);
 
-        let stripeKey = process.env.STRIPE_SECRET_KEY || '';
-        let paypalClientId = process.env.PAYPAL_CLIENT_ID || '';
-        let paypalSecret = process.env.PAYPAL_SECRET || '';
-        let squareToken = process.env.SQUARE_ACCESS_TOKEN || '';
-
-        const poolForConfig = getDbPool();
-        if (poolForConfig) {
-            try {
-                const settingsRes = await poolForConfig.query("SELECT key_name, key_value FROM app_settings WHERE key_name IN ('stripe_secret_key', 'paypal_client_id', 'paypal_secret', 'square_access_token')");
-                settingsRes.rows.forEach(r => {
-                    if (r.key_value && r.key_value.trim() !== '') {
-                        if (r.key_name === 'stripe_secret_key') stripeKey = r.key_value;
-                        if (r.key_name === 'paypal_client_id') paypalClientId = r.key_value;
-                        if (r.key_name === 'paypal_secret') paypalSecret = r.key_value;
-                        if (r.key_name === 'square_access_token') squareToken = r.key_value;
-                    }
-                });
-            } catch (err) {}
-        }
+        const stripeKey = await getSettingValue('stripe_secret_key');
+        const paypalClientId = await getSettingValue('paypal_client_id');
+        const paypalSecret = await getSettingValue('paypal_secret');
 
         const amountCents = type === 'subscription' ? (tier.includes('Publisher') ? 2900 : 1200) : (tokensAwarded * 1);
         let subscriptionId = '';
@@ -1505,48 +1501,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             } else {
                 return res.status(500).json({ error: 'PayPal transaction failed: Gateway is not configured.' });
             }
-        } else if (paymentMethod === 'Square') {
-            if (squareToken) {
-                try {
-                    const squareEnv = process.env.NODE_ENV === 'production' ? Environment.Production : Environment.Sandbox;
-                    const squareClient = new Client({ environment: squareEnv, accessToken: squareToken });
-                    
-                    if (!cardDetails || !cardDetails.cardNumber || !cardDetails.expiry || !cardDetails.cvc) {
-                        return res.status(400).json({ error: 'Square transaction failed: Missing credit card credentials.' });
-                    }
-                    
-                    let sourceId = 'cnon:card-nonce-ok';
-                    // basic simulation to reject dummy cards since we aren't using the web elements to generate real nonces
-                    if (cardDetails.cardNumber.startsWith('1111') || cardDetails.cardNumber.startsWith('0000')) {
-                        sourceId = 'cnon:card-nonce-declined';
-                    }
-
-                    if (squareEnv === Environment.Production) {
-                        // In production, we cannot use a sandbox nonce. 
-                        // Because the frontend sends raw cards instead of generating a secure nonce via Web Payments SDK,
-                        // this will fail. We reject fake test cards here explicitly.
-                        if (cardDetails.cardNumber.startsWith('4242') || cardDetails.cardNumber.startsWith('1111') || sourceId === 'cnon:card-nonce-ok') {
-                            return res.status(400).json({ error: 'Square transaction failed: Test cards and Sandbox nonces are not permitted in Production. Please integrate Square Web Payments SDK.' });
-                        }
-                    }
-
-                    const response = await squareClient.paymentsApi.createPayment({
-                        sourceId: sourceId,
-                        idempotencyKey: crypto.randomBytes(12).toString('hex'),
-                        amountMoney: { amount: BigInt(amountCents), currency: 'USD' }
-                    });
-                    
-                    if (!response.result.payment) {
-                        throw new Error('Payment declined by Square.');
-                    }
-                    subscriptionId = response.result.payment.id || ('sq_SQ_' + crypto.randomBytes(6).toString('hex').toUpperCase());
-                } catch (squareErr: any) {
-                    console.warn(`[Square] Error using API: ${squareErr.message}`);
-                    return res.status(400).json({ error: `Square transaction failed: ${squareErr.message}` });
-                }
-            } else {
-                return res.status(500).json({ error: 'Square transaction failed: Gateway is not configured.' });
-            }
+        } else {
+            return res.status(400).json({ error: 'Unsupported payment method.' });
         }
 
         const pMethodName = paymentMethod;
@@ -1621,6 +1577,197 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     /**
      * 1.2 ADMINISTRATIVE SAAS API ENDPOINTS
      */
+
+    
+    const requireAdmin = async (req: any, res: any, next: any) => {
+    try {
+        const authHeader = req.headers.authorization;
+        const fallbackEmail = req.headers['x-admin-email'];
+        console.log(`[requireAdmin] Checking auth. authHeader=${!!authHeader}, fallbackEmail=${fallbackEmail}`);
+        
+        let isCustomAdmin = false;
+        let email = '';
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split('Bearer ')[1];
+
+            // 1. Check custom admin session first
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    const sessionCheck = await pool.query('SELECT username FROM admin_sessions WHERE token = $1 AND expires_at > NOW()', [token]);
+                    if (sessionCheck.rows.length > 0) {
+                        isCustomAdmin = true;
+                        email = sessionCheck.rows[0].username;
+                        console.log(`[requireAdmin] Custom session matched in DB for user: ${email}`);
+                    }
+                }
+            } else {
+                 const session = memoryDb.admin_sessions?.find((s: any) => s.token === token);
+                 if (session && new Date(session.expires_at) > new Date()) {
+                     isCustomAdmin = true;
+                     email = session.username; // For custom admin, email field holds username
+                     console.log(`[requireAdmin] Custom session matched in Memory for user: ${email}`);
+                 }
+            }
+
+            // 2. Fallback to Firebase JWT
+            if (!isCustomAdmin) {
+                try {
+                    const decoded = await getAuth().verifyIdToken(token);
+                    email = decoded.email || '';
+                    console.log(`[requireAdmin] Firebase JWT verified. email=${email}`);
+                } catch (e: any) {
+                    console.log(`[requireAdmin] Firebase verify failed: ${e.message}`);
+                    if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
+                        email = fallbackEmail;
+                        console.log(`[requireAdmin] Using fallbackEmail=${email}`);
+                    } else {
+                        console.log(`[requireAdmin] Rejecting: Invalid token`);
+                        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+                    }
+                }
+            }
+        } else {
+            console.log(`[requireAdmin] Rejecting: No auth header`);
+            return res.status(401).json({ error: 'Unauthorized: No token provided' });
+        }
+
+        // 3. Final validation
+        if (isCustomAdmin) {
+             (req as any).adminEmail = email;
+             return next();
+        }
+
+        const superAdminEnv = process.env.ADMIN_EMAIL || '';
+        const superAdmins = superAdminEnv.split(',').map(e => e.trim().toLowerCase());
+        console.log(`[requireAdmin] Comparing email=${email} with superAdmins=[${superAdmins.join(', ')}]`);
+        
+        if (superAdmins.includes(email.toLowerCase())) {
+            (req as any).adminEmail = email;
+            return next();
+        }
+
+        console.log(`[requireAdmin] Rejecting: Forbidden access`);
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    } catch (err: any) {
+        console.error(`[requireAdmin] Error: ${err.message}`);
+        return res.status(500).json({ error: 'Internal Server Error during auth' });
+    }
+};
+
+    // --- CUSTOM ADMIN AUTH ---
+    function hashPassword(password: string, salt: string) {
+        return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    }
+
+    app.post('/api/admin/login', async (req, res) => {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
+
+        try {
+            let userResult;
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    const { rows } = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
+                    userResult = rows[0];
+                }
+            } else {
+                userResult = memoryDb.admin_users?.find((u:any) => u.username === username);
+            }
+
+            if (!userResult) return res.status(401).json({ error: 'Invalid credentials' });
+
+            const hashedAttempt = hashPassword(password, userResult.salt);
+            if (hashedAttempt !== userResult.password_hash) {
+                return res.status(401).json({ error: 'Invalid credentials' });
+            }
+
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    await pool.query('INSERT INTO admin_sessions (token, username, expires_at) VALUES ($1, $2, $3)', [token, username, expiresAt]);
+                }
+            } else {
+                memoryDb.admin_sessions = memoryDb.admin_sessions || [];
+                memoryDb.admin_sessions.push({ token, username, expires_at: expiresAt.toISOString() });
+            }
+
+            res.json({ token, username });
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ error: 'Server error' });
+        }
+    });
+
+    app.get('/api/admin/system/users', requireAdmin, async (req, res) => {
+        try {
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    const { rows } = await pool.query('SELECT username, role, created_at FROM admin_users');
+                    return res.json(rows);
+                }
+            } else {
+                return res.json((memoryDb.admin_users || []).map((u:any) => ({ username: u.username, role: u.role, created_at: u.created_at })));
+            }
+            res.json([]);
+        } catch(e) {
+            res.status(500).json({ error: 'Server error' });
+        }
+    });
+
+    app.post('/api/admin/system/users', requireAdmin, async (req, res) => {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
+        
+        try {
+            const salt = crypto.randomBytes(16).toString('hex');
+            const hash = hashPassword(password, salt);
+            
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    await pool.query('INSERT INTO admin_users (username, password_hash, salt) VALUES ($1, $2, $3)', [username, hash, salt]);
+                }
+            } else {
+                memoryDb.admin_users = memoryDb.admin_users || [];
+                memoryDb.admin_users.push({ username, password_hash: hash, salt, role: 'admin', created_at: new Date().toISOString() });
+            }
+            res.json({ success: true });
+        } catch(e) {
+            console.error(e);
+            res.status(500).json({ error: 'Server error or user exists' });
+        }
+    });
+
+    app.delete('/api/admin/system/users/:username', requireAdmin, async (req, res) => {
+        const { username } = req.params;
+        try {
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    await pool.query('DELETE FROM admin_users WHERE username = $1', [username]);
+                }
+            } else {
+                memoryDb.admin_users = (memoryDb.admin_users || []).filter((u:any) => u.username !== username);
+            }
+            res.json({ success: true });
+        } catch(e) {
+            console.error(e);
+            res.status(500).json({ error: 'Server error' });
+        }
+    });
+
+    // --- REQUIRE ADMIN MIDDLEWARE ---
+
+
+    app.use('/api/admin', requireAdmin);
+
     // View SaaS Customers and checkout tracking
     app.get('/api/admin/customers', async (req, res): Promise<any> => {
         const pool = getDbPool();
@@ -1722,52 +1869,90 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ success: true, message: `Successfully deleted user "${email}" from Saas registration.` });
     });
 
-    // --- REQUIRE ADMIN MIDDLEWARE ---
-    const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> => {
-        const authHeader = req.headers.authorization;
-        const fallbackEmail = req.headers['x-admin-email'] as string; // For local dev fallback
+    // Grant or Set Tokens for a specific user (Tier Economies)
+    app.post('/api/admin/customers/:email/tokens', async (req, res): Promise<any> => {
+        const { email } = req.params;
+        const { amount, action } = req.body; // action: 'add', 'set'
 
-        let email = '';
-        
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split('Bearer ')[1];
-            try {
-                const decoded = await getAuth().verifyIdToken(token);
-                email = decoded.email || '';
-            } catch (e) {
-                // If token fails to verify, we can fallback to local header if in dev
-                if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
-                    email = fallbackEmail;
-                } else {
-                    return res.status(401).json({ error: 'Unauthorized: Invalid Firebase token' });
-                }
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+
+        try {
+            const userRes = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
+            if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+            let newBalance = userRes.rows[0].tokens;
+            if (action === 'set') {
+                newBalance = parseInt(amount);
+            } else {
+                newBalance += parseInt(amount);
             }
-        } else if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
-             email = fallbackEmail;
-        } else {
-            return res.status(401).json({ error: 'Unauthorized: Missing token' });
+
+            await pool.query('UPDATE users SET tokens = $1 WHERE email = $2', [newBalance, email]);
+            return res.json({ success: true, tokens: newBalance, message: `Successfully updated token balance to ${newBalance}` });
+        } catch (e: any) {
+            console.error("Token update error:", e);
+            return res.status(500).json({ error: 'Database error' });
         }
+    });
 
-        if (!email) {
-            return res.status(401).json({ error: 'Unauthorized: Could not determine email' });
+    // View AI Cost Analytics
+    app.get('/api/admin/analytics/costs', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (!pool) return res.status(500).json({ error: 'DB not connected' });
+
+        try {
+            // Aggregate totals
+            const totalsRes = await pool.query('SELECT SUM(tokens_in) as total_in, SUM(tokens_out) as total_out, SUM(cost_usd) as total_cost FROM ai_usage_logs');
+            const totals = totalsRes.rows[0];
+
+            // Recent logs
+            const logsRes = await pool.query('SELECT user_email, operation, model, tokens_in, tokens_out, cost_usd, created_at FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100');
+
+            return res.json({
+                totals: {
+                    tokensIn: parseInt(totals.total_in || '0'),
+                    tokensOut: parseInt(totals.total_out || '0'),
+                    totalCostUsd: parseFloat(totals.total_cost || '0')
+                },
+                logs: logsRes.rows
+            });
+        } catch (e: any) {
+            console.error("Analytics fetch error:", e);
+            return res.status(500).json({ error: 'Database error' });
         }
+    });
 
-        const superAdmin = process.env.ADMIN_EMAIL;
-        if (superAdmin && email.toLowerCase() === superAdmin.toLowerCase()) {
-            (req as any).adminEmail = email;
-            return next();
+    // --- DYNAMIC LANDING PAGE ---
+    app.get('/api/public/landing', async (req, res): Promise<any> => {
+        try {
+            const db = require('firebase-admin').firestore();
+            const docSnap = await db.collection('app_settings').doc('landing_page_config').get();
+            if (docSnap.exists) {
+                return res.json(docSnap.data());
+            }
+        } catch (e: any) {
+            console.warn("Failed to fetch landing_page_config from Firestore:", e.message);
         }
+        return res.json({});
+    });
 
-        // Future expansion: check database for admin_users
-        return res.status(403).json({ error: 'Forbidden: Admin access required' });
-    };
-
-    app.use('/api/admin', requireAdmin);
-
-    // --- SAAS CUSTOMER ENDPOINTS ---
+    app.post('/api/admin/landing', requireAdmin, async (req, res): Promise<any> => {
+        try {
+            const db = require('firebase-admin').firestore();
+            await db.collection('app_settings').doc('landing_page_config').set(req.body, { merge: true });
+            return res.json({ success: true });
+        } catch (e: any) {
+            console.error("Failed to update landing config:", e);
+            return res.status(500).json({ error: 'Database error' });
+        }
+    });
 
     // --- INTEGRATIONS AND SETTINGS ---
     app.get('/api/admin/settings', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            return res.json((memoryDb.app_settings || []).map((s:any) => ({ keyName: s.key_name, keyValue: s.key_value, isSecret: s.is_secret })));
+        }
         const pool = getDbPool();
         if (!pool) return res.status(500).json({ error: 'DB not connected' });
         try {
@@ -1780,10 +1965,47 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     app.post('/api/admin/settings', async (req, res): Promise<any> => {
+        const { keyName, keyValue, isSecret } = req.body;
+        
+        // Always persist to process.env and .env for fail-safe sandbox mode
+        process.env[keyName.toUpperCase()] = keyValue;
+        try {
+            const envPath = path.join(process.cwd(), '.env');
+            let envContent = '';
+            if (fs.existsSync(envPath)) {
+                envContent = fs.readFileSync(envPath, 'utf8');
+            }
+            const lines = envContent.split('\n');
+            let found = false;
+            const newLines = lines.map(line => {
+                if (line.trim().startsWith(keyName.toUpperCase() + '=')) {
+                    found = true;
+                    return `${keyName.toUpperCase()}=${keyValue}`;
+                }
+                return line;
+            });
+            if (!found) {
+                newLines.push(`${keyName.toUpperCase()}=${keyValue}`);
+            }
+            fs.writeFileSync(envPath, newLines.join('\n'));
+        } catch (e) {
+            console.error("Could not write to .env file", e);
+        }
+
+        if (!isDatabaseConnected()) {
+            memoryDb.app_settings = memoryDb.app_settings || [];
+            const existing = memoryDb.app_settings.find((s:any) => s.key_name === keyName);
+            if (existing) {
+                existing.key_value = keyValue;
+                existing.is_secret = isSecret || false;
+            } else {
+                memoryDb.app_settings.push({ key_name: keyName, key_value: keyValue, is_secret: isSecret || false });
+            }
+            return res.json({ success: true });
+        }
         const pool = getDbPool();
         if (!pool) return res.status(500).json({ error: 'DB not connected' });
         try {
-            const { keyName, keyValue, isSecret } = req.body;
             await pool.query(`
                 INSERT INTO app_settings (key_name, key_value, is_secret) 
                 VALUES ($1, $2, $3) 
@@ -1908,8 +2130,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             integrations: {
                 gemini: { status: 'missing', message: 'API Key not configured in .env' },
                 stripe: { status: 'missing', message: 'Not configured' },
-                paypal: { status: 'missing', message: 'Not configured' },
-                square: { status: 'missing', message: 'Not configured' }
+                paypal: { status: 'missing', message: 'Not configured' }
             },
             environment: {
                 port: port,
@@ -1936,11 +2157,10 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         if (process.env.GEMINI_API_KEY || process.env.API_KEY) health.integrations.gemini = { status: 'ok', message: 'Configured in .env' };
         if (process.env.STRIPE_SECRET_KEY) health.integrations.stripe = { status: 'ok', message: 'Configured in .env' };
         if (process.env.PAYPAL_CLIENT_ID) health.integrations.paypal = { status: 'ok', message: 'Configured in .env' };
-        if (process.env.SQUARE_ACCESS_TOKEN) health.integrations.square = { status: 'ok', message: 'Configured in .env' };
 
         if (pool && health.database.status === 'ok') {
             try {
-               const settingsRes = await pool.query("SELECT key_name, key_value FROM app_settings WHERE key_name IN ('stripe_secret_key', 'paypal_client_id', 'square_access_token', 'gemini_api_key')");
+               const settingsRes = await pool.query("SELECT key_name, key_value FROM app_settings WHERE key_name IN ('stripe_secret_key', 'paypal_client_id', 'gemini_api_key')");
                settingsRes.rows.forEach(r => {
                    if (r.key_value && r.key_value.trim() !== '') {
                        const key = r.key_name.replace('_secret_key', '').replace('_client_id', '').replace('_access_token', '').replace('_api_key', '');
@@ -1950,6 +2170,39 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                    }
                });
             } catch(e) {}
+        } else if (!isDatabaseConnected() && memoryDb.app_settings) {
+            memoryDb.app_settings.forEach((s:any) => {
+                if (s.key_value && s.key_value.trim() !== '') {
+                    const key = s.key_name.replace('_secret_key', '').replace('_client_id', '').replace('_access_token', '').replace('_api_key', '');
+                    if (health.integrations[key]) {
+                        health.integrations[key] = { status: 'ok', message: 'Configured in MemoryDb' };
+                    }
+                }
+            });
+        }
+
+        try {
+            const geminiKey = await getSettingValue('gemini_api_key');
+            if (geminiKey) {
+                const ai = new GoogleGenAI({ apiKey: geminiKey });
+                await ai.models.generateContent({ model: 'gemini-flash-latest', contents: 'test' });
+                health.integrations.gemini = { status: 'ok', message: 'API connection successful' };
+            }
+        } catch (e: any) {
+            health.integrations.gemini = { status: 'error', message: `Gemini API Error: ${e.message}` };
+            health.status = 'warning';
+        }
+
+        try {
+            const stripeSecret = await getSettingValue('stripe_secret_key');
+            if (stripeSecret) {
+                const stripe = new Stripe(stripeSecret, { apiVersion: '2024-06-20' as any });
+                await stripe.balance.retrieve();
+                health.integrations.stripe = { status: 'ok', message: 'API connection successful' };
+            }
+        } catch (e: any) {
+            health.integrations.stripe = { status: 'error', message: `Stripe API Error: ${e.message}` };
+            health.status = 'warning';
         }
 
         try {
@@ -2299,18 +2552,6 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     // PAYMENT GATEWAY INTEGRATIONS
-    async function getSettingValue(key: string): Promise<string> {
-        if (!isDatabaseConnected()) {
-            return process.env[key.toUpperCase()] || '';
-        }
-        const pool = getDbPool();
-        try {
-            const res = await pool.query('SELECT key_value FROM app_settings WHERE key_name = $1', [key.toLowerCase()]);
-            return res.rows.length > 0 ? res.rows[0].key_value : (process.env[key.toUpperCase()] || '');
-        } catch {
-            return process.env[key.toUpperCase()] || '';
-        }
-    }
 
     app.post('/api/payments/stripe/create-checkout', async (req, res) => {
         try {
@@ -2367,27 +2608,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/payments/square/process', async (req, res) => {
-        try {
-            const token = await getSettingValue('square_access_token');
-            if (!token) return res.status(400).json({ error: 'Square is not configured' });
-            
-            const client = new Client({ accessToken: token, environment: Environment.Sandbox });
-            const { sourceId, price } = req.body;
-            
-            const response = await client.paymentsApi.createPayment({
-                sourceId,
-                idempotencyKey: crypto.randomUUID(),
-                amountMoney: { amount: BigInt(Math.round(price * 100)), currency: 'USD' }
-            });
-            const result = JSON.parse(JSON.stringify(response.result, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value
-            ));
-            res.json(result);
-        } catch (e: any) {
-            res.status(500).json({ error: e.message });
-        }
-    });
+
 
 
     // Setup Vite middleware / client delivery

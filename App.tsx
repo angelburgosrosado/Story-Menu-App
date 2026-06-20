@@ -59,7 +59,8 @@ const App: React.FC = () => {
   const [soundPrompt, setSoundPrompt] = useState("");
 
   // --- Firebase User Account States ---
-  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string } | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number } | null>(null);
   const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(!!localStorage.getItem('story_menu_skin'));
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [landingPreviewTab, setLandingPreviewTab] = useState<'blueprint' | 'visuals' | 'sound'>('blueprint');
@@ -378,11 +379,13 @@ const App: React.FC = () => {
           setCurrentUser(u);
           setActiveCreator({ id: u.id, email: u.email });
           localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
+          setIsAuthLoading(false);
         }).catch((err) => {
           console.warn("Could not query user doc details:", err);
           setCurrentUser(u);
           setActiveCreator({ id: u.id, email: u.email });
           localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
+          setIsAuthLoading(false);
         });
       } else {
         // Enforce commercial authentication, do not allow plain offline local storage bypass.
@@ -390,6 +393,7 @@ const App: React.FC = () => {
         localStorage.removeItem('infinite_heroes_creator');
         setCurrentUser(null);
         setActiveCreator({ id: '', email: '' });
+        setIsAuthLoading(false);
       }
     });
 
@@ -1046,6 +1050,15 @@ const App: React.FC = () => {
       else if (index === currentSheetIndex && comicFaces.find(f => f.pageIndex === index)?.imageUrl) setCurrentSheetIndex(prev => prev + 1);
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-400 mt-4 text-sm font-semibold tracking-wider animate-pulse">Initializing Neural Link...</p>
+      </div>
+    );
+  }
+
   if (currentUser === null) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative font-sans">
@@ -1060,7 +1073,7 @@ const App: React.FC = () => {
               setCurrentUser(user);
               if (user) {
                 setActiveCreator({ id: user.id, email: user.email });
-                localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName }));
+                localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName, tier: user.tier }));
                 
                 // Fetch extra stats if online
                 if (!user.isOffline) {
@@ -1151,7 +1164,7 @@ const App: React.FC = () => {
               setCurrentUser(user);
               if (user) {
                   setActiveCreator({ id: user.id, email: user.email });
-                  localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName }));
+                  localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName, tier: user.tier }));
                   window.dispatchEvent(new Event('refresh-character-vault'));
               } else {
                   const defaultUser = { id: '00000000-0000-0000-0000-000000000000', email: 'local-creator@infinite.multiverse' };
@@ -1176,7 +1189,7 @@ const App: React.FC = () => {
                       setCurrentUser(user);
                       if (user) {
                           setActiveCreator({ id: user.id, email: user.email });
-                          localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName }));
+                          localStorage.setItem('infinite_heroes_creator', JSON.stringify({ id: user.id, email: user.email, displayName: user.displayName, tier: user.tier }));
                           window.dispatchEvent(new Event('refresh-character-vault'));
                       }
                   }} 

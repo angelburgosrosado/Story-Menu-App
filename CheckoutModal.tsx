@@ -12,17 +12,7 @@ import { updateUserSubscriptionInFirestore } from './storageFirestore';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-let stripePromise: Promise<any> | null = null;
-const getStripePromise = async () => {
-    if (!stripePromise) {
-        const res = await fetch('/api/checkout/config');
-        const data = await res.json();
-        if (data.publishableKey) {
-            stripePromise = loadStripe(data.publishableKey);
-        }
-    }
-    return stripePromise;
-};
+
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -45,7 +35,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
   const [purchaseType, setPurchaseType] = useState<'subscription' | 'topup'>('subscription');
   const [tier, setTier] = useState<'Pro' | 'Enterprise'>(initialTier);
   const [topupTier, setTopupTier] = useState<'Starter' | 'Creator' | 'Studio'>('Starter');
-  const [paymentMethod, setPaymentMethod] = useState<'Stripe' | 'PayPal' | 'Square'>('Stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'Stripe' | 'PayPal'>('Stripe');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,30 +59,34 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
 
   const pricing = {
     Pro: {
-      price: '12',
-      label: 'Creator Tier',
+      price: '8',
+      label: 'Starter Tier',
       features: [
-        '1,200 Credits / month (~120 comics)',
-        'No Watermarks',
-        '10 Custom Characters (Consistency AI)',
-        'High-Resolution Exports (PDF, PNG)',
-        'Commercial Usage Rights',
+        '1,000 Credits / month (~100 comics)',
+        'Basic Art Styles',
+        'Standard Queue',
       ],
-      tokensAwarded: 1200
+      tokensAwarded: 1000
     },
     Enterprise: {
-      price: '29',
-      label: 'Pro / Publisher Tier',
+      price: '15',
+      label: 'Pro Tier',
       features: [
-        '4,000 Credits / month (~400 comics)',
-        'Unlimited Custom Characters',
-        'Priority GPU Processing (Instant)',
-        'Premium LLMs (GPT-4o / Claude 3.5)',
-        'Vector & Editable Exports',
+        '2,500 Credits / month (~250 comics)',
+        'Advanced Art Styles',
+        'Commercial Rights',
       ],
-      tokensAwarded: 4000
+      tokensAwarded: 2500
     },
   };
+
+  const addons: Record<string, { price: string; label: string; desc: string }> = {
+    watermark: { price: '4', label: 'Watermark Removal', desc: 'Remove Story.Menu branding from exports' },
+    priorityQueue: { price: '9', label: 'Priority GPU Queue', desc: 'Instant generation bypassing standard wait times' },
+    premiumModels: { price: '14', label: 'Premium LLMs', desc: 'Unlock GPT-4o, Claude 3.5, and Gemini 1.5 Pro' }
+  };
+
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
   const topupPricing = {
     Starter: { price: '5', label: 'Starter Pack', tokens: 500 },
@@ -123,7 +117,10 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
       let finalizeResponse;
 
       if (paymentMethod === 'Stripe') {
-        const amountCents = (purchaseType === 'subscription' ? parseFloat(pricing[tier].price) : parseFloat(topupPricing[topupTier].price)) * 100;
+        const basePrice = parseFloat(pricing[tier].price);
+        const addonTotal = selectedAddons.reduce((sum, key) => sum + parseFloat(addons[key as keyof typeof addons].price), 0);
+        const totalSubPrice = basePrice + addonTotal;
+        const amountCents = (purchaseType === 'subscription' ? totalSubPrice : parseFloat(topupPricing[topupTier].price)) * 100;
         
         // 1. Create PaymentIntent on the backend
         const intentRes = await fetch('/api/checkout/intent', {
@@ -149,10 +146,13 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
         if (confirmError) throw new Error(confirmError.message);
         
         // 3. Finalize the subscription on the backend
+        const addonLabels = selectedAddons.map(key => addons[key as keyof typeof addons].label).join(', ');
+        const tierString = purchaseType === 'subscription' ? `${pricing[tier].label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier].label;
+
         const payload: any = {
             email,
             type: purchaseType,
-            tier: purchaseType === 'subscription' ? pricing[tier].label : topupPricing[topupTier].label,
+            tier: tierString,
             tokensAwarded: purchaseType === 'subscription' ? pricing[tier].tokensAwarded : topupPricing[topupTier].tokens,
             paymentMethod,
             paymentIntentId: paymentIntent.id
@@ -164,17 +164,17 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
             body: JSON.stringify(payload),
         });
       } else {
+        const addonLabels = selectedAddons.map(key => addons[key as keyof typeof addons].label).join(', ');
+        const tierString = purchaseType === 'subscription' ? `${pricing[tier].label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier].label;
+
         const payload: any = {
           email,
           type: purchaseType,
-          tier: purchaseType === 'subscription' ? pricing[tier].label : topupPricing[topupTier].label,
+          tier: tierString,
           tokensAwarded: purchaseType === 'subscription' ? pricing[tier].tokensAwarded : topupPricing[topupTier].tokens,
           paymentMethod,
           paypalEmail
         };
-        if (paymentMethod === 'Square') {
-          payload.cardDetails = { zipCode, sourceId: 'cnon:card-nonce-ok' }; // Fallback (backend blocks in prod)
-        }
         console.info(`📦 Sending alternate checkout API request:`, payload);
         finalizeResponse = await fetch('/api/checkout', {
         method: 'POST',
@@ -404,6 +404,32 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                         ))}
                       </ul>
                     </div>
+
+                    <div className="space-y-2 mt-4">
+                      <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">Available Add-ons:</h4>
+                      <div className="space-y-2">
+                        {Object.entries(addons).map(([key, addon]) => (
+                          <label key={key} className={`flex items-start gap-2 p-2 border cursor-pointer transition-colors ${selectedAddons.includes(key) ? 'border-yellow-400 bg-yellow-400/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-600'}`}>
+                            <input 
+                              type="checkbox" 
+                              className="mt-1"
+                              checked={selectedAddons.includes(key)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedAddons(prev => [...prev, key]);
+                                else setSelectedAddons(prev => prev.filter(a => a !== key));
+                              }}
+                            />
+                            <div className="flex flex-col">
+                              <div className="flex justify-between w-full gap-2">
+                                <span className="text-[11px] font-bold text-white font-mono">{addon.label}</span>
+                                <span className="text-[11px] font-mono text-yellow-400">+${addon.price}/mo</span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-sans mt-0.5">{addon.desc}</span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -509,7 +535,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                   <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">
                     Select Gateway System
                   </span>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('Stripe')}
@@ -537,20 +563,6 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                         <path d="M85.4 1H74.2C73.6 1 73 1.6 73 2.2V25.8C73 26.4 73.6 27 74.2 27H85.4C93.4 27 98 22.8 98 14C98 5.2 93.4 1 85.4 1Z" fill="#00457C"/>
                       </svg>
                       <span>{t('checkout.auto11', 'PayPal Sandbox')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('Square')}
-                      className={`flex items-center justify-center gap-2 py-2.5 border transition-all text-xs font-mono font-bold ${
-                        paymentMethod === 'Square'
-                          ? 'bg-slate-800 text-white border-yellow-400 shadow-[2px_2px_0px_#000]'
-                          : 'bg-black text-slate-400 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      <svg className="h-3.5 w-auto" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M19 5H5V19H19V5ZM21 3V21H3V3H21ZM15 9H9V15H15V9ZM17 7V17H7V7H17Z"/>
-                      </svg>
-                      <span>Square</span>
                     </button>
                   </div>
                 </div>
@@ -594,7 +606,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                       />
                     </div>
                   </div>
-                ) : paymentMethod === 'PayPal' ? (
+                ) : (
                   <div className="space-y-3 p-4 bg-black/60 border border-slate-900">
                     <div className="space-y-1.5">
                       <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
@@ -613,71 +625,6 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                       </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-3 p-3 bg-black/60 border border-slate-900">
-                    <div className="flex items-center gap-2 mb-2">
-                       <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5H5V19H19V5ZM21 3V21H3V3H21ZM15 9H9V15H15V9ZM17 7V17H7V7H17Z"/></svg>
-                       <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Square POS Virtual Terminal</span>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
-                        CARD NUMBER (SQUARE)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required={paymentMethod === 'Square'}
-                          placeholder="0000 0000 0000 0000"
-                          value={cardNumber}
-                          onChange={handleCardNumberChange}
-                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono tracking-widest"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
-                          EXPIRY
-                        </label>
-                        <input
-                          type="text"
-                          required={paymentMethod === 'Square'}
-                          placeholder="MM/YY"
-                          value={expiry}
-                          onChange={handleExpiryChange}
-                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
-                          CVV
-                        </label>
-                        <input
-                          type="text"
-                          required={paymentMethod === 'Square'}
-                          placeholder="123"
-                          value={cvc}
-                          onChange={handleCvcChange}
-                          className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="block text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
-                        POSTAL CODE
-                      </label>
-                      <input
-                        type="text"
-                        required={paymentMethod === 'Square'}
-                        placeholder="ZIP"
-                        value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value.substring(0, 10))}
-                        className="w-full bg-black border border-slate-800 focus:border-yellow-400 py-1.5 px-3 text-xs outline-none text-white font-mono placeholder-slate-700"
-                      />
-                    </div>
-                  </div>
                 )}
               </div>
 
@@ -689,7 +636,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                   id="btn-checkout-submit"
                 >
                   <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
-                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${pricing[tier]?.price || '...'} SUBSCRIPTION`}</span>
+                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${purchaseType === 'subscription' ? parseFloat(pricing[tier].price) + selectedAddons.reduce((sum, key) => sum + parseFloat(addons[key as keyof typeof addons].price), 0) : topupPricing[topupTier].price} ${purchaseType === 'subscription' ? 'SUBSCRIPTION' : 'TOP-UP'}`}</span>
                 </button>
 
                 <div className="flex justify-center items-center gap-4 text-[10px] font-mono text-slate-500">
@@ -705,17 +652,25 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
   );
 };
 
+let stripePromise: Promise<any> | null = null;
+const initializeStripe = () => {
+    if (!stripePromise) {
+        stripePromise = fetch('/api/checkout/config')
+            .then(res => res.json())
+            .then(data => {
+                if (data.publishableKey) {
+                    return loadStripe(data.publishableKey);
+                }
+                return null;
+            })
+            .catch(() => null);
+    }
+    return stripePromise;
+};
+
 export const CheckoutModal: React.FC<CheckoutModalProps> = (props) => {
-    const [stripeProm, setStripeProm] = useState<Promise<any> | null>(null);
-
-    useEffect(() => {
-        getStripePromise().then(p => setStripeProm(p));
-    }, []);
-
-    if (!stripeProm) return <CheckoutModalContent {...props} />;
-
     return (
-        <Elements stripe={stripeProm}>
+        <Elements stripe={initializeStripe()}>
             <CheckoutModalContent {...props} />
         </Elements>
     );

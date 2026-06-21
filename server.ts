@@ -569,9 +569,9 @@ Sitemap: https://storymenu.app/sitemap.xml`
     /**
      * Helper to wrap Gemini calls and format safety blocks.
      */
-    const callGeminiSafely = async (aiParams: any, reqEmail?: string, operationName?: string) => {
+    const callGeminiSafely = async (ai: GoogleGenAI, aiParams: any, reqEmail?: string, operationName?: string) => {
         try {
-            const response = await aiClient!.models.generateContent(aiParams);
+            const response = await ai.models.generateContent(aiParams);
             if (reqEmail && operationName && aiParams.model) {
                 const tokensIn = response.usageMetadata?.promptTokenCount || 0;
                 const tokensOut = response.usageMetadata?.candidatesTokenCount || 0;
@@ -593,7 +593,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         if (!text) return res.status(400).json({ error: 'Text prompt is required.' });
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
-            const response = await callGeminiSafely({
+            const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.1-flash-tts-preview",
                 contents: [{ parts: [{ text }] }],
@@ -621,7 +621,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         const style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
-            const response = await callGeminiSafely({
+            const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash-image',
                 contents: { text: `STYLE: Masterpiece ${style} character sheet, detailed ink, neutral background. FULL BODY. Character: ${desc}` },
@@ -681,7 +681,7 @@ Provide a JSON array containing the 10 finalized chapter-level goals, adhering E
 
 Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no markdown formatting blocks like \`\`\`json or trailing characters.`;
 
-                const response = await callGeminiSafely({
+                const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
@@ -733,7 +733,7 @@ Provide a JSON object containing the finalized suggestions for this character's 
 
 Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no markdown formatting blocks like \`\`\`json or trailing characters.`;
 
-                const response = await callGeminiSafely({
+                const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
@@ -767,7 +767,7 @@ Rules:
 4. For plot/story directives, offer a compelling narrative direction.
 5. Max 35 words. Keep it concise, focused, and punchy.`;
 
-            const response = await callGeminiSafely({
+            const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
                 contents: { text: promptField }
@@ -786,6 +786,7 @@ Rules:
         if (!rawText) return res.status(400).json({ error: "Missing rawText" });
 
         try {
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const promptField = `
 You are a creative writing coach for children. The user has dictated a story idea using speech-to-text, which might contain grammatical errors, run-on sentences, or disjointed thoughts.
 
@@ -798,7 +799,7 @@ Your task:
 4. Return ONLY the final enhanced story paragraph, no introductory text, no quotes. Make it a few sentences long (max 50 words).
 `;
 
-            const response = await callGeminiSafely({
+            const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
                 contents: { text: promptField }
@@ -984,7 +985,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
-            const resObj = await callGeminiSafely({
+            const resObj = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: "gemini-3.5-flash",
                 contents: prompt,
@@ -1293,7 +1294,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
-            const resObj = await callGeminiSafely({
+            const resObj = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
               model: 'gemini-2.5-flash-image',
               contents: contents,

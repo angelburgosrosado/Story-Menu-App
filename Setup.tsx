@@ -382,7 +382,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     fieldName: 'storyBlueprint',
                     genre: props.selectedGenre,
                     customPremise: props.customPremise,
-                    storyTone: props.storyTone || 'Exciting & Action-packed'
+                    storyTone: props.storyTone || 'Exciting & Action-packed',
+                    userEmail: props.activeCreator.email
                 })
             });
             if (!response.ok) {
@@ -414,7 +415,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     fieldName: `Chapter ${pageNum} Goal`,
                     genre: props.selectedGenre,
                     customPremise: props.customPremise,
-                    currentValue: currentGoalObj ? `${currentGoalObj.title || ''} - ${currentGoalObj.goal || ''}` : ''
+                    currentValue: currentGoalObj ? `${currentGoalObj.title || ''} - ${currentGoalObj.goal || ''}` : '',
+                    userEmail: props.activeCreator.email
                 })
             });
             if (!response.ok) throw new Error('Failed to brainstorm chapter beat');
@@ -723,7 +725,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     genre: personaStudioStyle,
                     roleType: personaStudioRole,
                     characterName: personaStudioName,
-                    concept: personaStudioConcept
+                    concept: personaStudioConcept,
+                    userEmail: props.activeCreator.email
                 })
             });
             const data = await res.json();
@@ -798,7 +801,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
                 body: JSON.stringify({
                     desc: promptDesc,
-                    selectedGenre: personaStudioStyle
+                    selectedGenre: personaStudioStyle,
+                    userEmail: props.activeCreator.email
                 })
             });
             const data = await res.json();
@@ -897,7 +901,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 body: JSON.stringify({
                     fieldName,
                     currentValue,
-                    genre: props.selectedGenre
+                    genre: props.selectedGenre,
+                    userEmail: props.activeCreator.email
                 })
             });
             const data = await res.json();

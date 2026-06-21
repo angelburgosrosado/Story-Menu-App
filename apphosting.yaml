@@ -1,0 +1,15 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+
+env:
+  - variable: ADMIN_EMAIL
+    value: "angelburgosrosado@gmail.com,abglco@protonmail.com"
+    availability:
+      - RUNTIME
+  - variable: FEATURE_COMIC_GENERATOR
+    value: "true"
+    availability:
+      - BUILD
+      - RUNTIME

@@ -126,6 +126,43 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     };
 
+    const [isScanningHero, setIsScanningHero] = useState(false);
+    const [isScanningFriend, setIsScanningFriend] = useState(false);
+    const [isScanningVillain, setIsScanningVillain] = useState(false);
+    
+    const handleDropAsset = (e: React.DragEvent, target: 'hero' | 'friend' | 'villain') => {
+        e.preventDefault();
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (!dataStr) return;
+        try {
+            const char = JSON.parse(dataStr);
+            if (target === 'hero') {
+                setIsScanningHero(true);
+                setTimeout(() => {
+                    props.onSelectHero(char);
+                    if (char.desc) props.onHeroVisualsChange(char.desc);
+                    setIsScanningHero(false);
+                }, 1500);
+            } else if (target === 'friend') {
+                setIsScanningFriend(true);
+                setTimeout(() => {
+                    props.onSelectFriend(char);
+                    if (char.desc) props.onFriendVisualsChange(char.desc);
+                    setIsScanningFriend(false);
+                }, 1500);
+            } else if (target === 'villain') {
+                setIsScanningVillain(true);
+                setTimeout(() => {
+                    props.onSelectVillain(char);
+                    if (char.desc) props.onVillainVisualsChange(char.desc);
+                    setIsScanningVillain(false);
+                }, 1500);
+            }
+        } catch (err) {
+            console.error("Drop parse error", err);
+        }
+    };
+
     const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint' | 'settings'>('generate');
     const [savedProjects, setSavedProjects] = useState<any[]>([]);
 
@@ -152,55 +189,55 @@ export const Setup: React.FC<SetupProps> = (props) => {
     // Skin computed values
     const sOuterContainer = isEditorial 
         ? "max-w-[1100px] w-full bg-[#fbfbfa] text-stone-900 border border-stone-200/80 shadow-2xl p-6 md:p-10 relative rounded-2xl font-sans"
-        : "max-w-[1100px] w-full bg-slate-900 text-white border-[6px] border-black shadow-[16px_16px_0px_#000] p-6 md:p-8 relative overflow-hidden rounded-2xl";
+        : isKidStory ? "max-w-[1100px] w-full bg-blue-100 text-black border-4 border-blue-400 p-6 rounded-3xl" : "max-w-[1100px] w-full bg-gray-950 text-cyan-50 cyber-border shadow-[0_0_40px_rgba(34,211,238,0.15)] p-6 md:p-8 relative overflow-hidden rounded-xl font-sans";
 
     const sCard = isEditorial
         ? "bg-white border border-stone-200 shadow-sm p-6 rounded-xl relative flex flex-col justify-between"
-        : "bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[6px_6px_0px_#000] text-white relative";
+        : isKidStory ? "bg-white border-2 border-blue-300 p-4 rounded-2xl" : "bg-gray-900 border border-cyan-900/50 p-5 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] text-cyan-100 relative glass-panel";
 
     const sPanel = isEditorial
         ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-stone-100 border border-stone-200 p-6 rounded-xl shadow-sm text-stone-800"
-        : "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-slate-950 border-4 border-black p-6 rounded-lg shadow-[4px_4px_0px_#000] text-gray-200";
+        : isKidStory ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white border-2 border-blue-200 p-6 rounded-2xl" : "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-gray-950/80 border border-cyan-800/40 p-6 rounded-lg text-cyan-200 backdrop-blur-md";
 
     const sHeaderBadge = isEditorial
         ? "absolute -top-3.5 left-6 bg-stone-800 text-stone-50 border border-stone-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : "absolute -top-4 left-6 bg-blue-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[-1.5deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+        : isKidStory ? "absolute -top-4 left-6 bg-yellow-400 text-black font-sans text-lg px-4 py-1 rounded-full border-2 border-orange-400 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-cyan-400 font-mono text-xs uppercase px-3 py-1 border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sHeaderBadgeRed = isEditorial
         ? "absolute -top-3.5 left-6 bg-amber-700 text-stone-50 border border-amber-805 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : "absolute -top-4 left-6 bg-red-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[1.5deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+        : isKidStory ? "absolute -top-4 left-6 bg-red-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-red-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-pink-500 font-mono text-xs uppercase px-3 py-1 border border-pink-500/50 shadow-[0_0_10px_rgba(236,72,153,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sHeaderBadgeGreen = isEditorial
         ? "absolute -top-3.5 left-6 bg-emerald-700 text-stone-50 border border-emerald-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : "absolute -top-4 left-6 bg-green-600 text-white font-comic text-lg uppercase px-4 py-0.5 border-2 border-black rotate-[-1deg] shadow-[2px_2px_0px_#000] font-bold z-10 tracking-wide";
+        : isKidStory ? "absolute -top-4 left-6 bg-green-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-green-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-emerald-400 font-mono text-xs uppercase px-3 py-1 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sTitle = isEditorial
         ? "font-serif text-3xl font-extrabold tracking-tight text-stone-900 mb-2"
-        : "font-comic text-xl font-bold uppercase text-yellow-400 tracking-wider mb-1";
+        : isKidStory ? "font-sans text-2xl font-bold text-blue-600 mb-1" : "font-mono text-lg font-bold uppercase text-cyan-300 tracking-widest mb-1 text-glow-cyan";
 
     const sSubtitle = isEditorial
         ? "text-stone-500 font-sans text-xs leading-relaxed"
-        : "text-slate-400 text-xs leading-relaxed";
+        : isKidStory ? "text-gray-600 text-sm" : "text-cyan-600 text-xs leading-relaxed font-mono";
 
     const sInput = isEditorial
         ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans"
-        : "w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold";
+        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-gray-950/50 border border-cyan-800 text-cyan-100 text-xs p-2.5 rounded focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)] transition-all font-mono";
 
     const sSelect = isEditorial
         ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans font-semibold"
-        : "w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold";
+        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-gray-950/50 border border-cyan-800 text-cyan-100 text-xs p-2.5 rounded focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)] transition-all font-mono";
 
     const sLabel = isEditorial
         ? "font-sans text-[11px] uppercase text-stone-500 font-bold tracking-wider block mb-1.5"
-        : "font-comic text-xs uppercase text-yellow-400 font-bold tracking-wider block mb-1";
+        : isKidStory ? "font-sans text-sm text-blue-500 font-bold mb-1" : "font-mono text-[10px] uppercase text-cyan-500 tracking-widest block mb-1 opacity-80";
 
     const sPrimaryBtn = isEditorial
         ? "bg-stone-900 hover:bg-stone-805 text-stone-50 font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer"
-        : "flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-white font-mono uppercase tracking-wider text-[10.5px] font-black px-3 py-2 rounded-md border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-[1px_1px_0px_#000] transition-all cursor-pointer";
+        : isKidStory ? "bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 btn-shimmer disabled:opacity-50 text-white font-mono uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded border border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.4)] hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all cursor-pointer";
 
     const sRedBtn = isEditorial
         ? "bg-red-700 hover:bg-red-800 text-white font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer border border-red-800"
-        : "flex items-center gap-1.5 bg-red-650 hover:bg-red-650 text-white font-mono uppercase tracking-wider text-[10.5px] font-black px-3 py-2 rounded-md border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-[1px_1px_0px_#000] transition-all cursor-pointer";
+        : isKidStory ? "bg-red-500 hover:bg-red-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-pink-500 font-mono uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded border border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)] transition-all cursor-pointer";
     
     // Draft state hooks
     const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -557,6 +594,21 @@ export const Setup: React.FC<SetupProps> = (props) => {
     };
 
     // Wardrobe Drawer state tracker
+    const [cohesionSliderValue, setCohesionSliderValue] = useState(50);
+    const [terminalLogs, setTerminalLogs] = useState<string[]>(['> SYSTEM BOOT...', '> INITIALIZING MULTIVERSE MATRIX...']);
+    
+    useEffect(() => {
+        setTerminalLogs(prev => [...prev.slice(-4), `> GENRE LOCKED: ${props.selectedGenre}`]);
+    }, [props.selectedGenre]);
+    
+    useEffect(() => {
+        setTerminalLogs(prev => [...prev.slice(-4), `> LANGUAGE LOCKED: ${props.selectedLanguage}`]);
+    }, [props.selectedLanguage]);
+    
+    useEffect(() => {
+        setTerminalLogs(prev => [...prev.slice(-4), `> NARRATOR PERSONA: ${props.selectedVoice}`]);
+    }, [props.selectedVoice]);
+
     const [isWardrobeOpen, setIsWardrobeOpen] = useState(false);
     const [wardrobeTargetRole, setWardrobeTargetRole] = useState<'Hero' | 'Co-Star' | 'Villain'>('Hero');
     const [activePresets, setActivePresets] = useState<Record<'Hero' | 'Co-Star' | 'Villain', 'Tactical' | 'Gala' | 'Casual' | 'Custom'>>({

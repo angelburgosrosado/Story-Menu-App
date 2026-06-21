@@ -91,6 +91,42 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(55, 65, 81, 1); }
 
+/* Cyberpunk Neon Theme Extensions */
+@keyframes biometric-scan {
+  0% { background-position: 0% -100%; box-shadow: 0 0 0px inset rgba(34,211,238,0); }
+  50% { box-shadow: 0 0 20px inset rgba(34,211,238,0.5); }
+  100% { background-position: 0% 200%; box-shadow: 0 0 0px inset rgba(34,211,238,0); }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: #22d3ee; }
+}
+
+.animate-biometric-scan {
+  background: linear-gradient(to bottom, transparent 40%, rgba(34,211,238,0.4) 50%, transparent 60%);
+  background-size: 100% 200%;
+  animation: biometric-scan 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cyber-border {
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  box-shadow: inset 0 0 15px rgba(34, 211, 238, 0.1), 0 0 15px rgba(34, 211, 238, 0.1);
+  position: relative;
+}
+
+.typewriter-text {
+  overflow: hidden;
+  border-right: .15em solid #22d3ee;
+  white-space: nowrap;
+  animation: typewriter 1s steps(40, end) forwards, blink-caret .75s step-end infinite;
+}
+
 /* Print Styles for Kid Storymaker */
 @media print {
   /* Hide UI elements */

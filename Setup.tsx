@@ -185,6 +185,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const isEditorial = appSkin === 'writers-journal';
     const isKidStory = appSkin === 'kid-story';
+    const isCyberpunk = !isEditorial && !isKidStory;
 
     // Skin computed values
     const sOuterContainer = isEditorial 
@@ -1552,7 +1553,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 </div>
 
                 {/* TAB NAVIGATION: Generator vs Library */}
-                <div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border border-cyan-800/50 rounded-lg overflow-hidden bg-gray-950 p-1.5 gap-2 shadow-[0_0_15px_rgba(34,211,238,0.2)]"}>
+                {!isCyberpunk && (
+<div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border border-cyan-800/50 rounded-lg overflow-hidden bg-gray-950 p-1.5 gap-2 shadow-[0_0_15px_rgba(34,211,238,0.2)]"}>
                     <button
                         type="button"
                         onClick={() => setActiveTab('generate')}
@@ -1616,8 +1618,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         {isEditorial ? 'Settings' : 'Settings'}
                     </button>
                 </div>
+)}
 
-                {activeTab === 'generate' ? (
+
+                {(isCyberpunk || activeTab === 'generate') && (
                     <>
                         {/* Main Config Workspace split in 2 bold frames */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 relative z-10">
@@ -2862,7 +2866,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                      </button>
                 </div>
             </>
-        ) : activeTab === 'settings' ? (
+        )}
+{(!isCyberpunk && activeTab === 'settings') && (
             <div className="p-8">
                 <div className={sCard}>
                     <h3 className={sTitle}>Global Settings</h3>
@@ -2880,7 +2885,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     </div>
                 </div>
             </div>
-        ) : activeTab === 'persona' ? (
+        )}
+{(isCyberpunk || activeTab === 'persona') && (
              <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
                   {/* MULTIVERSE WARDROBE DRAWER COMPONENT */}
                   <AnimatePresence>
@@ -3518,7 +3524,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       </div>
                   </div>
              </div>
-        ) : activeTab === 'blueprint' ? (
+        )}
+{(isCyberpunk || activeTab === 'blueprint') && (
              <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
                   {/* HEADER BANNER */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-black pb-4 mb-6">
@@ -3726,7 +3733,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                        </div>
                   )}
              </div>
-        ) : (
+        )}
+{(!isCyberpunk && activeTab === 'library') && (
              <div className={isEditorial 
                   ? "relative z-10 bg-[#fdfdfc] border border-stone-200 p-6 rounded-xl shadow-sm text-stone-900 text-left select-none font-sans"
                   : "relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none"}>

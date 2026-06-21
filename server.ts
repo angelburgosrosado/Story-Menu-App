@@ -1961,6 +1961,17 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
+    // --- DIAGNOSTIC ENDPOINT (PUBLIC) ---
+    app.get('/api/public/debug-env', (req, res) => {
+        return res.json({
+            timestamp: new Date().toISOString(),
+            adminEmailStatus: process.env.ADMIN_EMAIL ? `Loaded (${process.env.ADMIN_EMAIL.length} chars)` : 'MISSING',
+            adminEmailPreview: process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.substring(0, 10) + '...' : '',
+            geminiKeyStatus: process.env.GEMINI_API_KEY ? 'Loaded' : 'MISSING',
+            stripeKeyStatus: process.env.STRIPE_SECRET_KEY ? 'Loaded' : 'MISSING'
+        });
+    });
+
     // --- DYNAMIC LANDING PAGE ---
     app.get('/api/public/landing', async (req, res): Promise<any> => {
         try {

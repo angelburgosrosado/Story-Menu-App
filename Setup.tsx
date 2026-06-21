@@ -201,15 +201,15 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const sHeaderBadge = isEditorial
         ? "absolute -top-3.5 left-6 bg-stone-800 text-stone-50 border border-stone-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : isKidStory ? "absolute -top-4 left-6 bg-yellow-400 text-black font-sans text-lg px-4 py-1 rounded-full border-2 border-orange-400 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-cyan-400 font-mono text-xs uppercase px-3 py-1 border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] font-bold z-10 tracking-widest rounded-sm";
+        : isKidStory ? "absolute -top-4 left-6 bg-gray-900 text-yellow-400 text-black font-sans text-lg px-4 py-1 rounded-full border-2 border-orange-400 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-cyan-400 font-mono text-xs uppercase px-3 py-1 border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sHeaderBadgeRed = isEditorial
         ? "absolute -top-3.5 left-6 bg-amber-700 text-stone-50 border border-amber-805 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : isKidStory ? "absolute -top-4 left-6 bg-red-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-red-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-pink-500 font-mono text-xs uppercase px-3 py-1 border border-pink-500/50 shadow-[0_0_10px_rgba(236,72,153,0.2)] font-bold z-10 tracking-widest rounded-sm";
+        : isKidStory ? "absolute -top-4 left-6 bg-gray-900 text-red-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-red-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-pink-500 font-mono text-xs uppercase px-3 py-1 border border-pink-500/50 shadow-[0_0_10px_rgba(236,72,153,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sHeaderBadgeGreen = isEditorial
         ? "absolute -top-3.5 left-6 bg-emerald-700 text-stone-50 border border-emerald-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : isKidStory ? "absolute -top-4 left-6 bg-green-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-green-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-emerald-400 font-mono text-xs uppercase px-3 py-1 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-bold z-10 tracking-widest rounded-sm";
+        : isKidStory ? "absolute -top-4 left-6 bg-gray-900 text-green-400 text-white font-sans text-lg px-4 py-1 rounded-full border-2 border-green-600 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-emerald-400 font-mono text-xs uppercase px-3 py-1 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-bold z-10 tracking-widest rounded-sm";
 
     const sTitle = isEditorial
         ? "font-serif text-3xl font-extrabold tracking-tight text-stone-900 mb-2"
@@ -237,7 +237,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const sRedBtn = isEditorial
         ? "bg-red-700 hover:bg-red-800 text-white font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer border border-red-800"
-        : isKidStory ? "bg-red-500 hover:bg-red-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-pink-500 font-mono uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded border border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)] transition-all cursor-pointer";
+        : isKidStory ? "bg-gray-900 text-red-400 hover:bg-gray-900 text-red-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-pink-500 font-mono uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded border border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)] transition-all cursor-pointer";
     
     // Draft state hooks
     const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -1421,7 +1421,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 {!isEditorial && <div className="absolute inset-0 opacity-15 retro-halftone pointer-events-none" />}
 
                 {/* Aesthetic Top Ribbon */}
-                <div className={`absolute top-0 right-0 ${isEditorial ? 'bg-stone-200 text-stone-700 border-b border-l border-stone-300 font-sans text-[10px] uppercase font-bold tracking-widest px-4.5 py-1 z-10' : 'bg-yellow-400 text-black font-comic text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10'}`}>
+                <div className={`absolute top-0 right-0 ${isEditorial ? 'bg-stone-200 text-stone-700 border-b border-l border-stone-300 font-sans text-[10px] uppercase font-bold tracking-widest px-4.5 py-1 z-10' : 'bg-gray-900 text-yellow-400 text-black font-mono text-xs uppercase px-4 py-1 border-b-2 border-l-2 border-black tracking-widest font-bold z-10'}`}>
                      {isKidStory ? "🌟 Kid Storymaker v1.0" : isEditorial ? t('setup.dashboard.editorialBadge') : t('setup.dashboard.comicBadge')}
                 </div>
 
@@ -1429,7 +1429,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 <div className={`flex justify-between items-center mb-6 relative z-10 select-none pb-4 border-b ${isEditorial ? 'border-stone-200 text-stone-900' : 'border-slate-800 text-slate-300'}`}>
                      <div className="flex items-center gap-2">
                           <span className="text-xl">🛠️</span>
-                          <span className={`${isEditorial ? 'text-xs uppercase tracking-widest text-[#5c5449] font-black font-sans' : 'text-xs uppercase tracking-widest text-yellow-400 font-comic font-black'}`}>{t('setup.dashboard.skinLabel')}</span>
+                          <span className={`${isEditorial ? 'text-xs uppercase tracking-widest text-[#5c5449] font-black font-sans' : 'text-xs uppercase tracking-widest text-yellow-400 font-mono font-black'}`}>{t('setup.dashboard.skinLabel')}</span>
                      </div>
                      <div className={`flex items-center gap-1.5 p-1 rounded-lg text-xs ${isEditorial ? 'bg-stone-200/65' : 'bg-black/40 border border-white/5'}`}>
                           <button
@@ -1471,10 +1471,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                          </div>
                     ) : (
                          <>
-                              <span className="block font-comic text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">{t('setup.dashboard.comicSubtitle')}</span>
-                              <div className="inline-flex items-center justify-center gap-1.5 bg-red-600 border-4 border-black px-6 py-2 shadow-[4px_4px_0px_#000] transform -rotate-1">
-                                  <span className="font-comic text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto3', 'STORY')}</span>
-                                  <span className="font-comic text-4xl md:text-6xl text-yellow-300 tracking-wider font-extrabold" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto4', '.MENU')}</span>
+                              <span className="block font-mono text-red-500 text-xl md:text-2xl tracking-widest uppercase mb-1 drop-shadow-[1px_1px_0px_#000]">{t('setup.dashboard.comicSubtitle')}</span>
+                              <div className="inline-flex items-center justify-center gap-1.5 bg-gray-900 text-red-400 border-4 border-black px-6 py-2 shadow-[4px_4px_0px_#000] transform -rotate-1">
+                                  <span className="font-mono text-4xl md:text-6xl text-white tracking-wider" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto3', 'STORY')}</span>
+                                  <span className="font-mono text-4xl md:text-6xl text-yellow-300 tracking-wider font-extrabold" style={{ textShadow: '3px 3px 0px black' }}>{t('setup.auto4', '.MENU')}</span>
                               </div>
                          </>
                     )}
@@ -1485,7 +1485,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     <div className="md:col-span-12 text-left font-sans">
                         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 ${isEditorial ? 'border-stone-200 pb-4 mb-4' : 'border-slate-800 pb-4 mb-4'}`}>
                             <div>
-                                <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-comic font-black text-xl text-yellow-400 tracking-wider uppercase"}>
+                                <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-mono font-black text-xl text-yellow-400 tracking-wider uppercase"}>
                                      {t('setup.dashboard.cloudActive')}
                                 </h3>
                                 <p className={isEditorial ? "text-stone-500 font-sans text-xs mt-1" : "text-slate-400 font-mono text-xs mt-1"}>
@@ -1510,8 +1510,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            {t('setup.dashboard.signOut')}
                                       </button>
                                  )}
-                                 <div className={isEditorial ? "flex items-center gap-2 bg-stone-200/60 p-2 rounded-lg text-xs font-semibold" : "flex items-center gap-2 bg-slate-900 border-2 border-black/80 px-3 py-2 rounded text-xs select-none"}>
-                                     <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                                 <div className={isEditorial ? "flex items-center gap-2 bg-stone-200/60 p-2 rounded-lg text-xs font-semibold" : "flex items-center gap-2 bg-gray-950/50 border border-cyan-800/80 px-3 py-2 rounded text-xs select-none"}>
+                                     <span className="w-2.5 h-2.5 rounded-full bg-gray-900 text-green-400 animate-pulse" />
                                      <span className={isEditorial ? "font-sans text-stone-600 uppercase tracking-wider text-[11px]" : "font-mono text-slate-300 uppercase tracking-widest text-[11px] font-bold"}>
                                           {t('setup.dashboard.firestoreLive')}
                                      </span>
@@ -1523,7 +1523,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">🌌</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f1Title')}</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-mono font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f1Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
                                          {t('setup.dashboard.f1Desc')}
                                     </p>
@@ -1532,7 +1532,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">🎭</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f2Title')}</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-mono font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f2Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
                                          {t('setup.dashboard.f2Desc')}
                                     </p>
@@ -1541,7 +1541,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div className="flex gap-3">
                                 <span className="text-3xl select-none">📚</span>
                                 <div>
-                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-comic font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f3Title')}</h4>
+                                    <h4 className={isEditorial ? "font-sans font-bold text-stone-900 uppercase text-xs tracking-wider mb-1" : "font-mono font-bold text-white uppercase text-xs tracking-wider mb-1"}>{t('setup.dashboard.f3Title')}</h4>
                                     <p className={isEditorial ? "text-stone-500 text-xs leading-relaxed font-sans" : "text-slate-400 text-xs leading-relaxed"}>
                                          {t('setup.dashboard.f3Desc')}
                                     </p>
@@ -1552,14 +1552,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 </div>
 
                 {/* TAB NAVIGATION: Generator vs Library */}
-                <div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border-4 border-black rounded-lg overflow-hidden bg-slate-950 p-1.5 gap-2 shadow-[4px_4px_0px_#000]"}>
+                <div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border border-cyan-800/50 rounded-lg overflow-hidden bg-gray-950 p-1.5 gap-2 shadow-[0_0_15px_rgba(34,211,238,0.2)]"}>
                     <button
                         type="button"
                         onClick={() => setActiveTab('generate')}
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'generate' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'generate' ? 'bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'generate' ? 'bg-gray-900 text-cyan-400 border border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
                         {isEditorial ? t('setup.tabs.generateEditorial') : t('setup.tabs.generateComic')}
@@ -1570,7 +1570,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'blueprint' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-indigo-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-gray-900 text-pink-500 border border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
                         {isEditorial ? t('setup.tabs.blueprintEditorial') : t('setup.tabs.blueprintComic')}
@@ -1582,11 +1582,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'persona' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-green-600 text-white border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] translate-y-[-1px]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
+                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-gray-900 text-emerald-400 border border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
                         }`}
                     >
                         {isEditorial ? t('setup.tabs.personaEditorial') : t('setup.tabs.personaComic')}
-                        <span className="absolute -top-2 -right-2 bg-yellow-400 text-black font-bold border border-black text-[10px] px-2 py-0.5 rounded shadow-sm">{t('setup.auto6', 'BETA')}</span>
+                        <span className="absolute -top-2 -right-2 bg-gray-900 text-yellow-400 text-black font-bold border border-black text-[10px] px-2 py-0.5 rounded shadow-sm">{t('setup.auto6', 'BETA')}</span>
                     </button>
                     <button
                         type="button"
@@ -1594,7 +1594,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'library' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'library' ? 'bg-green-500 text-white border-black shadow-[4px_4px_0px_#000]' : 'bg-green-950/40 text-green-300 border-green-900/50 hover:border-green-500 hover:bg-green-900/40'}`
+                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'library' ? 'bg-gray-900 text-emerald-400 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-emerald-300 hover:bg-gray-900/50 border-cyan-800/30'}`
                         }`}
                     >
                         {isEditorial ? t('setup.tabs.libraryEditorial') : t('setup.tabs.libraryComic')}
@@ -1610,7 +1610,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
                             isEditorial 
                                 ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'settings' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-comic text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'settings' ? 'bg-orange-500 text-white border-black shadow-[4px_4px_0px_#000]' : 'bg-orange-950/40 text-orange-300 border-orange-900/50 hover:border-orange-500 hover:bg-orange-900/40'}`
+                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'settings' ? 'bg-gray-900 text-orange-400 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-orange-300 hover:bg-gray-900/50 border-cyan-800/30'}`
                         }`}
                     >
                         {isEditorial ? 'Settings' : 'Settings'}
@@ -1653,19 +1653,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
                                                 {isEditorial ? "PROTAGONIST ACTIVE" : "HERO ACTIVE"}
                                            </div>
 
                                            <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-blue-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-mono'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
                                                 <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                            </div>
                                       </div>
                                  ) : (
                                       <label htmlFor="hero-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-blue-800 hover:bg-blue-950/50'} cursor-pointer transition-colors group/upload`}>
                                            <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
-                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-comic text-[10px] uppercase px-2 py-0.5 rounded-full shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
+                                                <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-mono text-[10px] uppercase px-2 py-0.5 rounded-full shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
                                                 <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
                                            </div>
 
@@ -1674,7 +1674,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-blue-300'}`}>{isEditorial ? "PORTRAIT" : "HERO AVATAR"}</span>
+                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-mono text-blue-300'}`}>{isEditorial ? "PORTRAIT" : "HERO AVATAR"}</span>
                                            <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
                                       </label>
                                  )}
@@ -1684,7 +1684,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-green-400'}`}>
                                                 {isEditorial ? "🖋️ PROTAGONIST DATA" : "⚡ IDENTITY RECORD"}
                                            </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-mono'}`}>
                                                 {isEditorial ? "PROTAGONIST" : "MAIN HERO"}
                                            </p>
                                            <p className={`text-[9.5px] line-clamp-2 mt-1 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.hero?.desc || (isEditorial ? "A central figure of the narrative..." : "Ready for battle")}</p>
@@ -1739,19 +1739,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-purple-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
+                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-gray-900 text-purple-400 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
                                                 {isEditorial ? "SUPPORTING CAST READY" : "CO-STAR READY"}
                                            </div>
 
                                            <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-purple-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-mono'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
                                                 <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                            </div>
                                       </div>
                                  ) : (
                                       <label htmlFor="friend-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-purple-800 hover:bg-purple-950/50'} cursor-pointer transition-colors group/upload`}>
                                            <div className="absolute top-2 left-2 right-2 flex justify-end items-center">
-                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto10', 'OPTIONAL')}</span>
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-purple-900 border border-purple-700 text-purple-200 font-mono text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto10', 'OPTIONAL')}</span>
                                            </div>
 
                                            <div className={`mt-2 mb-1 transform group-hover/upload:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-purple-400'}`}>
@@ -1759,7 +1759,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-purple-300'}`}>{isEditorial ? "PORTRAIT" : "CO-STAR AVATAR"}</span>
+                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-mono text-purple-300'}`}>{isEditorial ? "PORTRAIT" : "CO-STAR AVATAR"}</span>
                                            <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
                                       </label>
                                  )}
@@ -1769,7 +1769,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-purple-400 animate-pulse'}`}>
                                                 {isEditorial ? "📜 SUPPORTING CAST REGISTERED" : "🌟 ALLY DISCOVERED"}
                                            </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-mono'}`}>
                                                 {isEditorial ? "CO-STAR / ALLY" : "SOCIUS / SIDEKICK"}
                                            </p>
                                            <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.friend?.desc || (isEditorial ? "Supporting the main narrative thread..." : "Ready for combat support")}</p>
@@ -1824,19 +1824,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
-                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-red-600 text-white border border-black font-comic text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
+                                           <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-gray-900 text-red-400 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
                                                 {isEditorial ? "ANTAGONIST ACTIVE" : "NEMESIS ACTIVE"}
                                            </div>
 
                                            <div className={`absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 ${isEditorial ? 'bg-stone-900/90' : 'bg-red-950/90'}`}>
-                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-comic'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
+                                                <span className={`text-xs font-bold uppercase tracking-wider ${isEditorial ? 'text-stone-100 font-sans' : 'text-yellow-400 font-mono'}`}>{isEditorial ? "REPLACE IMAGE" : "CHANGE PROFILE"}</span>
                                                 <span className={`text-[8px] font-mono mt-0.5 ${isEditorial ? 'text-stone-300' : 'text-gray-300'}`}>{isEditorial ? "SELECT FILE" : "CLICK TO SWAP"}</span>
                                            </div>
                                       </div>
                                  ) : (
                                       <label htmlFor="villain-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-red-800 hover:bg-red-950/50'} cursor-pointer transition-colors group/upload`}>
                                            <div className="absolute top-2 left-2 right-2 flex justify-end items-center">
-                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-comic text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto12', 'OPTIONAL')}</span>
+                                                <span className={isEditorial ? "bg-stone-200 text-stone-600 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-red-950 border border-red-900 text-red-200 font-mono text-[10px] uppercase px-2 py-0.5 rounded-full"}>{t('setup.auto12', 'OPTIONAL')}</span>
                                            </div>
 
                                            <div className={`mt-2 mb-1 transform group-hover/upload:scale-110 transition-transform duration-300 ${isEditorial ? 'text-stone-400' : 'text-red-400'}`}>
@@ -1845,7 +1845,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
                                                 </svg>
                                            </div>
-                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-comic text-red-300'}`}>{isEditorial ? "PORTRAIT" : "ARC-RIVAL AVATAR"}</span>
+                                           <span className={`text-sm tracking-wide ${isEditorial ? 'font-sans font-bold text-stone-700' : 'font-mono text-red-300'}`}>{isEditorial ? "PORTRAIT" : "ARC-RIVAL AVATAR"}</span>
                                            <span className={`text-[9px] uppercase tracking-widest font-mono mt-0.5 ${isEditorial ? 'text-stone-400' : 'text-gray-400'}`}>{isEditorial ? "CLICK TO ADD FILE" : "CLICK TO SCAN"}</span>
                                       </label>
                                  )}
@@ -1855,7 +1855,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <span className={`text-[9px] font-mono tracking-wider font-bold block mb-0.5 ${isEditorial ? 'text-stone-600' : 'text-red-500'}`}>
                                                 {isEditorial ? "⚖️ CONFLICT CORE REGISTERED" : "⚠️ MENACE UNLEASHED"}
                                            </span>
-                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-comic'}`}>
+                                           <p className={`text-sm leading-none uppercase tracking-wide truncate ${isEditorial ? 'text-stone-850 font-sans font-black' : 'text-white font-mono'}`}>
                                                 {isEditorial ? "ANTAGONIST" : "ARC-RIVAL"}
                                            </p>
                                            <p className={`text-[9.5px] line-clamp-1 mt-0.5 font-sans ${isEditorial ? 'text-stone-600' : 'text-gray-300'}`}>{props.villain?.desc || (isEditorial ? "The central source of narrative tension..." : "Plotting doom...")}</p>
@@ -1900,7 +1900,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         {savedCharacters.length > 0 && (
                             <div className={`mt-5 pt-4 border-t-2 ${isEditorial ? 'border-stone-200' : 'border-slate-700'}`}>
                                 <div className="flex justify-between items-center mb-2.5">
-                                     <span className={isEditorial ? "font-sans text-xs uppercase text-stone-700 font-black tracking-wider" : "font-comic text-xs uppercase text-yellow-300 font-bold tracking-wider"}>
+                                     <span className={isEditorial ? "font-sans text-xs uppercase text-stone-700 font-black tracking-wider" : "font-mono text-xs uppercase text-yellow-300 font-bold tracking-wider"}>
                                           {isEditorial ? "🗃️ Character Index (Stored Profiles)" : "🗃️ Character Vault (Saved in pg DB)"}
                                      </span>
                                      <span className={`text-[10px] font-mono ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
@@ -1914,7 +1914,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                className={`flex-shrink-0 w-36 rounded-lg p-2 flex flex-col justify-between group/vault relative text-left ${
                                                     isEditorial 
                                                          ? 'bg-stone-205 border border-stone-300' 
-                                                         : 'bg-slate-900 border-2 border-black'
+                                                         : 'bg-gray-950/50 border border-cyan-800'
                                                }`}
                                           >
                                                <div className={`relative h-20 w-full mb-1 rounded overflow-hidden ${isEditorial ? 'bg-stone-200' : 'bg-slate-950'}`}>
@@ -1931,7 +1931,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     )}
                                                     <button 
                                                          onClick={(e) => { e.stopPropagation(); handleDeleteFromVault(char.id); }}
-                                                         className="absolute top-1 right-1 bg-black/75 hover:bg-red-600 rounded p-1 text-white border border-black opacity-0 group-hover/vault:opacity-100 transition-opacity duration-200"
+                                                         className="absolute top-1 right-1 bg-black/75 hover:bg-gray-900 text-red-400 rounded p-1 text-white border border-black opacity-0 group-hover/vault:opacity-100 transition-opacity duration-200"
                                                          title="Retire Character"
                                                     >
                                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1940,7 +1940,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     </button>
                                                </div>
                                                <div>
-                                                    <p className={`text-xs uppercase truncate leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-850' : 'font-comic font-bold text-gray-200'}`}>
+                                                    <p className={`text-xs uppercase truncate leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-850' : 'font-mono font-bold text-gray-200'}`}>
                                                          {char.character_name}
                                                     </p>
                                                     <span className={`text-[9px] font-mono uppercase px-1 py-0.2 rounded border inline-block mt-0.5 select-none ${
@@ -1970,7 +1970,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                          className={`text-[10px] py-0.5 uppercase tracking-wide rounded border transition-colors ${
                                                               isEditorial
                                                                    ? 'bg-stone-200 hover:bg-[#3c3730] text-stone-700 hover:text-white border-stone-300 font-sans font-bold'
-                                                    : 'bg-zinc-805 hover:bg-yellow-400 font-comic text-gray-300 hover:text-black border-black'
+                                                    : 'bg-zinc-805 hover:bg-gray-900 text-yellow-400 font-mono text-gray-300 hover:text-black border-black'
                                                          }`}
                                                     >
                                                          {isEditorial ? "ASSIGN ROLE" : "CAST ROLE"}
@@ -1986,14 +1986,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <div className={`mt-4 p-5 rounded-lg text-left ${
                              isEditorial 
                                   ? 'bg-stone-100/90 border border-stone-300 shadow-sm' 
-                                  : 'bg-slate-900 border-4 border-black shadow-[4px_4px_0px_#000]'
+                                  : 'bg-slate-900 border border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
                         }`}>
                              <div className="flex items-center gap-2 mb-2">
                                   <span className="text-xl">{isEditorial ? '✒️' : '💈'}</span>
                                   <span className={
                                        isEditorial 
                                             ? "font-sans text-sm uppercase text-stone-700 font-black tracking-wider" 
-                                            : "font-comic text-sm uppercase text-green-400 font-extrabold tracking-wider animate-pulse"
+                                            : "font-mono text-sm uppercase text-green-400 font-extrabold tracking-wider animate-pulse"
                                   }>
                                        {isEditorial ? "Character Cohesion & Editorial Style Sheets" : "Character Visual Cohesion & Design Coordinates"}
                                   </span>
@@ -2016,7 +2016,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                   }`}>
                                         <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-3 gap-2 ${isEditorial ? 'border-stone-200' : 'border-red-500/20'}`}>
                                              <div className="flex flex-col text-left">
-                                                  <span className={`text-xs uppercase tracking-wide flex items-center gap-1.5 leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-700' : 'font-comic font-black text-red-400'}`}>
+                                                  <span className={`text-xs uppercase tracking-wide flex items-center gap-1.5 leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-700' : 'font-mono font-black text-red-400'}`}>
                                                        {isEditorial ? "🔒 Antagonist Archetype Schema (Persistent Character Model)" : "🔒 Nemesis Identity Schema (Google Firestore Sync Layer)"}
                                                   </span>
                                                   <span className={`text-[10px] ${isEditorial ? 'text-stone-500 font-sans' : 'text-gray-400 font-mono'}`}>
@@ -2049,7 +2049,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                   className={`self-start sm:self-center text-[9.5px] rounded px-2.5 py-1 font-bold uppercase transition-all tracking-wide disabled:opacity-40 ${
                                                        isEditorial
                                                             ? 'bg-stone-200 hover:bg-[#3c3730] text-stone-700 hover:text-white border border-stone-300 font-sans'
-                                                            : 'bg-red-955/65 hover:bg-red-900 text-red-200 border border-red-500/40 font-comic'
+                                                            : 'bg-red-955/65 hover:bg-red-900 text-red-200 border border-red-500/40 font-mono'
                                                   }`}
                                                   disabled={!props.villain}
                                              >
@@ -2281,7 +2281,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                       disabled={!props.villain}
                                                                       className={`flex-1 text-[8.5px] py-1 font-mono uppercase font-black transition-colors ${
                                                                            props.nemesisDNA?.rendering_directives?.continuity_weight === w
-                                                                                ? isEditorial ? 'bg-[#3c3730] text-stone-50' : 'bg-red-600 text-white'
+                                                                                ? isEditorial ? 'bg-[#3c3730] text-stone-50' : 'bg-gray-900 text-red-400 text-white'
                                                                                 : isEditorial ? 'bg-stone-200 text-stone-600 hover:bg-stone-300' : 'bg-slate-900 text-gray-400 hover:text-white'
                                                                       }`}
                                                                  >
@@ -2347,14 +2347,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     isSelected 
                                                     ? (isEditorial
                                                         ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm'
-                                                        : 'bg-yellow-400 text-black border-2 border-black font-bold -rotate-1 translate-x-px translate-y-px shadow-[2px_2px_0px_rgba(0,0,0,1)]')
+                                                        : 'bg-gray-900 text-yellow-400 text-black border-2 border-black font-bold -rotate-1 translate-x-px translate-y-px shadow-[2px_2px_0px_rgba(0,0,0,1)]')
                                                     : (isEditorial
                                                         ? 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-100 hover:text-stone-900 hover:border-stone-400'
                                                         : 'bg-slate-900 text-gray-300 border-2 border-slate-700 hover:bg-slate-750 hover:text-white hover:border-gray-500 hover:-translate-y-px shadow-sm')
                                                 }`}
                                             >
                                                 <span className="text-base select-none">{genreIcons[g] || "📖"}</span>
-                                                <span className={`text-xs tracking-wide uppercase truncate ${isEditorial ? 'font-sans font-medium' : 'font-comic'}`}>{g}</span>
+                                                <span className={`text-xs tracking-wide uppercase truncate ${isEditorial ? 'font-sans font-medium' : 'font-mono'}`}>{g}</span>
                                             </button>
                                         );
                                     })}
@@ -2365,7 +2365,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div>
                                 <p className={isEditorial
                                     ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
-                                    : 'font-comic text-base tracking-wide text-cyan-400 uppercase mb-2'}>
+                                    : 'font-mono text-base tracking-wide text-cyan-400 uppercase mb-2'}>
                                     {isEditorial ? 'Multilingual Lexicon (Output)' : 'Multilingual Lexicon (Language)'}
                                 </p>
                                 <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
@@ -2379,7 +2379,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      isSelected
                                                      ? (isEditorial
                                                          ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm font-sans'
-                                                         : 'bg-cyan-400 text-black border-2 border-black shadow-[1px_1px_0px_black] font-mono')
+                                                         : 'bg-gray-900 text-cyan-400 text-black border-2 border-black shadow-[1px_1px_0px_black] font-mono')
                                                      : (isEditorial
                                                          ? 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-100 hover:text-stone-800 hover:border-stone-400 font-sans'
                                                          : 'bg-slate-900 text-gray-400 border-2 border-slate-700 hover:text-white hover:border-gray-500 font-mono')
@@ -2396,7 +2396,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div>
                                 <p className={isEditorial
                                     ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase mb-2'
-                                    : 'font-comic text-base tracking-wide text-purple-300 uppercase mb-2'}>
+                                    : 'font-mono text-base tracking-wide text-purple-300 uppercase mb-2'}>
                                     {isEditorial ? 'Voice Narrator Persona' : 'Voice Narrator (Gemini Audio)'}
                                 </p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
@@ -2411,7 +2411,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      isSelected
                                                      ? (isEditorial
                                                          ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm'
-                                                         : 'bg-purple-600 text-white border-2 border-black shadow-[2px_2px_0px_black] scale-[1.01] font-bold')
+                                                         : 'bg-gray-900 text-purple-400 text-white border-2 border-black shadow-[2px_2px_0px_black] scale-[1.01] font-bold')
                                                      : (isEditorial
                                                          ? 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-100 hover:text-stone-800 hover:border-stone-400'
                                                          : 'bg-slate-900 text-gray-400 border-2 border-slate-700 hover:text-white hover:border-gray-500')
@@ -2431,7 +2431,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     <div className="flex items-center justify-between mb-1">
                                          <p className={isEditorial
                                              ? 'font-sans text-xs font-semibold tracking-widest text-stone-600 uppercase'
-                                             : 'font-comic text-xs tracking-wide text-red-400 uppercase'}>
+                                             : 'font-mono text-xs tracking-wide text-red-400 uppercase'}>
                                              {isEditorial ? 'Author\'s Premise (Optional)' : 'Enter Your Unique Multiverse Concept'}
                                          </p>
                                          <button
@@ -2440,7 +2440,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                               disabled={suggestingFields['customPremise']}
                                               className={isEditorial
                                                   ? 'text-[9.5px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-300 rounded px-2 py-0.5 font-sans tracking-wide transition-all disabled:opacity-40 font-semibold uppercase'
-                                                  : 'text-[9.5px] bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
+                                                  : 'text-[9.5px] bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-500/40 rounded px-2 py-0.5 font-mono tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
                                          >
                                               {suggestingFields['customPremise'] ? (isEditorial ? '✨ Thinking…' : '✨ THINKING...') : (isEditorial ? '✨ AI Suggest' : '✨ AI SUGGEST')}
                                          </button>
@@ -2459,7 +2459,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             )}
 
                             {/* ADVANCED STORY DIRECTIONS & NARRATIVE DIRECTIVES */}
-                            <div className={`border-t pt-4 mt-2 text-left ${isEditorial ? 'border-stone-200' : 'border-slate-700/60 font-comic'}`}>
+                            <div className={`border-t pt-4 mt-2 text-left ${isEditorial ? 'border-stone-200' : 'border-slate-700/60 font-mono'}`}>
                                 {/* Header with neon elements */}
                                 <div className="flex flex-col mb-2.5">
                                      <div className="flex items-center justify-between">
@@ -2467,7 +2467,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                <span className="text-base">{isEditorial ? '📋' : '🔮'}</span>
                                                <span className={isEditorial
                                                    ? 'font-sans text-[13px] font-bold uppercase text-stone-700 tracking-wider'
-                                                   : 'font-comic text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider'}
+                                                   : 'font-mono text-[13px] font-extrabold uppercase text-cyan-300 tracking-wider'}
                                                    style={isEditorial ? {} : { textShadow: '1px 1px 0px black' }}>
                                                     {isEditorial ? 'Saga Blueprint & Author Guidelines' : 'Saga Blueprint Console'}
                                                </span>
@@ -2653,8 +2653,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 {/* COMPILED GUIDELINE DOSSIER */}
                                 <div className={`transition-colors rounded-md p-3 text-left relative overflow-hidden ${isEditorial
                                     ? 'border border-stone-200 hover:border-stone-400 bg-stone-50'
-                                    : 'border border-slate-800 hover:border-cyan-900/60 bg-slate-950/70 font-comic'}`}>
-                                     {!isEditorial && <div className="absolute top-0 right-0 h-10 w-10 bg-cyan-500/5 blur-2xl rounded-full" />}
+                                    : 'border border-slate-800 hover:border-cyan-900/60 bg-slate-950/70 font-mono'}`}>
+                                     {!isEditorial && <div className="absolute top-0 right-0 h-10 w-10 bg-gray-900 text-cyan-400/5 blur-2xl rounded-full" />}
                                      
                                      <div className={`flex items-center justify-between pb-1.5 mb-2 ${isEditorial ? 'border-b border-stone-200' : 'border-b border-slate-800'}`}>
                                           <div className="flex items-center gap-1.5">
@@ -2680,7 +2680,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      <div className="grid grid-cols-2 md:grid-cols-1 xl:grid-cols-2 gap-1.5 font-sans">
                                           <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
                                                <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Genre' : 'STORY PATH (GENRE)'}</span>
-                                               <span className={`text-[10.5px] font-extrabold ${isEditorial ? 'text-stone-800 font-sans' : 'text-white font-comic'}`}>
+                                               <span className={`text-[10.5px] font-extrabold ${isEditorial ? 'text-stone-800 font-sans' : 'text-white font-mono'}`}>
                                                     {genreIcons[props.selectedGenre] || "📖"} {props.selectedGenre || "Custom"}
                                                </span>
                                           </div>
@@ -2701,7 +2701,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                           <div className={`p-1.5 rounded ${isEditorial ? 'bg-white border border-stone-200' : 'bg-slate-900/80 border border-slate-800'}`}>
                                                <span className={`text-[8px] uppercase block font-bold ${isEditorial ? 'text-stone-500 font-sans' : 'text-slate-500 font-mono'}`}>{isEditorial ? 'Story Template' : 'STORY OUTLINE TYPE'}</span>
-                                               <span className={`text-[10.5px] font-medium block ${isEditorial ? 'text-stone-700 font-sans' : 'text-purple-300 font-comic'}`}>
+                                               <span className={`text-[10.5px] font-medium block ${isEditorial ? 'text-stone-700 font-sans' : 'text-purple-300 font-mono'}`}>
                                                     {props.creativeDirectives
                                                         ? (isEditorial ? "📝 Custom guidelines active" : "📝 Author Blueprint Customised")
                                                         : (isEditorial ? "📖 Default narrative formula" : "🤖 Standard Co-Creative Formula")}
@@ -2740,7 +2740,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                    disabled={suggestingFields['soundPrompt']}
                                                    className={isEditorial
                                                        ? 'text-[9.5px] bg-stone-200 hover:bg-stone-300 text-stone-600 border border-stone-300 rounded px-2 py-0.5 font-sans tracking-wide transition-all disabled:opacity-40 font-semibold uppercase'
-                                                       : 'text-[9.5px] bg-yellow-950/60 hover:bg-yellow-900 text-yellow-200 border border-yellow-500/40 rounded px-2 py-0.5 font-comic tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
+                                                       : 'text-[9.5px] bg-yellow-950/60 hover:bg-yellow-900 text-yellow-200 border border-yellow-500/40 rounded px-2 py-0.5 font-mono tracking-wide transition-all disabled:opacity-40 font-bold uppercase'}
                                               >
                                                    {suggestingFields['soundPrompt']
                                                        ? (isEditorial ? '✨ Thinking…' : '✨ THINKING...')
@@ -2756,7 +2756,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                  : "e.g. 80s arcade synthesizer, cosmic cyberbass, retro spooky pipe organ"} 
                                              className={isEditorial
                                                  ? 'w-full bg-white border border-stone-300 text-stone-800 text-xs p-2 rounded focus:outline-none focus:border-stone-500 font-sans'
-                                                 : 'w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-yellow-400 font-sans'}
+                                                 : 'w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2 rounded focus:outline-none focus:border-yellow-400 font-sans'}
                                          />
                                          {/* Clickable Sound Presets */}
                                          <div className="mt-2 flex flex-wrap gap-1.5">
@@ -2788,7 +2788,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-white font-comic'}`}>
+                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-white font-mono'}`}>
                                              {isEditorial ? 'Rich Prose Mode' : 'Novel Mode / Rich Content'}
                                          </span>
                                          <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
@@ -2797,7 +2797,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     </div>
                                     <button 
                                         onClick={() => props.onRichModeChange(!props.richMode)}
-                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.richMode ? (isEditorial ? 'bg-stone-700' : 'bg-cyan-500') : 'bg-slate-700'} relative`}
+                                        className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.richMode ? (isEditorial ? 'bg-stone-700' : 'bg-gray-900 text-cyan-400') : 'bg-slate-700'} relative`}
                                         aria-label="Toggle Rich Prose Mode"
                                     >
                                          <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${props.richMode ? 'translate-x-6' : 'translate-x-0'}`} />
@@ -2806,7 +2806,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
-                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-yellow-400 font-comic animate-pulse'}`}>
+                                         <span className={`text-xs font-bold tracking-wide uppercase ${isEditorial ? 'text-stone-700 font-sans' : 'text-yellow-400 font-mono animate-pulse'}`}>
                                              {isEditorial ? '🎵 Ambient Soundscape' : '🎵 SYNAPSE Retro SOUNDTRACK'}
                                          </span>
                                          <span className={`text-[10px] ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
@@ -2816,7 +2816,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     <button 
                                         onClick={() => props.onSoundtrackChange(!props.soundtrackEnabled)}
                                         className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 ${props.soundtrackEnabled
-                                            ? (isEditorial ? 'bg-stone-700' : 'bg-yellow-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]')
+                                            ? (isEditorial ? 'bg-stone-700' : 'bg-gray-900 text-yellow-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]')
                                             : 'bg-slate-700'} relative`}
                                         aria-label="Toggle Ambient Soundscape"
                                     >
@@ -2835,7 +2835,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 <div className="relative group select-none">
                      {/* Pulsing button shadow */}
                      {!isEditorial && (
-                          <div className={`absolute -inset-1 rounded-lg blur opacity-75 group-hover:opacity-100 transition-opacity duration-300 ${props.hero ? 'bg-red-500 animate-pulse-glow' : 'bg-gray-700'}`} />
+                          <div className={`absolute -inset-1 rounded-lg blur opacity-75 group-hover:opacity-100 transition-opacity duration-300 ${props.hero ? 'bg-gray-900 text-red-400 animate-pulse-glow' : 'bg-gray-700'}`} />
                      )}
                      
                      <button 
@@ -2843,7 +2843,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                           disabled={!props.hero || props.isTransitioning} 
                           className={isEditorial
                                ? "relative w-full py-4 text-base md:text-lg text-stone-50 bg-stone-900 hover:bg-stone-850 font-sans font-black uppercase tracking-widest rounded-xl shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center border border-stone-800"
-                               : "shiny-btn relative comic-btn w-full py-4 text-2xl md:text-4xl text-white font-comic uppercase tracking-widest border-4 border-black disabled:grayscale disabled:opacity-50 disabled:cursor-not-allowed shadow-[6px_6px_0px_#000] hover:scale-[1.01] active:translate-y-1 active:shadow-[2px_2px_0px_#000] transition-all"
+                               : "shiny-btn relative comic-btn w-full py-4 text-2xl md:text-4xl text-white font-mono uppercase tracking-widest border-4 border-black disabled:grayscale disabled:opacity-50 disabled:cursor-not-allowed shadow-[6px_6px_0px_#000] hover:scale-[1.01] active:translate-y-1 active:shadow-[2px_2px_0px_#000] transition-all"
                           }
                      >
                           {props.isTransitioning ? (
@@ -2901,10 +2901,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       animate={{ x: 0, opacity: 1 }}
                                       exit={{ x: '100%', opacity: 0.5 }}
                                       transition={{ type: 'spring', damping: 26, stiffness: 190 }}
-                                      className="absolute top-0 right-0 h-full w-full sm:w-[460px] bg-slate-950 border-l-4 border-black z-[150] shadow-[-10px_0px_0px_rgba(0,0,0,0.8)] rounded-r-lg p-6 flex flex-col font-comic select-none overflow-y-auto cursor-default"
+                                      className="absolute top-0 right-0 h-full w-full sm:w-[460px] bg-slate-950 border-l-4 border-black z-[150] shadow-[-10px_0px_0px_rgba(0,0,0,0.8)] rounded-r-lg p-6 flex flex-col font-mono select-none overflow-y-auto cursor-default"
                                  >
                                       {/* Drawer Header */}
-                                      <div className="flex items-start justify-between border-b-4 border-black pb-3.5 mb-5 font-comic">
+                                      <div className="flex items-start justify-between border-b-4 border-black pb-3.5 mb-5 font-mono">
                                            <div>
                                                 <div className="flex items-center gap-2">
                                                      <span className="text-2xl">🛍️</span>
@@ -2919,14 +2919,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <button
                                                 type="button"
                                                 onClick={() => setIsWardrobeOpen(false)}
-                                                className="w-8 h-8 rounded border-2 border-black bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all text-xs"
+                                                className="w-8 h-8 rounded border-2 border-black bg-gray-900 text-red-400 hover:bg-gray-900 text-red-400 text-white font-bold flex items-center justify-center shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all text-xs"
                                            >
                                                 ✕
                                            </button>
                                       </div>
 
                                       {/* Target Character Tabs */}
-                                      <div className="mb-4 font-comic">
+                                      <div className="mb-4 font-mono">
                                            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2 font-mono">
                                                 Select Active Character Target
                                            </label>
@@ -2947,8 +2947,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                                          ? role === 'Hero'
                                                                               ? 'bg-blue-600 border border-black text-white shadow-[1px_1px_0px_black]'
                                                                               : role === 'Co-Star'
-                                                                                   ? 'bg-purple-600 border border-black text-white shadow-[1px_1px_0px_black]'
-                                                                                   : 'bg-red-600 border border-black text-white shadow-[1px_1px_0px_black]'
+                                                                                   ? 'bg-gray-900 text-purple-400 border border-black text-white shadow-[1px_1px_0px_black]'
+                                                                                   : 'bg-gray-900 text-red-400 border border-black text-white shadow-[1px_1px_0px_black]'
                                                                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                                                }`}
                                                           >
@@ -2961,13 +2961,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                                       {/* Alert Notification inside Drawer */}
                                       {wardrobeAlert && (
-                                           <div className="bg-yellow-500 border-2 border-black text-black font-extrabold text-[10px] p-2 rounded mb-4 animate-bounce text-center uppercase tracking-wide font-comic">
+                                           <div className="bg-gray-900 text-yellow-400 border-2 border-black text-black font-extrabold text-[10px] p-2 rounded mb-4 animate-bounce text-center uppercase tracking-wide font-mono">
                                                 ⚡ {wardrobeAlert}
                                            </div>
                                       )}
 
                                       {/* Presets Selection Column */}
-                                      <div className="flex-1 space-y-4 font-comic">
+                                      <div className="flex-1 space-y-4 font-mono">
                                            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold font-mono block mb-1">
                                                 Choose Predefined Sg-Aesthetic
                                            </span>
@@ -2988,7 +2988,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      >
                                                           {/* Active Tag */}
                                                           {isActive && (
-                                                               <span className="absolute top-2 right-2 bg-yellow-400 text-black text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-[1px_1px_0px_black]">
+                                                               <span className="absolute top-2 right-2 bg-gray-900 text-yellow-400 text-black text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-[1px_1px_0px_black]">
                                                                     ACTIVE WEAR
                                                                </span>
                                                           )}
@@ -3020,14 +3020,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       </div>
 
                                       {/* Drawer Footer controls */}
-                                      <div className="mt-6 border-t-2 border-slate-800 pt-4 text-center font-comic">
+                                      <div className="mt-6 border-t-2 border-slate-800 pt-4 text-center font-mono">
                                            <span className="text-[9.5px] text-slate-400 font-mono uppercase tracking-tight block">
                                                 Updates dynamic rendering directives instantly.
                                            </span>
                                            <button
                                                 type="button"
                                                 onClick={() => setIsWardrobeOpen(false)}
-                                                className="w-full mt-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-xs py-2 uppercase border-2 border-black shadow-[2px_2px_0px_black] active:translate-y-px transition-all font-comic"
+                                                className="w-full mt-2.5 bg-gray-900 text-yellow-400 hover:bg-gray-900 text-yellow-400 text-black font-extrabold text-xs py-2 uppercase border-2 border-black shadow-[2px_2px_0px_black] active:translate-y-px transition-all font-mono"
                                            >
                                                 🔐 LOCK SARTORIAL MATRIX
                                            </button>
@@ -3038,7 +3038,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   </AnimatePresence>
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b-4 border-black pb-4 mb-6 gap-4">
                        <div>
-                            <span className="block font-comic text-purple-400 font-extrabold text-2xl md:text-3xl uppercase tracking-wider mb-1" style={{ textShadow: '2px 2px 0px black' }}>
+                            <span className="block font-mono text-purple-400 font-extrabold text-2xl md:text-3xl uppercase tracking-wider mb-1" style={{ textShadow: '2px 2px 0px black' }}>
                                  🎭 THE MULTIVERSE AI PERSONA TUNING STUDIO
                             </span>
                             <p className="text-xs text-slate-400 font-mono max-w-2xl leading-relaxed">
@@ -3051,7 +3051,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  setWardrobeTargetRole(personaStudioRole);
                                  setIsWardrobeOpen(true);
                             }}
-                            className="self-start md:self-center flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white font-comic font-black text-xs uppercase px-4 py-3 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] tracking-wide transition-all"
+                            className="self-start md:self-center flex items-center gap-1.5 bg-gray-900 text-purple-400 hover:bg-gray-900 text-purple-400 text-white font-mono font-black text-xs uppercase px-4 py-3 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] tracking-wide transition-all"
                        >
                             🛍️ CHOOSE WARDROBE
                        </button>
@@ -3061,12 +3061,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       {/* Left Panel: Creator Workspace */}
                       <div className="lg:col-span-7 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000]">
                            <div>
-                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2">{t('setup.auto25', '1. Select Character Role')}</label>
+                                <label className="block text-xs font-mono text-yellow-300 uppercase tracking-wider mb-2">{t('setup.auto25', '1. Select Character Role')}</label>
                                 <div className="grid grid-cols-3 gap-3">
                                      <button
                                           type="button"
                                           onClick={() => handlePersonaStudioSelectRole('Hero')}
-                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
                                                personaStudioRole === 'Hero'
                                                     ? 'bg-blue-600 border-black text-white shadow-[2px_2px_0px_black]'
                                                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
@@ -3077,9 +3077,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      <button
                                           type="button"
                                           onClick={() => handlePersonaStudioSelectRole('Co-Star')}
-                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
                                                personaStudioRole === 'Co-Star'
-                                                    ? 'bg-purple-600 border-black text-white shadow-[2px_2px_0px_black]'
+                                                    ? 'bg-gray-900 text-purple-400 border-black text-white shadow-[2px_2px_0px_black]'
                                                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
                                           }`}
                                      >
@@ -3088,9 +3088,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      <button
                                           type="button"
                                           onClick={() => handlePersonaStudioSelectRole('Villain')}
-                                          className={`py-2 text-center font-comic font-bold text-xs uppercase rounded border-2 transition-all ${
+                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
                                                personaStudioRole === 'Villain'
-                                                    ? 'bg-red-600 border-black text-white shadow-[2px_2px_0px_black]'
+                                                    ? 'bg-gray-900 text-red-400 border-black text-white shadow-[2px_2px_0px_black]'
                                                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
                                           }`}
                                      >
@@ -3101,23 +3101,23 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                     <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto26', 'Character Name Input')}</label>
+                                     <label className="block text-xs font-mono text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto26', 'Character Name Input')}</label>
                                      <input
                                           type="text"
                                           value={personaStudioName}
                                           onChange={(e) => setPersonaStudioName(e.target.value)}
                                           placeholder="e.g. Captain Volt, Chrono..."
-                                          className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans"
+                                          className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans"
                                      />
                                 </div>
                                 <div>
                                      <div className="flex justify-between items-center mb-1">
-                                          <label className="block text-xs font-comic text-gray-350 uppercase font-semibold">{t('setup.auto27', 'Creative Art Style')}</label>
+                                          <label className="block text-xs font-mono text-gray-350 uppercase font-semibold">{t('setup.auto27', 'Creative Art Style')}</label>
                                           {props.selectedGenre !== personaStudioStyle && (
                                                <button
                                                     type="button"
                                                     onClick={() => setPersonaStudioStyle(props.selectedGenre)}
-                                                    className="text-[8.5px] bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-500/30 rounded px-1.5 py-0.5 font-comic tracking-wide transition-all uppercase font-bold"
+                                                    className="text-[8.5px] bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-500/30 rounded px-1.5 py-0.5 font-mono tracking-wide transition-all uppercase font-bold"
                                                     title={`Sync with selected story: ${props.selectedGenre}`}
                                                >
                                                     🔗 Sync to {props.selectedGenre || "Selected Story"}
@@ -3127,7 +3127,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      <select
                                           value={personaStudioStyle}
                                           onChange={(e) => setPersonaStudioStyle(e.target.value)}
-                                          className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
+                                          className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
                                      >
                                           {GENRES.map((g) => (
                                                 <option key={g} value={g}>{genreIcons[g] || "🎨"} {g}</option>
@@ -3137,13 +3137,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            </div>
 
                            <div>
-                                <label className="block text-xs font-comic text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto28', 'Persona Concept Hint / Keywords')}</label>
+                                <label className="block text-xs font-mono text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto28', 'Persona Concept Hint / Keywords')}</label>
                                 <textarea
                                      rows={2}
                                      value={personaStudioConcept}
                                      onChange={(e) => setPersonaStudioConcept(e.target.value)}
                                      placeholder="e.g. cyberpunk hacktivist with electro-kinesis, hot-headed ninja, mysterious shadow commander"
-                                     className="w-full bg-slate-900 border-2 border-black text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
+                                     className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
                                 />
                                 {/* Custom Style Description Templates */}
                                 <div className="mt-2 text-[10px] text-gray-400">
@@ -3195,7 +3195,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 type="button"
                                 onClick={handlePersonaStudioBrainstorm}
                                 disabled={personaStudioSuggesting}
-                                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold font-comic uppercase text-xs py-3.5 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
+                                className="w-full bg-gray-900 text-yellow-400 hover:bg-gray-900 text-yellow-400 text-black font-semibold font-mono uppercase text-xs py-3.5 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
                            >
                                 {personaStudioSuggesting ? (
                                      <>
@@ -3214,13 +3214,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            {(personaStudioSuggestedName || personaStudioSuggestedBio || personaStudioSuggestedVisuals) && (
                                 <div className="mt-2 p-4 bg-slate-950 border-2 border-dashed border-purple-500/50 rounded-lg animate-fadeIn text-left">
                                      <div className="flex justify-between border-b border-slate-700 pb-1.5 mb-2">
-                                          <span className="font-comic text-xs uppercase text-purple-300 font-bold">{t('setup.auto30', '✨ Designed Persona Profile Specs')}</span>
+                                          <span className="font-mono text-xs uppercase text-purple-300 font-bold">{t('setup.auto30', '✨ Designed Persona Profile Specs')}</span>
                                           <span className="bg-purple-900 text-purple-200 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">{t('setup.auto31', 'GEMINI GENERATED')}</span>
                                      </div>
                                      <div className="space-y-2.5 text-xs text-gray-300">
                                           <div>
                                                <strong className="text-white font-semibold">{t('setup.auto32', 'Brainstormed Name:')}</strong>
-                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 text-yellow-300 font-comic uppercase text-[12px]">{personaStudioSuggestedName}</p>
+                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 text-yellow-300 font-mono uppercase text-[12px]">{personaStudioSuggestedName}</p>
                                           </div>
                                           <div>
                                                <strong className="text-white font-semibold flex items-center">{t('setup.auto33', 'Story Backstory / Bio:')}</strong>
@@ -3243,8 +3243,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             {/* Nemesis Identity Schema Coordination Matrix */}
                             {personaStudioRole === 'Villain' && (
                                  <div className="mt-4 p-4 bg-slate-950 border-4 border-black border-red-500/30 rounded-lg text-left shadow-[4px_4px_0px_rgba(0,0,0,1)] animate-fadeIn">
-                                      <div className="flex flex-col border-b border-red-500/25 pb-2.5 mb-4 font-comic">
-                                           <span className="font-comic text-sm uppercase text-red-400 font-extrabold flex items-center gap-1.5 select-none tracking-wide" style={{ textShadow: '1px 1px 0px black' }}>
+                                      <div className="flex flex-col border-b border-red-500/25 pb-2.5 mb-4 font-mono">
+                                           <span className="font-mono text-sm uppercase text-red-400 font-extrabold flex items-center gap-1.5 select-none tracking-wide" style={{ textShadow: '1px 1px 0px black' }}>
                                                 💀 Nemesis Cosmic Identity Schema Editor
                                            </span>
                                            <span className="text-[10px] text-gray-400 font-mono tracking-wider">
@@ -3464,9 +3464,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       </div>
 
                       {/* Right Panel: Portrait and Casting Panel */}
-                      <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000] text-center min-h-[450px] justify-between font-comic font-bold">
+                      <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000] text-center min-h-[450px] justify-between font-mono font-bold">
                            <div>
-                                <label className="block text-xs font-comic text-yellow-300 uppercase tracking-wider mb-2 text-left">{t('setup.auto39', '2. Character Avatar Portrait')}</label>
+                                <label className="block text-xs font-mono text-yellow-300 uppercase tracking-wider mb-2 text-left">{t('setup.auto39', '2. Character Avatar Portrait')}</label>
                                 <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-950 border-4 border-black rounded-lg overflow-hidden group shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                                      {personaStudioPortrait ? (
                                           <img
@@ -3478,7 +3478,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      ) : (
                                           <div className="w-full h-full flex flex-col items-center justify-center p-4">
                                                <span className="text-5xl mb-2 select-none">🎭</span>
-                                               <span className="font-comic text-sm text-purple-300 uppercase font-extrabold pb-1">{t('setup.auto40', 'AWAITING SUMMONS')}</span>
+                                               <span className="font-mono text-sm text-purple-300 uppercase font-extrabold pb-1">{t('setup.auto40', 'AWAITING SUMMONS')}</span>
                                                <span className="text-[10px] text-gray-400 uppercase font-mono tracking-widest mt-1">{t('setup.auto41', 'SAGA PORTRAIT PORTAL')}</span>
                                           </div>
                                      )}
@@ -3486,7 +3486,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      {personaStudioGeneratingImg && (
                                           <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-4">
                                                <div className="w-12 h-12 border-4 border-t-purple-500 border-r-purple-500 border-b-transparent border-l-transparent rounded-full animate-spin mb-3" />
-                                               <span className="font-comic text-xs uppercase text-purple-400 tracking-wider">{t('setup.auto42', 'SUMMONING VISUAL CORES')}</span>
+                                               <span className="font-mono text-xs uppercase text-purple-400 tracking-wider">{t('setup.auto42', 'SUMMONING VISUAL CORES')}</span>
                                                <span className="text-[9px] font-mono text-gray-400 uppercase mt-1 animate-pulse">{t('setup.auto43', 'GENERATING COMIC PORTRAIT...')}</span>
                                           </div>
                                      )}
@@ -3502,7 +3502,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      type="button"
                                      onClick={handlePersonaStudioGeneratePortrait}
                                      disabled={personaStudioGeneratingImg || (!personaStudioSuggestedVisuals && !personaStudioConcept)}
-                                     className="w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:pointer-events-none text-black font-semibold font-comic uppercase text-xs py-3 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all"
+                                     className="w-full bg-gray-900 text-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:pointer-events-none text-black font-semibold font-mono uppercase text-xs py-3 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px transition-all"
                                 >
                                      🎨 CONJURE AI CARTOON PORTRAIT MAP
                                 </button>
@@ -3510,7 +3510,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      type="button"
                                      onClick={handlePersonaStudioCastCharacter}
                                      disabled={!personaStudioPortrait}
-                                     className="w-full bg-red-656 hover:bg-red-600 disabled:opacity-40 disabled:pointer-events-none text-white font-comic uppercase text-sm font-bold py-3.5 px-4 rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all"
+                                     className="w-full bg-red-656 hover:bg-gray-900 text-red-400 disabled:opacity-40 disabled:pointer-events-none text-white font-mono uppercase text-sm font-bold py-3.5 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px transition-all"
                                 >
                                      🔥 COMMIT PERSONA & CAST AS {personaStudioRole.toUpperCase()}
                                 </button>
@@ -3525,7 +3525,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                        <div>
                             <div className="flex items-center gap-2 mb-1">
                                  <span className="text-3xl">🔮</span>
-                                 <span className="font-comic text-xl lg:text-2xl font-black uppercase text-cyan-300 tracking-wider" style={{ textShadow: '2px 2px 0px black' }}>
+                                 <span className="font-mono text-xl lg:text-2xl font-black uppercase text-cyan-300 tracking-wider" style={{ textShadow: '2px 2px 0px black' }}>
                                       Story Blueprint Manager
                                  </span>
                             </div>
@@ -3539,7 +3539,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  type="button"
                                  onClick={handleGenerateStoryBlueprint}
                                  disabled={generatingBlueprint}
-                                 className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold font-comic uppercase text-xs px-3.5 py-2.5 rounded border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
+                                 className="bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 text-black font-semibold font-mono uppercase text-xs px-3.5 py-2.5 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
                             >
                                  {generatingBlueprint ? (
                                       <>
@@ -3553,14 +3553,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <button
                                  type="button"
                                  onClick={handleInitializeDefaultBlueprint}
-                                 className="bg-purple-600 hover:bg-purple-500 text-white font-semibold font-comic uppercase text-xs px-3.5 py-2.5 rounded border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
+                                 className="bg-gray-900 text-purple-400 hover:bg-gray-900 text-purple-400 text-white font-semibold font-mono uppercase text-xs px-3.5 py-2.5 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
                             >
                                  📋 Load Default Template
                             </button>
                             <button
                                  type="button"
                                  onClick={() => props.onStoryBlueprintChange([])}
-                                 className="bg-slate-950 hover:bg-slate-900 text-red-450 border-2 border-black font-semibold font-comic uppercase text-xs px-3 py-2 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                                 className="bg-slate-950 hover:bg-slate-900 text-red-450 border-2 border-black font-semibold font-mono uppercase text-xs px-3 py-2 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
                             >
                                  ❌ Clear Blueprint
                             </button>
@@ -3586,7 +3586,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   {!props.storyBlueprint || props.storyBlueprint.length === 0 ? (
                        <div className="text-center py-16 px-4 bg-slate-950/40 rounded-xl border-4 border-dashed border-slate-800">
                             <span className="text-5xl block mb-3">🔮</span>
-                            <h3 className="font-comic text-base font-extrabold text-yellow-500 uppercase mb-2">{t('setup.auto48', 'Saga Blueprint Blank')}</h3>
+                            <h3 className="font-mono text-base font-extrabold text-yellow-500 uppercase mb-2">{t('setup.auto48', 'Saga Blueprint Blank')}</h3>
                             <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed mb-4">
                                  Your blueprint configuration is currently empty. Click above to auto-generate a custom plot-line tailored to your active genre and characters, or load a default template structure to write goals manually!
                             </p>
@@ -3595,14 +3595,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       type="button"
                                       onClick={handleGenerateStoryBlueprint}
                                       disabled={generatingBlueprint}
-                                      className="bg-cyan-500 hover:bg-cyan-400 px-4 py-2 text-black font-semibold font-comic uppercase text-xs rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]"
+                                      className="bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 px-4 py-2 text-black font-semibold font-mono uppercase text-xs rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
                                  >
                                       {generatingBlueprint ? "⚡ Brainstorming Saga..." : "✨ Generate AI Saga Path"}
                                  </button>
                                  <button
                                       type="button"
                                       onClick={handleInitializeDefaultBlueprint}
-                                      className="bg-purple-700 hover:bg-purple-600 px-4 py-2 text-white font-semibold font-comic uppercase text-xs rounded border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]"
+                                      className="bg-purple-700 hover:bg-gray-900 text-purple-400 px-4 py-2 text-white font-semibold font-mono uppercase text-xs rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
                                  >
                                       📋 Load Default Structure
                                  </button>
@@ -3653,16 +3653,16 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                           {emoji} Page {pageNum} Beat
                                                      </span>
                                                      {pageNum === 1 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-emerald-400 animate-pulse">{t('setup.auto49', 'INCITING')}</span>
+                                                          <span className="text-[8.5px] font-mono font-semibold text-emerald-400 animate-pulse">{t('setup.auto49', 'INCITING')}</span>
                                                      )}
                                                      {pageNum === 3 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-amber-400 animate-pulse">{t('setup.auto50', 'DECISION POINT')}</span>
+                                                          <span className="text-[8.5px] font-mono font-semibold text-amber-400 animate-pulse">{t('setup.auto50', 'DECISION POINT')}</span>
                                                      )}
                                                      {pageNum === 9 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-red-405 animate-pulse">{t('setup.auto51', 'CLIMAX CONFLICT')}</span>
+                                                          <span className="text-[8.5px] font-mono font-semibold text-red-405 animate-pulse">{t('setup.auto51', 'CLIMAX CONFLICT')}</span>
                                                      )}
                                                      {pageNum === 10 && (
-                                                          <span className="text-[8.5px] font-comic font-semibold text-purple-400 animate-pulse">{t('setup.auto52', 'FINALE RESOLVE')}</span>
+                                                          <span className="text-[8.5px] font-mono font-semibold text-purple-400 animate-pulse">{t('setup.auto52', 'FINALE RESOLVE')}</span>
                                                      )}
                                                 </div>
                                                 
@@ -3670,7 +3670,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                      type="button"
                                                      onClick={() => handleGeneratePageGoal(pageNum)}
                                                      disabled={generatingPageGoal !== null}
-                                                     className="text-[9.5px] bg-cyan-955 hover:bg-cyan-900 border border-cyan-800/60 hover:border-cyan-500 text-cyan-305 px-2 py-0.5 rounded font-comic transition-all disabled:opacity-40"
+                                                     className="text-[9.5px] bg-cyan-955 hover:bg-cyan-900 border border-cyan-800/60 hover:border-cyan-500 text-cyan-305 px-2 py-0.5 rounded font-mono transition-all disabled:opacity-40"
                                                      title="AI Suggest / Dream details for this specific chapter goal."
                                                 >
                                                      {generatingPageGoal === pageNum ? "🧠 Thinking..." : "✨ AI Suggest"}
@@ -3732,7 +3732,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                   : "relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none"}>
                   <span className={isEditorial
                       ? "block font-sans text-[#3c3730] font-black text-2xl uppercase tracking-wider mb-2"
-                      : "block font-comic text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2"}
+                      : "block font-mono text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2"}
                       style={isEditorial ? {} : { textShadow: '2px 2px 0px black' }}>
                       {isEditorial ? "📚 THE NARRATIVE ARCHIVE" : "📚 THE MULTIVERSE STUDIO LIBRARY"}
                   </span>
@@ -3750,7 +3750,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                      <div className="lg:col-span-8 flex flex-col gap-4">
                           <span className={isEditorial
                                 ? "text-xs font-sans text-stone-605 tracking-wider uppercase border-b border-stone-200 pb-1.5 font-bold block"
-                                : "text-xs font-comic text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block"}>
+                                : "text-xs font-mono text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block"}>
                                {isEditorial ? `📚 Saved Manuscripts Catalog (${savedProjects.length})` : `📚 Active Publications Archive (${savedProjects.length})`}
                           </span>
 
@@ -3814,7 +3814,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                         <div>
                                                              <span className={isEditorial
                                                                   ? "block font-sans font-bold text-sm tracking-wide text-stone-900 group-hover:text-stone-700 truncate transition-colors"
-                                                                  : "block font-comic font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors"}>
+                                                                  : "block font-mono font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors"}>
                                                                   {project.title}
                                                              </span>
                                                              <span className={isEditorial
@@ -3853,7 +3853,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            : "lg:col-span-4 bg-slate-950 border-4 border-black p-4 rounded-lg relative text-left"}>
                            <span className={isEditorial
                                 ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider mb-2"
-                                : "block font-comic text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2"}>
+                                : "block font-mono text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2"}>
                                 {isEditorial ? "✍️ MANUSCRIPT REGISTRY" : "🚀 SELF-PUBLISH COMIC"}
                            </span>
                            <p className={isEditorial
@@ -3875,7 +3875,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           placeholder={isEditorial ? "e.g. Chronicles of Eldoria: Vol I" : "e.g. Captain Nebula: Deep Space"}
                                           value={manualComicTitle}
                                           onChange={(e) => setManualComicTitle(e.target.value)}
-                                          className={isEditorial ? sInput : "w-full bg-slate-900 border-2 border-black p-1.5 px-2.5 rounded font-mono text-xs text-yellow-305 focus:outline-none focus:border-orange-500"}
+                                          className={isEditorial ? sInput : "w-full bg-gray-950/50 border border-cyan-800 p-1.5 px-2.5 rounded font-mono text-xs text-yellow-305 focus:outline-none focus:border-orange-500"}
                                      />
                                 </div>
 
@@ -3885,7 +3885,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           <select
                                                value={manualComicGenre}
                                                onChange={(e) => setManualComicGenre(e.target.value)}
-                                               className={isEditorial ? sSelect : "w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
+                                               className={isEditorial ? sSelect : "w-full bg-gray-950/50 border border-cyan-800 p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
                                           >
                                                {GENRES.map((g) => (
                                                     <option key={g} value={g}>{g}</option>
@@ -3897,7 +3897,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           <select
                                                value={manualComicLanguage}
                                                onChange={(e) => setManualComicLanguage(e.target.value)}
-                                               className={isEditorial ? sSelect : "w-full bg-slate-900 border-2 border-black p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
+                                               className={isEditorial ? sSelect : "w-full bg-gray-950/50 border border-cyan-800 p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
                                           >
                                                {LANGUAGES.map((l) => (
                                                     <option key={l.code} value={l.code}>{l.name}</option>
@@ -3953,7 +3953,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                      disabled={isPublishingManual}
                                      className={isEditorial
                                           ? sPrimaryBtn + " w-full mt-2"
-                                          : "mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-comic text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40 w-full"}
+                                          : "mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-mono text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40 w-full"}
                                 >
                                      {isPublishingManual 
                                            ? (isEditorial ? 'REGISTERING...' : 'PUBLISHING...') 
@@ -3970,7 +3970,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                            <div>
                                 <span className={isEditorial
                                      ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider"
-                                     : "block font-comic text-cyan-400 font-extrabold text-sm uppercase tracking-wider"}>
+                                     : "block font-mono text-cyan-400 font-extrabold text-sm uppercase tracking-wider"}>
                                      {isEditorial 
                                           ? `💾 UNFINISHED MANUSCRIPT DRAFTS (${savedDrafts.length})` 
                                           : `💾 UNFINISHED CREATIVE WORKSPACE DRAFTS (${savedDrafts.length})`}
@@ -3987,7 +3987,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 onClick={handleSaveDraft}
                                 className={isEditorial
                                      ? sPrimaryBtn
-                                     : "bg-cyan-600 hover:bg-cyan-500 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"}
+                                     : "bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"}
                            >
                                 {isSavingDraft 
                                      ? (isEditorial ? "SAVING SNAPSHOT..." : "SNAPSHOT-SAVING...") 
@@ -4039,7 +4039,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     <div>
                                                          <span className={isEditorial
                                                               ? "block font-sans font-bold text-xs text-stone-900 group-hover:text-stone-700 truncate transition-colors"
-                                                              : "block font-comic font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors"}>
+                                                              : "block font-mono font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors"}>
                                                               {draft.title}
                                                          </span>
                                                          <span className={isEditorial

@@ -4,17 +4,17 @@ export type ModerationRegion = 'US' | 'EU' | 'GLOBAL';
 
 export const REGIONAL_MODERATION_SETTINGS = {
     'US': {
-        strictness: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        strictness: HarmBlockThreshold.BLOCK_NONE,
         allowComicViolence: true,
         ageGating: false,
     },
     'EU': {
-        strictness: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        strictness: HarmBlockThreshold.BLOCK_NONE,
         allowComicViolence: false,
         ageGating: true,
     },
     'GLOBAL': {
-        strictness: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        strictness: HarmBlockThreshold.BLOCK_NONE,
         allowComicViolence: true,
         ageGating: false,
     }

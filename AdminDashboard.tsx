@@ -102,6 +102,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
           console.log("[VERIFICATION] Starting live app verification...");
           // Check health
           const health = await fetch('/api/admin/health').then(r => r.json());
+          if (health.error) throw new Error(`API Error: ${health.error}`);
+          if (!health.database) throw new Error("Invalid health response format from server.");
           if (health.database.status !== 'ok' && health.database.status !== 'offline') throw new Error("DB not OK: " + health.database.message);
           console.log("[VERIFICATION] Database connectivity:", health.database.status);
           

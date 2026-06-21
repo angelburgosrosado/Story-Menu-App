@@ -584,8 +584,8 @@ Sitemap: https://storymenu.app/sitemap.xml`
             }
             return response;
         } catch (e: any) {
-            // Check if it's a safety error from SDK (FinishReason.SAFETY usually throws a specific structure)
-            if (e.message && e.message.includes('safety') || e.message?.includes('MODERATION_BLOCKED')) {
+            // Removed manual 'safety' check string matching to prevent false positives with SDK syntax errors.
+            if (e.message?.includes('MODERATION_BLOCKED')) {
                 throw new Error('MODERATION_BLOCKED');
             }
             throw e;

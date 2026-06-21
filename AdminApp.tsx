@@ -454,6 +454,23 @@ export const AdminApp: React.FC = () => {
                                                 </button>
                                                 <button 
                                                     onClick={async () => {
+                                                        const res = await adminFetch(`/api/admin/customers/${c.email}/tokens`, {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ amount: 1000 })
+                                                        });
+                                                        if (res.ok) {
+                                                            alert('1000 Tokens granted successfully!');
+                                                            fetchData();
+                                                        } else {
+                                                            alert('Failed to grant tokens.');
+                                                        }
+                                                    }}
+                                                    className="text-emerald-600 hover:text-emerald-800 font-semibold text-xs mr-4 transition-colors">
+                                                    +1000 Tokens
+                                                </button>
+                                                <button 
+                                                    onClick={async () => {
                                                         if(confirm(`Delete ${c.email}?`)) {
                                                             await adminFetch(`/api/admin/customers/${c.email}`, { method: 'DELETE' });
                                                             fetchData();

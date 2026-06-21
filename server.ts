@@ -571,6 +571,11 @@ Sitemap: https://storymenu.app/sitemap.xml`
      */
     const callGeminiSafely = async (ai: GoogleGenAI, aiParams: any, reqEmail?: string, operationName?: string) => {
         try {
+            if (aiParams.safetySettings) {
+                aiParams.config = aiParams.config || {};
+                aiParams.config.safetySettings = aiParams.safetySettings;
+                delete aiParams.safetySettings;
+            }
             const response = await ai.models.generateContent(aiParams);
             if (reqEmail && operationName && aiParams.model) {
                 const tokensIn = response.usageMetadata?.promptTokenCount || 0;

@@ -447,36 +447,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                             * Tokens stored here override sandbox mocks. Leave empty to use local test mode.
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Stripe */}
                             <div className="p-4 bg-slate-900 border border-slate-800 rounded">
                                 <h4 className="font-bold text-indigo-400 mb-2">Stripe</h4>
-                                <div className="space-y-2">
-                                    <input id="stripe_publishable_key" placeholder="Stripe Publishable Key" defaultValue={settings.find(s => s.keyName === 'stripe_publishable_key')?.keyValue || ''} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
-                                    <input id="stripe_secret_key" placeholder="Stripe Secret Key" defaultValue={settings.find(s => s.keyName === 'stripe_secret_key')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
-                                    <button onClick={async () => {
-                                        const pubVal = (document.getElementById('stripe_publishable_key') as HTMLInputElement).value;
-                                        const secVal = (document.getElementById('stripe_secret_key') as HTMLInputElement).value;
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'stripe_publishable_key', keyValue: pubVal, isSecret: false }) });
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'stripe_secret_key', keyValue: secVal, isSecret: true }) });
-                                        fetchData();
-                                    }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-1 rounded text-xs font-bold">Save Stripe Keys</button>
+                                <div className="space-y-2 text-xs text-green-400">
+                                    <p>🔒 Managed securely via Google Cloud Run Environment Variables.</p>
                                 </div>
                             </div>
                             
                             {/* PayPal */}
                             <div className="p-4 bg-slate-900 border border-slate-800 rounded">
                                 <h4 className="font-bold text-blue-400 mb-2">PayPal</h4>
-                                <div className="space-y-2">
-                                    <input id="paypal_client_id" placeholder="Client ID" defaultValue={settings.find(s => s.keyName === 'paypal_client_id')?.keyValue || ''} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
-                                    <input id="paypal_secret" placeholder="Secret" defaultValue={settings.find(s => s.keyName === 'paypal_secret')?.keyValue || ''} type="password" className="w-full bg-slate-950 border border-slate-700 p-2 text-xs text-white" />
-                                    <button onClick={async () => {
-                                        const cid = (document.getElementById('paypal_client_id') as HTMLInputElement).value;
-                                        const sec = (document.getElementById('paypal_secret') as HTMLInputElement).value;
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'paypal_client_id', keyValue: cid, isSecret: false }) });
-                                        await fetch('/api/admin/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ keyName: 'paypal_secret', keyValue: sec, isSecret: true }) });
-                                        fetchData();
-                                    }} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 rounded text-xs font-bold">Save PayPal Keys</button>
+                                <div className="space-y-2 text-xs text-green-400">
+                                    <p>🔒 Managed securely via Google Cloud Run Environment Variables.</p>
                                 </div>
                             </div>
                         </div>

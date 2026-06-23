@@ -4,7 +4,7 @@ import { CommunityGallery } from './CommunityGallery';
 import { 
   Sparkles, Layers, Flame, BookOpen, Star, GitMerge, 
   ArrowRight, PenTool, Globe, Zap, Play, Pause, Volume2, 
-  Music, Eye, RotateCw, AlertTriangle, UserCheck, ShieldCheck, Cpu, Sun, Moon, Menu, X
+  Music, Eye, RotateCw, AlertTriangle, UserCheck, ShieldCheck, Cpu, Sun, Moon, Menu, X, Loader2, Image as ImageIcon
 } from 'lucide-react';
 import { 
   startProceduralSoundtrack, 
@@ -13,7 +13,7 @@ import {
   playExplosionSFX, 
   playPageTurnSFX 
 } from './audio';
-import { LANGUAGES } from './types';
+import { LANGUAGES, ART_STYLES } from './types';
 
 export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
     const { i18n } = useTranslation();
@@ -30,6 +30,88 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     const [landingConfig, setLandingConfig] = useState<any>(null);
     const [plans, setPlans] = useState<any[]>([]);
     const [isSubscription, setIsSubscription] = useState(true);
+
+    // Avatar Creator State
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+    const [avatarStyle, setAvatarStyle] = useState('Photorealistic Cartoon Style');
+    const [generatedAvatar, setGeneratedAvatar] = useState<string | null>(null);
+    const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+    const [previewCount, setPreviewCount] = useState(() => {
+        return parseInt(localStorage.getItem('avatar_preview_count') || '0');
+    });
+
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setAvatarFile(file);
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const base64Str = (evt.target?.result as string).split(',')[1];
+                if (base64Str) setAvatarBase64(base64Str);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const [avatarAge, setAvatarAge] = useState('Young Adult');
+    const [avatarGender, setAvatarGender] = useState('Neutral');
+    const [avatarEthnicity, setAvatarEthnicity] = useState('Not Set');
+
+    const handleGenerateAvatar = async (isRandom = false) => {
+        if (!isRandom && !avatarBase64) return;
+        if (previewCount >= 3 && !localStorage.getItem('infinite_heroes_creator')) {
+            alert("You've reached the free preview limit. Please sign in or subscribe to generate more!");
+            return;
+        }
+
+        setIsGeneratingAvatar(true);
+        try {
+            const res = await fetch('/api/leonardo/persona', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    referenceImage: isRandom ? null : avatarBase64,
+                    artStyle: avatarStyle,
+                    gender: avatarGender,
+                    age: avatarAge,
+                    ethnicity: avatarEthnicity,
+                    isRandom
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.imageUrl) {
+                setGeneratedAvatar(data.imageUrl);
+                const newCount = previewCount + 1;
+                setPreviewCount(newCount);
+                localStorage.setItem('avatar_preview_count', newCount.toString());
+            } else {
+                alert("Failed to generate avatar: " + (data.error || "Unknown error"));
+            }
+        } catch (err: any) {
+            alert("Error: " + err.message);
+        } finally {
+            setIsGeneratingAvatar(false);
+        }
+    };
+
+    const handleSurpriseMe = () => {
+        const ages = ['Child', 'Teen', 'Young Adult', 'Adult', 'Elder'];
+        const genders = ['Male', 'Female', 'Neutral'];
+        const ethnicities = ['Caucasian', 'Latina', 'Asian', 'Arab', 'Black/Afro', 'Indian', 'Hispanic', 'Native American', 'Pacific Islander', 'Middle Eastern', 'Southeast Asian', 'Mixed Race'];
+        
+        const rAge = ages[Math.floor(Math.random() * ages.length)];
+        const rGen = genders[Math.floor(Math.random() * genders.length)];
+        const rEth = ethnicities[Math.floor(Math.random() * ethnicities.length)];
+        
+        setAvatarAge(rAge);
+        setAvatarGender(rGen);
+        setAvatarEthnicity(rEth);
+        
+        // Execute immediately with the random parameters
+        handleGenerateAvatar(true);
+    };
+
 
     useEffect(() => {
         fetch('/api/public/landing')
@@ -319,6 +401,144 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
                         {landingConfig?.heroSubtitle || "Whether you're crafting complex manga, creating magical picture books for kids, or journaling your next great short story, Story.Menu gives you the AI tools to bring your imagination to life."}
                     </p>
+                </div>
+
+
+                {/* INTERACTIVE AVATAR CREATOR */}
+                <div id="avatar-creator" className={`max-w-4xl mx-auto mb-24 p-8 md:p-12 rounded-[2.5rem] border shadow-2xl relative z-20 ${isLightMode ? 'bg-white border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]' : 'bg-slate-900 border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)]'}`}>
+                    <div className="text-center mb-8">
+                        <h2 className={`text-3xl font-extrabold mb-2 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>See Yourself in the Story</h2>
+                        <p className={`${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Upload a photo and let our AI transform you into a comic character instantly.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div className="space-y-6">
+                            <div>
+                                <label className={`block text-sm font-bold mb-2 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>1. Upload Your Photo</label>
+                                <div className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all hover:bg-indigo-500/5 ${isLightMode ? 'border-slate-300' : 'border-slate-700'}`}>
+                                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" id="avatar-upload" />
+                                    <label htmlFor="avatar-upload" className="cursor-pointer block">
+                                        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <UserCheck size={24} />
+                                        </div>
+                                        <span className={`font-semibold ${isLightMode ? 'text-indigo-600' : 'text-indigo-400'}`}>
+                                            {avatarFile ? avatarFile.name : 'Click to Upload Photo'}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className={`block text-sm font-bold mb-2 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>2. Demographic Profile</label>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <select 
+                                        value={avatarGender} 
+                                        onChange={(e) => setAvatarGender(e.target.value)}
+                                        className={`w-full p-3 rounded-xl border outline-none font-semibold text-sm ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'}`}
+                                    >
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Neutral">Neutral</option>
+                                    </select>
+                                    <select 
+                                        value={avatarAge} 
+                                        onChange={(e) => setAvatarAge(e.target.value)}
+                                        className={`w-full p-3 rounded-xl border outline-none font-semibold text-sm ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'}`}
+                                    >
+                                        <option value="Child">Child</option>
+                                        <option value="Teen">Teen</option>
+                                        <option value="Young Adult">Young Adult</option>
+                                        <option value="Adult">Adult</option>
+                                        <option value="Elder">Elder</option>
+                                    </select>
+                                </div>
+                                <select 
+                                    value={avatarEthnicity} 
+                                    onChange={(e) => setAvatarEthnicity(e.target.value)}
+                                    className={`w-full p-3 rounded-xl border outline-none font-semibold text-sm ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'}`}
+                                >
+                                    <option value="Not Set">Ethnicity (Not Set)</option>
+                                    <option value="Caucasian">Caucasian</option>
+                                    <option value="Latina">Latina</option>
+                                    <option value="Asian">Asian</option>
+                                    <option value="Arab">Arab</option>
+                                    <option value="Black/Afro">Black/Afro</option>
+                                    <option value="Indian">Indian</option>
+                                    <option value="Hispanic">Hispanic</option>
+                                    <option value="Native American">Native American</option>
+                                    <option value="Pacific Islander">Pacific Islander</option>
+                                    <option value="Middle Eastern">Middle Eastern</option>
+                                    <option value="Southeast Asian">Southeast Asian</option>
+                                    <option value="Mixed Race">Mixed Race</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className={`block text-sm font-bold mb-2 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>3. Choose a Style</label>
+                                <select 
+                                    value={avatarStyle} 
+                                    onChange={(e) => setAvatarStyle(e.target.value)}
+                                    className={`w-full p-3 rounded-xl border outline-none font-semibold ${isLightMode ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-800 border-slate-700 text-white'}`}
+                                >
+                                    {ART_STYLES.map((style) => (
+                                        <option key={style.id} value={style.name}>{style.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={handleSurpriseMe}
+                                    disabled={isGeneratingAvatar}
+                                    className={`flex-1 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                                        isGeneratingAvatar 
+                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                                        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 shadow-sm'
+                                    }`}
+                                >
+                                    <Sparkles size={20} />
+                                    Surprise Me
+                                </button>
+
+                                <button 
+                                    onClick={() => handleGenerateAvatar(false)}
+                                    disabled={!avatarBase64 || isGeneratingAvatar}
+                                    className={`flex-1 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                                        !avatarBase64 || isGeneratingAvatar
+                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                                        : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white hover:scale-[1.02] shadow-[0_0_20px_rgba(168,85,247,0.4)]'
+                                    }`}
+                                >
+                                    {isGeneratingAvatar ? <Loader2 className="animate-spin" size={20} /> : <UserCheck size={20} />}
+                                    {isGeneratingAvatar ? 'Generating...' : 'Generate Profile'}
+                                </button>
+                            </div>
+                            
+                            {previewCount > 0 && !localStorage.getItem('infinite_heroes_creator') && (
+                                <p className={`text-xs text-center font-medium ${previewCount >= 3 ? 'text-red-500' : 'text-amber-500'}`}>
+                                    Free Previews Used: {previewCount} / 3
+                                </p>
+                            )}
+                        </div>
+
+                        <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden border-4 shadow-inner flex items-center justify-center ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                            {generatedAvatar ? (
+                                <img src={generatedAvatar} alt="Generated Avatar" className="w-full h-full object-cover" />
+                            ) : isGeneratingAvatar ? (
+                                <div className="text-center text-indigo-500">
+                                    <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+                                    <p className="font-bold animate-pulse">Summoning Leonardo.ai...</p>
+                                </div>
+                            ) : avatarBase64 ? (
+                                <img src={`data:image/jpeg;base64,${avatarBase64}`} alt="Uploaded Preview" className="w-full h-full object-cover opacity-50 grayscale blur-sm" />
+                            ) : (
+                                <div className={`text-center px-6 ${isLightMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                    <p>Your generated avatar will appear here.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* The 3 Paths (Feature Cards) */}

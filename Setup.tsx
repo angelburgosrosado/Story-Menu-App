@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal } from './types';
+import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal, ART_STYLES } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -26,13 +26,15 @@ interface SetupProps {
     friend: Persona | null;
     villain: Persona | null;
     selectedGenre: string;
+    selectedArtStyle?: string;
+    onArtStyleChange?: (styleId: string) => void;
     selectedLanguage: string;
     customPremise: string;
     richMode: boolean;
     selectedVoice: string;
     soundtrackEnabled: boolean;
-    activeCreator: { id: string; email: string };
-    onCreatorChange: (creator: { id: string; email: string }) => void;
+    activeCreator: { id: string; email: string; tier?: string };
+    onCreatorChange: (creator: { id: string; email: string; tier?: string }) => void;
     onHeroUpload: (file: File) => void;
     onFriendUpload: (file: File) => void;
     onVillainUpload: (file: File) => void;
@@ -163,16 +165,103 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     };
 
-    const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint' | 'settings'>('generate');
+    const [activeTab, setActiveTab] = useState<'generate' | 'persona' | 'library' | 'blueprint' | 'vault' | 'settings'>('generate');
     const [savedProjects, setSavedProjects] = useState<any[]>([]);
 
     const [geminiKey, setGeminiKey] = useState<string>(() => {
-        try {
-            return localStorage.getItem('GEMINI_API_KEY') || '';
-        } catch (e) {
-            return '';
-        }
+        return localStorage.getItem('story_menu_gemini_key') || '';
     });
+    const [leonardoKey, setLeonardoKey] = useState<string>(() => {
+        return localStorage.getItem('story_menu_leonardo_key') || '';
+    });
+    const [pineconeKey, setPineconeKey] = useState<string>(() => {
+        return localStorage.getItem('story_menu_pinecone_key') || '';
+    });
+    
+    // Vault Generator State
+    const [vaultCharName, setVaultCharName] = useState('');
+    const [vaultReferenceImage, setVaultReferenceImage] = useState<string | null>(null);
+    const [vaultCharDesc, setVaultCharDesc] = useState('');
+    const [vaultCharStyle, setVaultCharStyle] = useState('Comic Book');
+    const [isVaultGenerating, setIsVaultGenerating] = useState(false);
+    const [vaultStatusMsg, setVaultStatusMsg] = useState('');
+
+    
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64Str = (event.target?.result as string).split(',')[1];
+            if (base64Str) setVaultReferenceImage(base64Str);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleVaultGenerate = async () => {
+
+        if (!vaultCharName.trim() || !vaultCharDesc.trim()) {
+             setVaultStatusMsg("Name and Description are required.");
+             return;
+        }
+        setIsVaultGenerating(true);
+        setVaultStatusMsg("Summoning artist portal... Handcrafting dynamic cartoon portrait.");
+        try {
+            const endpoint = vaultReferenceImage ? '/api/leonardo/persona' : '/api/gemini/persona';
+            const payload: any = {
+                desc: vaultCharDesc,
+                selectedGenre: vaultCharStyle,
+                userEmail: props.activeCreator.email
+            };
+            if (vaultReferenceImage) {
+                payload.referenceImage = vaultReferenceImage;
+            }
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.base64 || data.imageUrl) {
+                setVaultStatusMsg("Avatar summoned successfully! Saving to Vault...");
+                const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+                
+                const newChar = {
+                    id: 'char_' + Date.now(),
+                    name: vaultCharName,
+                    description: vaultCharDesc,
+                    imageUrl: data.imageUrl ? data.imageUrl : (data.base64.startsWith('data:') ? data.base64 : `data:image/jpeg;base64,${data.base64}`),
+                    role: 'Vaulted',
+                    powers: 'Unknown'
+                };
+
+                if (isFirebaseUser) {
+                    await saveCharacterToFirestore(props.activeCreator.id, {
+                        ...newChar,
+                        userId: props.activeCreator.id,
+                        createdAt: Date.now()
+                    });
+                } else {
+                    const list = [...savedCharacters, newChar];
+                    localStorage.setItem(`characters_${props.activeCreator.id}`, JSON.stringify(list));
+                }
+                
+                // Refresh characters
+                window.dispatchEvent(new Event('refresh-character-vault'));
+                setVaultStatusMsg(`Character ${vaultCharName} saved to the Vault successfully!`);
+                setVaultCharName('');
+                setVaultCharDesc('');
+                setVaultReferenceImage(null);
+            } else {
+                setVaultStatusMsg("Art generation returned blank pixels. Please try again.");
+            }
+        } catch (e: any) {
+            console.error("Vault generation failed:", e);
+            setVaultStatusMsg("Ethereal art nexus connection lost: " + e.message);
+        } finally {
+            setIsVaultGenerating(false);
+        }
+    };
 
     const handleGeminiKeyChange = (val: string) => {
         setGeminiKey(val);
@@ -297,6 +386,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     userId: props.activeCreator.id,
                     title: titleText,
                     genre: props.selectedGenre,
+                            artStyle: props.selectedArtStyle,
                     comicFaces: comicFacesStr,
                     storyBlueprint: storyBlueprintStr
                 });
@@ -323,6 +413,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 userId: props.activeCreator.id,
                 title: titleText,
                 genre: props.selectedGenre,
+                            artStyle: props.selectedArtStyle,
                 comicFaces: comicFacesStr,
                 storyBlueprint: storyBlueprintStr,
                 updatedAt: new Date().toISOString(),
@@ -381,6 +472,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 body: JSON.stringify({
                     fieldName: 'storyBlueprint',
                     genre: props.selectedGenre,
+                            artStyle: props.selectedArtStyle,
                     customPremise: props.customPremise,
                     storyTone: props.storyTone || 'Exciting & Action-packed',
                     userEmail: props.activeCreator.email
@@ -414,6 +506,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 body: JSON.stringify({
                     fieldName: `Chapter ${pageNum} Goal`,
                     genre: props.selectedGenre,
+                            artStyle: props.selectedArtStyle,
                     customPremise: props.customPremise,
                     currentValue: currentGoalObj ? `${currentGoalObj.title || ''} - ${currentGoalObj.goal || ''}` : '',
                     userEmail: props.activeCreator.email
@@ -489,6 +582,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [personaStudioName, setPersonaStudioName] = useState('');
     const [personaStudioConcept, setPersonaStudioConcept] = useState('');
     const [personaStudioStyle, setPersonaStudioStyle] = useState(props.selectedGenre || 'Superhero Action');
+    const [selectedArtStyle, setSelectedArtStyle] = useState(props.selectedArtStyle || 'vibrant-comic');
 
     const [personaStudioSuggestedName, setPersonaStudioSuggestedName] = useState('');
     const [personaStudioSuggestedBio, setPersonaStudioSuggestedBio] = useState('');
@@ -723,6 +817,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 body: JSON.stringify({
                     fieldName: 'personaBrainstorm',
                     genre: personaStudioStyle,
+                    artStyle: selectedArtStyle,
                     roleType: personaStudioRole,
                     characterName: personaStudioName,
                     concept: personaStudioConcept,
@@ -902,6 +997,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     fieldName,
                     currentValue,
                     genre: props.selectedGenre,
+                            artStyle: props.selectedArtStyle,
                     userEmail: props.activeCreator.email
                 })
             });
@@ -1613,6 +1709,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     </button>
                     <button
                         type="button"
+                        onClick={() => setActiveTab('vault')}
+                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
+                            isEditorial 
+                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'vault' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
+                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'vault' ? 'bg-gray-900 text-purple-400 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-purple-300 hover:bg-gray-900/50 border-purple-800/30'}`
+                        }`}
+                    >
+                        {isEditorial ? "VAULT" : "VAULT"}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setActiveTab('settings')}
                         className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
                             isEditorial 
@@ -1644,10 +1751,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
                               <br/><span className="opacity-70 mt-1 block">Supported formats: JPG, PNG, WEBP, GIF (Max 5MB)</span>
                          </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             
                             {/* HERO CARD (BLUE THEME) */}
-                            <div className={`relative group min-h-[415px] pb-3 px-3 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] cursor-pointer ${
+                            <div className={`sm:col-span-2 relative group min-h-[450px] pb-6 px-6 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.01] cursor-pointer ${
                                  isEditorial
                                       ? `border bg-stone-100/90 ${props.hero ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'}`
@@ -1655,7 +1762,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                  <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onHeroUpload(e.target.files[0]); } e.target.value = ''; }} />
                                  
                                  {props.hero ? (
-                                      <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
+                                      <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[220px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
                                            <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                 <span className="sr-only">{t('setup.auto7', 'Upload Hero')}</span>
                                            </label>
@@ -1672,7 +1779,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            </div>
                                       </div>
                                  ) : (
-                                      <label htmlFor="hero-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[144px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-blue-800 hover:bg-blue-950/50'} cursor-pointer transition-colors group/upload`}>
+                                      <label htmlFor="hero-upload-input" className={`flex flex-col justify-center items-center text-center h-36 mt-3 p-4 relative z-20 min-h-[220px] flex-shrink-0 rounded-lg border-2 border-dashed ${isEditorial ? 'border-stone-300 hover:bg-stone-200' : 'border-blue-800 hover:bg-blue-950/50'} cursor-pointer transition-colors group/upload`}>
                                            <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
                                                 <span className={isEditorial ? "bg-stone-300 text-stone-700 font-sans text-[10px] uppercase font-bold px-2 py-0.5 rounded" : "bg-blue-600 text-white border border-black font-mono text-[10px] uppercase px-2 py-0.5 rounded-full shadow-[1px_1px_0px_#000]"}>{t('setup.auto8', 'REQUIRED')}</span>
                                                 <span className={`w-2 h-2 rounded-full ${isEditorial ? 'bg-stone-400' : 'bg-blue-500 animate-ping'}`} />
@@ -2086,7 +2193,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                             props.onVillainDnaChange(JSON.stringify(updated));
                                                        }}
                                                        disabled={!props.villain}
-                                                       rows={3}
+                                                       rows={6}
                                                        className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
                                                             isEditorial
                                                                  ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
@@ -2114,7 +2221,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                             props.onVillainDnaChange(JSON.stringify(updated));
                                                        }}
                                                        disabled={!props.villain}
-                                                       rows={3}
+                                                       rows={6}
                                                        className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
                                                             isEditorial
                                                                  ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
@@ -2142,7 +2249,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                             props.onVillainDnaChange(JSON.stringify(updated));
                                                        }}
                                                        disabled={!props.villain}
-                                                       rows={3}
+                                                       rows={6}
                                                        className={`w-full text-[11px] p-2 rounded focus:outline-none font-sans border ${
                                                             isEditorial
                                                                  ? 'bg-white border-stone-300 text-stone-900 focus:border-stone-500'
@@ -2369,6 +2476,35 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     })}
                                 </div>
                             </div>
+
+                            {/* Visual Art Style Selection */}
+                            <div className="mt-4">
+                                <p className={sLabel}>{isEditorial ? "Visual Art Direction" : "Select Visual Art Style"}</p>
+                                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                    {ART_STYLES.map((style) => {
+                                        const isSelected = props.selectedArtStyle === style.id;
+                                        return (
+                                            <button 
+                                                key={style.id}
+                                                onClick={() => props.onArtStyleChange && props.onArtStyleChange(style.id)}
+                                                className={`py-2 px-3 text-left rounded transition-all duration-150 transform flex items-center gap-1.5 ${
+                                                    isSelected 
+                                                    ? (isEditorial
+                                                        ? 'bg-stone-800 text-stone-50 border border-stone-700 font-semibold shadow-sm'
+                                                        : 'bg-gray-900 text-pink-400 text-black border-2 border-black font-bold -rotate-1 translate-x-px translate-y-px shadow-[2px_2px_0px_rgba(0,0,0,1)]')
+                                                    : (isEditorial
+                                                        ? 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-100 hover:text-stone-900 hover:border-stone-400'
+                                                        : 'bg-slate-900 text-gray-300 border-2 border-slate-700 hover:bg-slate-750 hover:text-white hover:border-gray-500 hover:-translate-y-px shadow-sm')
+                                                }`}
+                                            >
+                                                <span className="text-base select-none">🎨</span>
+                                                <span className={`text-xs tracking-wide uppercase truncate ${isEditorial ? 'font-sans font-medium' : 'font-mono'}`}>{style.name}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
 
                             {/* Dense Grid chips for Common Languages */}
                             <div>
@@ -4084,6 +4220,87 @@ export const Setup: React.FC<SetupProps> = (props) => {
                       )}
                  </div>
             </div>
+        )}
+
+        {(activeTab === 'vault') && (
+             <div className={isEditorial 
+                  ? "relative z-10 bg-[#fdfdfc] border border-stone-200 p-6 rounded-xl shadow-sm text-stone-900 text-left select-none font-sans"
+                  : "relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none"}>
+                  <span className={isEditorial
+                      ? "block font-sans text-[#3c3730] font-black text-2xl uppercase tracking-wider mb-2"
+                      : "block font-mono text-purple-400 font-extrabold text-2.5xl uppercase tracking-wider mb-2"}
+                      style={isEditorial ? {} : { textShadow: '2px 2px 0px black' }}>
+                      {isEditorial ? "💎 THE CHARACTER FORGE" : "💎 THE CHARACTER VAULT"}
+                  </span>
+                  
+                  {(!props.activeCreator.tier || props.activeCreator.tier === 'Free') ? (
+                      <div className="p-12 border-4 border-dashed border-purple-900/50 rounded bg-slate-950/40 text-center text-slate-400 font-mono my-4">
+                          <span className="text-4xl mb-4 block">🔒</span>
+                          <p className="text-lg font-bold text-white mb-2">Vault Generation Locked</p>
+                          <p className="text-sm">The Character Vault is an exclusive feature for registered, paying customers. Upgrade your account to gain access to unlimited direct-to-vault character generation.</p>
+                      </div>
+                  ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-6">
+                           {/* GENERATOR SIDE */}
+                           <div className="lg:col-span-5 bg-slate-950 border-4 border-black p-4 rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                <h3 className="font-mono text-yellow-300 font-bold mb-4 uppercase text-sm border-b-2 border-slate-800 pb-2">Generate New Character</h3>
+                                {/* Generator Form */}
+                                <div className="space-y-4 font-mono text-xs">
+                                    <div>
+                                        <label className="block text-slate-400 mb-1 font-bold">Character Name</label>
+                                        <input value={vaultCharName} onChange={e => setVaultCharName(e.target.value)} type="text" className="w-full bg-slate-900 border-2 border-black rounded p-2 text-white focus:outline-none focus:border-purple-500" placeholder="e.g. Zara Nexus" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-400 mb-1 font-bold">Description / Core Traits</label>
+                                        <textarea value={vaultCharDesc} onChange={e => setVaultCharDesc(e.target.value)} rows={4} className="w-full bg-slate-900 border-2 border-black rounded p-2 text-white focus:outline-none focus:border-purple-500" placeholder="A futuristic hacker with neon blue hair and a cybernetic eye..." />
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-400 mb-1 font-bold">Art Style</label>
+                                        <select value={vaultCharStyle} onChange={e => setVaultCharStyle(e.target.value)} className="w-full bg-slate-900 border-2 border-black rounded p-2 text-white focus:outline-none focus:border-purple-500">
+                                             <option value="Comic Book">Comic Book</option>
+                                             <option value="Anime">Anime / Manga</option>
+                                             <option value="Cyberpunk">Cyberpunk 3D</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-400 mb-1 font-bold">Digital Avatar Photo (Optional)</label>
+                                        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="w-full bg-slate-900 border-2 border-black rounded p-1 text-white focus:outline-none focus:border-purple-500 text-[10px]" />
+                                        {vaultReferenceImage && <p className="text-[10px] text-green-400 mt-1">✓ Image selected for Leonardo processing</p>}
+                                    </div>
+                                    {vaultStatusMsg && (
+                                        <div className="p-2 bg-slate-900 border border-slate-700 rounded text-cyan-400 text-[10px]">
+                                            {vaultStatusMsg}
+                                        </div>
+                                    )}
+                                    <button disabled={isVaultGenerating} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider disabled:opacity-50" onClick={handleVaultGenerate}>
+                                        {isVaultGenerating ? "Generating..." : "⚡ Generate & Vault"}
+                                    </button>
+                                </div>
+                           </div>
+
+                           {/* VAULT GALLERY SIDE */}
+                           <div className="lg:col-span-7">
+                                <h3 className="font-mono text-cyan-400 font-bold mb-4 uppercase text-sm border-b-2 border-slate-800 pb-2">Your Saved Characters ({savedCharacters.length})</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                     {savedCharacters.length === 0 ? (
+                                         <div className="col-span-full p-8 border-4 border-dashed border-slate-800 rounded bg-slate-950/20 text-center text-slate-500 font-mono">
+                                             <p className="text-xs font-bold">Your Vault is empty.</p>
+                                         </div>
+                                     ) : (
+                                         savedCharacters.map(char => (
+                                              <div key={char.id} className="group relative bg-slate-950 border-4 border-black p-2 rounded-lg hover:border-purple-500 transition-all cursor-pointer">
+                                                   <div className="aspect-[3/4] w-full bg-slate-900 border-2 border-slate-800 rounded overflow-hidden mb-2 relative">
+                                                        <img src={char.imageUrl || 'https://via.placeholder.com/150'} alt={char.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                   </div>
+                                                   <span className="font-mono font-bold text-[10px] text-white truncate block text-center">{char.name}</span>
+                                              </div>
+                                         ))
+                                     )}
+                                </div>
+                           </div>
+                      </div>
+                  )}
+             </div>
         )}
 
             </div>

@@ -21,6 +21,27 @@ export const TONES = [
     "WHOLESOME (Warm, gentle, optimistic.)"
 ];
 
+export interface ArtStyle {
+    id: string;
+    name: string;
+    promptTemplate: string;
+}
+
+export const ART_STYLES: ArtStyle[] = [
+    { id: 'photorealistic-cartoon', name: 'Photorealistic Cartoon Style', promptTemplate: 'Photorealistic Cartoon Style, hyper-detailed 3D render, Disney Pixar style, cinematic lighting' },
+    { id: 'cinema-3d', name: 'Cinema 3D Rendering', promptTemplate: 'Cinema 3D Render Animation, Unreal Engine 5, Octane Render, 8k resolution, volumetric lighting' },
+    { id: '8-panel', name: '8 Panel Comic', promptTemplate: '8 panel comic layout, sequential art, comic book grid, varied panel sizes' },
+    { id: 'roblox-comic', name: 'Roblox Players Comic Gen', promptTemplate: 'Roblox game style, blocky avatars, Roblox aesthetics, bright game colors' },
+    { id: 'minecraft-comic', name: 'Minecraft Players Comic Gen', promptTemplate: 'Minecraft voxel style, blocky environment, pixelated textures, Minecraft aesthetics' },
+    { id: 'roblox-generator', name: 'Roblox Player Generator', promptTemplate: 'Detailed Roblox avatar character design, Roblox studio render, crisp 3D' },
+    { id: 'vibrant-comic', name: 'Vibrant Comic Book', promptTemplate: 'Vibrant Comic Book style, rich dynamic colors, bold ink outlines, energetic halftone dots' },
+    { id: 'studio-ghibli', name: 'Studio Ghibli AI', promptTemplate: 'Studio Ghibli anime style, Hayao Miyazaki, lush watercolor backgrounds, cel-shaded characters' },
+    { id: 'watercolor-comic', name: 'Watercolor Comic Strip', promptTemplate: 'Watercolor comic strip, fluid brush strokes, soft pastel colors, traditional media' },
+    { id: 'paper-cut', name: 'Paper Cut Style', promptTemplate: 'Paper cut style, layered papercraft, drop shadows, textured craft paper, diorama aesthetic' },
+    { id: 'retro-scifi', name: 'Retro Sci-Fi', promptTemplate: 'Retro Sci-Fi, 1970s pulp science fiction, vintage colors, Moebius style, worn paper texture' },
+    { id: 'minimalist-comic', name: 'Minimalist Comic Art', promptTemplate: 'Minimalist comic art, clean lines, plenty of negative space, simple shapes, elegant' }
+];
+
 export const LANGUAGES = [
     { code: 'en-US', name: '🇺🇸 English' },
     { code: 'es-MX', name: '🇲🇽 Spanish' },

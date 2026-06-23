@@ -584,10 +584,6 @@ Sitemap: https://storymenu.app/sitemap.xml`
             }
             return response;
         } catch (e: any) {
-            // Removed manual 'safety' check string matching to prevent false positives with SDK syntax errors.
-            if (e.message?.includes('MODERATION_BLOCKED')) {
-                throw new Error('MODERATION_BLOCKED');
-            }
             throw e;
         }
     };
@@ -619,11 +615,203 @@ Sitemap: https://storymenu.app/sitemap.xml`
         }
     });
 
+    
+// Helper function for Leonardo Image Upload
+const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
+    const initRes = await fetch("https://cloud.leonardo.ai/api/rest/v1/init-image", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey.trim()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ extension: "jpg" })
+    });
+    if (!initRes.ok) throw new Error(`Init image failed: ${await initRes.text()}`);
+    const initData: any = await initRes.json();
+    const uploadDetails = initData.uploadInitImage;
+    
+    const buffer = Buffer.from(base64Str, 'base64');
+    let uploadRes;
+    if (uploadDetails.fields) {
+        const formData = new FormData();
+        const fieldsObj = JSON.parse(uploadDetails.fields);
+        for (const [key, value] of Object.entries(fieldsObj)) formData.append(key, value as string);
+        formData.append('file', new Blob([buffer], { type: 'image/jpeg' }), "image.jpg");
+        uploadRes = await fetch(uploadDetails.url, { method: "POST", body: formData });
+    } else {
+        uploadRes = await fetch(uploadDetails.url, { method: "PUT", headers: { "Content-Type": "image/jpeg" }, body: buffer });
+    }
+    if (!uploadRes.ok) throw new Error(`Upload to S3 failed: ${await uploadRes.text()}`);
+    return uploadDetails.id;
+};
+
+
+    app.post('/api/leonardo/persona', async (req, res): Promise<any> => {
+        const { desc, artStyle, userEmail, referenceImage, gender, age, ethnicity, isRandom } = req.body;
+        
+        // Only consume tokens if a userEmail is provided (bypassed for landing page free preview)
+        if (userEmail) {
+            if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-3.5-flash', 1000)))) return res.status(402).json({ error: 'Insufficient tokens' });
+        }
+        
+        const characterDesc = desc || `A detailed character portrait`;
+        const demogEthnicity = ethnicity && ethnicity !== 'Not Set' ? `${ethnicity} ` : '';
+        const demogGender = gender && gender !== 'Neutral' ? gender : 'person';
+        const demogAge = age || 'Young Adult';
+        
+        const apiKey = process.env.LEONARDO_API_KEY;
+        if (!apiKey) {
+            console.warn("LEONARDO_API_KEY is not defined. Falling back to mocked image.");
+            return res.json({ 
+                imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                desc
+            });
+        }
+        
+        try {
+            let initImageId = null;
+            if (referenceImage && !isRandom) {
+                console.log("Uploading avatar reference to Leonardo...");
+                initImageId = await uploadToLeonardo(referenceImage, apiKey);
+                console.log(`Upload successful. ID: ${initImageId}`);
+            }
+
+            const modelMapping: Record<string, string> = {
+                "3D Render": "debdf72a-91a4-467b-bf61-cc02bdeb69c6",
+                "Acrylic": "3cbb655a-7ca4-463f-b697-8a03ad67327c",
+                "Anime General": "b2a54a51-230b-4d4f-ad4e-8409bf58645f",
+                "Creative": "6fedbf1f-4a17-45ec-84fb-92fe524a29ef",
+                "Dynamic": "111dc692-d470-4eec-b791-3475abac4c46",
+                "Fashion": "594c4a08-a522-4e0e-b7ff-e4dac4b6b622",
+                "Game Concept": "09d2b5b5-d7c5-4c02-905d-9f84051640f4",
+                "Graphic Design 3D": "7d7c2bc5-4b12-4ac3-81a9-630057e9e89f",
+                "Illustration": "645e4195-f63d-4715-a3f2-3fb1e6eb8c70",
+                "None": "556c1ee5-ec38-42e8-955a-1e82dad0ffa1",
+                "Portrait": "8e2bc543-6ee2-45f9-bcd9-594b6ce84dcd",
+                "Portrait Cinematic": "4edb03c9-8a26-4041-9d01-f85b5d4abd71",
+                "Ray Traced": "b504f83c-3326-4947-82e1-7fe9e839ec0f",
+                "Stock Photo": "5bdc3f2a-1be6-4d1c-8e77-992a30824a2c",
+                "Watercolor": "1db308ce-c7ad-4d10-96fd-592fa6b75cc4"
+            };
+
+            // The UUIDs provided are internal Leonardo Preset Style IDs. The public REST API 
+            // requires these to be passed as ENUM strings in the `presetStyle` parameter 
+            // alongside the `alchemy: true` flag, rather than as models or elements.
+            const styleToPresetEnum: Record<string, string> = {
+                // Legacy / Landing Page ones
+                "3D Render": "RENDER_3D",
+                "Anime General": "ANIME",
+                "Creative": "CREATIVE",
+                "Dynamic": "DYNAMIC",
+                "Illustration": "ILLUSTRATION",
+                "Ray Traced": "RAYTRACED",
+                "None": "NONE",
+                "Acrylic": "CREATIVE", 
+                "Fashion": "PHOTOGRAPHY",
+                "Game Concept": "CREATIVE",
+                "Graphic Design 3D": "RENDER_3D",
+                "Portrait": "PHOTOGRAPHY",
+                "Portrait Cinematic": "PHOTOGRAPHY",
+                "Stock Photo": "PHOTOGRAPHY",
+                "Watercolor": "SKETCH_COLOR",
+                
+                // Authorized ART_STYLES from types.ts
+                "Photorealistic Cartoon Style": "RENDER_3D",
+                "Cinema 3D Rendering": "RENDER_3D",
+                "8 Panel Comic": "ILLUSTRATION",
+                "Roblox Players Comic Gen": "RENDER_3D",
+                "Minecraft Players Comic Gen": "RENDER_3D",
+                "Roblox Player Generator": "RENDER_3D",
+                "Vibrant Comic Book": "ILLUSTRATION",
+                "Studio Ghibli AI": "ANIME",
+                "Watercolor Comic Strip": "SKETCH_COLOR",
+                "Paper Cut Style": "CREATIVE",
+                "Retro Sci-Fi": "ILLUSTRATION",
+                "Minimalist Comic Art": "ILLUSTRATION"
+            };
+
+            const payload: any = {
+                prompt: `Masterpiece portrait of a ${demogAge} ${demogEthnicity}${demogGender}, ${artStyle === 'None' ? 'beautiful' : artStyle} style. Highly detailed, perfect lighting, stylized character art. ${characterDesc}`.substring(0, 1450),
+                modelId: "1e60896f-3c26-4296-8ecc-53e2afecc132", // Leonardo Diffusion XL base
+                width: 768,
+                height: 1024,
+                num_images: 1,
+                alchemy: true,
+                presetStyle: styleToPresetEnum[artStyle] || "DYNAMIC"
+            };
+
+            if (initImageId) {
+                payload.controlnets = [
+                    {
+                        initImageId: initImageId,
+                        initImageType: "UPLOADED",
+                        preprocessorId: 133, // 133 is Character Reference. 67 is Style Reference.
+                        strengthType: "High"
+                    }
+                ];
+            }
+
+            console.log("Sending generation request to Leonardo API...");
+            const response = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${apiKey.trim()}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Leonardo API returned code: ${response.status}. Details: ${errText}`);
+            }
+
+            const data: any = await response.json();
+            const generationId = data.sdGenerationJob?.generationId;
+            if (!generationId) {
+                throw new Error("Leonardo API did not return a generationId.");
+            }
+
+            console.log(`Leonardo generation started. Job ID: ${generationId}. Waiting for completion...`);
+            
+            // Poll for completion
+            let imageUrl = null;
+            for (let i = 0; i < 30; i++) {
+                await new Promise(r => setTimeout(r, 4000)); // wait 4 seconds
+                const pollRes = await fetch(`https://cloud.leonardo.ai/api/rest/v1/generations/${generationId}`, {
+                    headers: { "Authorization": `Bearer ${apiKey.trim()}` }
+                });
+                if (pollRes.ok) {
+                    const pollData: any = await pollRes.json();
+                    const status = pollData.generations_by_pk?.status;
+                    if (status === 'COMPLETE') {
+                        imageUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
+                        console.log("Leonardo image generation complete!");
+                        break;
+                    } else if (status === 'FAILED') {
+                        throw new Error("Leonardo API generation job failed.");
+                    }
+                }
+            }
+
+            if (imageUrl) {
+                return res.json({ imageUrl, desc: characterDesc });
+            } else {
+                throw new Error("Polling timed out or image URL not found.");
+            }
+
+        } catch (e: any) {
+            console.error("Leonardo persona api failed:", e.message);
+            return res.status(500).json({ error: e.message || "Persona generation failed" });
+        }
+    });
+
     app.post('/api/gemini/persona', async (req, res): Promise<any> => {
-        const { desc, selectedGenre, userEmail } = req.body;
+        const { desc, selectedGenre,
+            artStyle, userEmail } = req.body;
         if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-3.5-flash', 1000)))) return res.status(402).json({ error: 'Insufficient tokens' });
         if (!desc) return res.status(400).json({ error: 'Description is required' });
-        const style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
+        let style = selectedGenre === 'Custom' ? "Modern American comic book art" : `${selectedGenre} comic`;
+        if (artStyle) {
+            style = artStyle;
+        }
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const response = await callGeminiSafely(ai, {
@@ -869,6 +1057,7 @@ Your task:
             pageNum,
             isDecisionPage,
             selectedGenre,
+            artStyle,
             selectedLanguage,
             storyTone,
             customPremise,
@@ -893,7 +1082,7 @@ Your task:
          ).join('\n');
 
         // Determine Core Story Driver (Genre vs Custom Premise)
-        let coreDriver = `GENRE: ${selectedGenre}. TONE: ${storyTone}.`;
+        let coreDriver = `GENRE: ${selectedGenre}. VISUAL STYLE: ${artStyle || 'Default'}. TONE: ${storyTone}.`;
         if (selectedGenre === 'Custom') {
             coreDriver = `STORY PREMISE: ${customPremise || "A totally unique, unpredictable adventure"}. (Follow this premise strictly over standard genre tropes).`;
         }
@@ -1028,6 +1217,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             beat,
             type,
             styleEra,
+            artStyle,
             heroVisuals,
             friendVisuals,
             villainVisuals,
@@ -1077,7 +1267,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             }
         }
 
-        let promptText = `STYLE: ${styleEra || selectedGenre} comic book art, detailed ink, vibrant colors. `;
+        let promptText = `STYLE: ${artStyle || styleEra || selectedGenre} art style. `;
         
         if (heroVisuals?.trim()) {
             promptText += `HERO GUIDELINES (Use Hero references to align likeness, hair/head suggestions and clothing style): ${heroVisuals}. `;
@@ -1125,6 +1315,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     const comicResponse = await generator.create({
                         panels: [{ prompt: promptText, characterReference: heroRef?.base64 }],
                         style: styleEra || selectedGenre,
+            artStyle,
                         resolution: "1024x1024"
                     });
                     llamagenResult = comicResponse.panels?.[0]?.imageUrl || comicResponse.imageUrl;
@@ -1133,12 +1324,13 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     const fetchRes = await fetch("https://api.llamagen.ai/v1/comic/generate", {
                         method: "POST",
                         headers: {
-                            "Authorization": `Bearer ${apiKey}`,
+                            "Authorization": `Bearer ${apiKey.trim()}`,
                             "Content-Type": "application/json"
                         },
                         body: JSON.stringify({
                             prompt: promptText,
                             style: styleEra || selectedGenre,
+            artStyle,
                             character_references: heroRef?.base64 ? [heroRef.base64] : []
                         })
                     });
@@ -1248,6 +1440,32 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             }
         }
 
+        // Helper function for Leonardo Image Upload
+        const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
+            const initRes = await fetch("https://cloud.leonardo.ai/api/rest/v1/init-image", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey.trim()}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ extension: "jpg" })
+            });
+            if (!initRes.ok) throw new Error(`Init image failed: ${await initRes.text()}`);
+            const initData: any = await initRes.json();
+            const uploadDetails = initData.uploadInitImage;
+            
+            const buffer = Buffer.from(base64Str, 'base64');
+            let uploadRes;
+            if (uploadDetails.fields) {
+                const formData = new FormData();
+                const fieldsObj = JSON.parse(uploadDetails.fields);
+                for (const [key, value] of Object.entries(fieldsObj)) formData.append(key, value as string);
+                formData.append('file', new Blob([buffer], { type: 'image/jpeg' }), "image.jpg");
+                uploadRes = await fetch(uploadDetails.url, { method: "POST", body: formData });
+            } else {
+                uploadRes = await fetch(uploadDetails.url, { method: "PUT", headers: { "Content-Type": "image/jpeg" }, body: buffer });
+            }
+            if (!uploadRes.ok) throw new Error(`Upload to S3 failed: ${await uploadRes.text()}`);
+            return uploadDetails.id;
+        };
+
         // 3. LEONARDO.AI INTEGRATION (Character Reference API)
         if (provider === 'leonardo') {
             console.log("Image generation request routed to Leonardo.ai Platform API");
@@ -1260,37 +1478,91 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 });
             }
             try {
+                let initImageId = null;
+                if (heroRef?.base64) {
+                    console.log("Uploading character reference to Leonardo...");
+                    initImageId = await uploadToLeonardo(heroRef.base64, apiKey);
+                    console.log(`Upload successful. ID: ${initImageId}`);
+                }
+
+                const payload: any = {
+                    prompt: promptText.substring(0, 1450),
+                    modelId: "1e60896f-3c26-4296-8ecc-53e2afecc132",
+                    width: 768,
+                    height: 1024,
+                    num_images: 1,
+                    promptMagic: true
+                };
+
+                if (initImageId) {
+                    payload.controlnets = [
+                        {
+                            initImageId: initImageId,
+                            initImageType: "UPLOADED",
+                            preprocessorId: 67,
+                            strengthType: "High"
+                        }
+                    ];
+                }
+
                 const response = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${apiKey}`,
+                        "Authorization": `Bearer ${apiKey.trim()}`,
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({
-                        prompt: promptText,
-                        modelId: "b2449217-0e93-4096-8ac4-a0141e8d0892",
-                        width: 512,
-                        height: 768,
-                        num_images: 1,
-                        promptMagic: true,
-                        controlnets: heroRef?.base64 ? [
-                            {
-                                initImageId: heroRef.base64.substring(0, 30),
-                                strengthType: "CharacterReference",
-                                weight: 0.85
-                            }
-                        ] : []
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
                     const data: any = await response.json();
+                    const generationId = data.sdGenerationJob?.generationId;
+                    
+                    if (!generationId) {
+                        return res.json({ 
+                            imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                            info: "Leonardo API did not return a generationId."
+                        });
+                    }
+
+                    console.log(`Leonardo generation started. Job ID: ${generationId}. Waiting for completion...`);
+                    
+                    // Poll for completion (up to 20 attempts, waiting 3 seconds each)
+                    for (let i = 0; i < 20; i++) {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        const pollRes = await fetch(`https://cloud.leonardo.ai/api/rest/v1/generations/${generationId}`, {
+                            headers: {
+                                "Authorization": `Bearer ${apiKey.trim()}`,
+                                "accept": "application/json"
+                            }
+                        });
+                        
+                        if (pollRes.ok) {
+                            const pollData: any = await pollRes.json();
+                            const status = pollData.generations_by_pk?.status;
+                            console.log(`Poll ${i+1}/20 for ${generationId}: Status = ${status}`);
+                            
+                            if (status === 'COMPLETE') {
+                                const finalUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
+                                if (finalUrl) {
+                                    console.log("Leonardo image generation complete!");
+                                    return res.json({ imageUrl: finalUrl, jobId: generationId });
+                                }
+                                break; // Break out to return fallback if complete but no URL
+                            } else if (status === 'FAILED') {
+                                throw new Error("Leonardo API generation job failed.");
+                            }
+                        }
+                    }
+
                     return res.json({ 
-                        imageUrl: data.sdGenerationJob?.generated_images?.[0]?.url || "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
-                        jobId: data.sdGenerationJob?.generationId 
+                        imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                        jobId: generationId,
+                        info: "Generation timed out."
                     });
                 }
-                throw new Error(`Leonardo API returned code: ${response.status}`);
+                const errText = await response.text();
+                throw new Error(`Leonardo API returned code: ${response.status}. Details: ${errText}`);
             } catch (err: any) {
                 console.error("Leonardo.ai API error:", err.message);
                 return res.status(500).json({ error: `Leonardo failed: ${err.message}` });

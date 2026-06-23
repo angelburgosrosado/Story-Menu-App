@@ -33,10 +33,9 @@ const App: React.FC = () => {
   // --- API Key Hook ---
   const { validateApiKey, setShowApiKeyDialog, showApiKeyDialog, handleApiKeyDialogContinue } = useApiKey();
 
-  const [activeCreator, setActiveCreator] = useState<{ id: string; email: string; tier?: string }>({
+  const [activeCreator, setActiveCreator] = useState<{ id: string; email: string }>({
     id: '00000000-0000-0000-0000-000000000000',
-    email: 'local-creator@infinite.multiverse',
-    tier: 'Free'
+    email: 'local-creator@infinite.multiverse'
   });
 
   const [villainDna, setVillainDna] = useState("");
@@ -111,7 +110,7 @@ const App: React.FC = () => {
       isOffline: true
     };
     setCurrentUser(u);
-    setActiveCreator({ id: u.id, email: u.email, tier: u.tier });
+    setActiveCreator({ id: u.id, email: u.email });
     localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
     window.dispatchEvent(new Event('refresh-character-vault'));
   };

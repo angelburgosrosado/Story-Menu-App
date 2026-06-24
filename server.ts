@@ -1217,6 +1217,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             beat,
             type,
             styleEra,
+            styleKeywords,
             artStyle,
             heroVisuals,
             friendVisuals,
@@ -1267,7 +1268,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             }
         }
 
-        let promptText = `STYLE: ${artStyle || styleEra || selectedGenre} art style. `;
+        let promptText = `STYLE: ${artStyle || styleEra || selectedGenre} art style. VISUAL AESTHETICS: ${styleKeywords || ''}. `;
         
         if (heroVisuals?.trim()) {
             promptText += `HERO GUIDELINES (Use Hero references to align likeness, hair/head suggestions and clothing style): ${heroVisuals}. `;

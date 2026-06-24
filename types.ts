@@ -12,6 +12,20 @@ export const BATCH_SIZE = 6;
 export const DECISION_PAGES = [3];
 
 export const GENRES = ["Superhero Action", "Historical Archeology Tales", "Classic Horror", "Dark Sci-Fi", "High Fantasy", "Neon Noir Detective", "Wasteland Apocalypse", "Lighthearted Comedy", "Teen Drama / Slice of Life", "Anime Story", "Custom"];
+
+export const STYLE_KEYWORDS: Record<string, string> = {
+    "Superhero Action": "dynamic comic book style, bold lines, vibrant colors, heroic poses, cinematic lighting, dramatic shading",
+    "Historical Archeology Tales": "vintage pulp adventure, sepia tones, detailed environments, realistic proportions, matte painting, treasure hunter aesthetic",
+    "Classic Horror": "macabre, dark shadows, high contrast, eerie atmosphere, gothic illustration style, chilling",
+    "Dark Sci-Fi": "cyberpunk, grimdark, neon glow, intricate mechanical details, moody atmosphere, futuristic dystopian",
+    "High Fantasy": "epic fantasy illustration, ethereal lighting, ornate armor, mystical creatures, vibrant magic effects, rich oil painting",
+    "Neon Noir Detective": "neo-noir, synthwave color palette, stark shadows, rain-slicked streets, cinematic angles, hardboiled",
+    "Wasteland Apocalypse": "post-apocalyptic, grimy, rusty textures, desaturated colors, harsh sunlight, survivalist gear, detailed ruins",
+    "Lighthearted Comedy": "cartoony, bright pastel colors, exaggerated expressions, clean lines, flat shading, cheerful",
+    "Teen Drama / Slice of Life": "webtoon style, soft lighting, expressive faces, modern casual clothing, everyday environments, cel shaded",
+    "Anime Story": "anime style, cel-shaded, large expressive eyes, dynamic action lines, colorful hair, japanese animation aesthetic, vibrant",
+    "Custom": "clean illustration, modern aesthetic, highly detailed, professional art"
+};
 export const TONES = [
     "ACTION-HEAVY (Short, punchy dialogue. Focus on kinetics.)",
     "INNER-MONOLOGUE (Heavy captions revealing thoughts.)",

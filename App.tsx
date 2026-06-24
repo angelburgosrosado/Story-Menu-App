@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, TONES, LANGUAGES, ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from './types';
+import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from './types';
 import { Setup } from './Setup';
 import { Book } from './Book';
 import { useApiKey } from './useApiKey';
@@ -653,7 +653,21 @@ const App: React.FC = () => {
                 selectedLanguage,
                 storyTone,
                 customPremise,
-                creativeDirectives,
+                creativeDirectives: (() => {
+                    let enhancedCreativeDirectives = `${creativeDirectives || ''} Artistic Style Keywords: ${STYLE_KEYWORDS[selectedGenre] || STYLE_KEYWORDS['Custom']}.`;
+                    let narrativeGuidance = "";
+                    if (isFinalPage) {
+                        narrativeGuidance = "This is the final page. Conclude the story with a satisfying resolution, a clear ending, or a poignant moment. Ensure all plot threads are tied up.";
+                    } else if (pageNum % 3 === 0 && pageNum !== 1) {
+                        narrativeGuidance = "This page should advance the main plot significantly, introduce a new challenge, or reveal a key piece of information. Build towards the climax.";
+                    } else if (isDecisionPage) {
+                        narrativeGuidance = "This page ends with a decision. Ensure the narrative naturally leads to a point where the main character must make a crucial choice. Set up the stakes for the upcoming decision.";
+                    } else {
+                        narrativeGuidance = "Continue the story naturally. Focus on character development, dialogue, and advancing the current scene.";
+                    }
+                    enhancedCreativeDirectives += ` NARRATIVE GUIDANCE for this beat: ${narrativeGuidance}`;
+                    return enhancedCreativeDirectives;
+                })(),
                 richMode,
                 heroVisuals,
                 friendVisuals,
@@ -729,6 +743,7 @@ const App: React.FC = () => {
                 beat,
                 type,
                 styleEra,
+                styleKeywords: STYLE_KEYWORDS[selectedGenre] || STYLE_KEYWORDS['Custom'],
                 heroVisuals,
                 friendVisuals,
                 villainVisuals,

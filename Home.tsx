@@ -307,7 +307,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 {/* 3D Spline Background */}
                 <div className="absolute top-0 left-0 w-full h-full min-h-[800px] z-0 pointer-events-auto overflow-hidden opacity-100 flex items-center justify-center">
                     <Spline 
-                        scene="https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode" 
+                        scene="https://my.spline.design/animatedcharactersbyheyvladcopycopy-L2z3H23X3D7vtn9Z8jCei5XO/scene.splinecode" 
                         style={{ width: '100%', height: '100%' }}
                     />
                 </div>

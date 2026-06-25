@@ -7,11 +7,10 @@ import { WritersJournalDashboard } from './WritersJournalDashboard';
 import { KidStoryDashboard } from './KidStoryDashboard';
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx / Account.tsx logic). */
-const getActiveSkin = (): 'comic' | 'writers-journal' | 'kid-story' => {
+const getActiveSkin = (): 'comic' | 'kid-story' => {
     try {
         const saved = localStorage.getItem('story_menu_skin');
-        if (saved === 'editorial' || saved === 'short-story') return 'writers-journal';
-        if (saved === 'comic' || saved === 'writers-journal' || saved === 'kid-story') return saved;
+        if (saved === 'comic' || saved === 'kid-story') return saved;
         return 'comic';
     } catch {
         return 'comic';

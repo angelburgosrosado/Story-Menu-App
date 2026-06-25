@@ -303,92 +303,69 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div className="ambient-orb cyan w-[500px] h-[500px] top-10 left-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none"></div>
                 <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/4 right-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none" style={{ animationDelay: '3s' }}></div>
 
-                {/* Cinematic Hero Section */}
-                <div className="w-full space-y-8 text-center max-w-4xl mx-auto mb-20 relative z-10">
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md ${isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/10'}`}>
-                        <span className="flex h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse animate-ping"></span>
-                        <span className={`text-sm font-semibold tracking-wide ${isLightMode ? 'text-cyan-600' : 'text-cyan-400'}`}>{landingConfig?.heroBadge || t('home.hero.badge', 'The Ultimate AI Publishing Platform')}</span>
+                {/* Magical Hero Section */}
+                <div className="w-full flex flex-col items-center text-center max-w-5xl mx-auto mb-24 relative z-10 pt-10">
+                    <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border backdrop-blur-md mb-8 ${isLightMode ? 'bg-amber-100 border-amber-300' : 'bg-amber-500/20 border-amber-500/40'}`}>
+                        <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span className={`text-sm font-bold tracking-wide ${isLightMode ? 'text-amber-700' : 'text-amber-300'}`}>👑 Premium Features Now Available</span>
                     </div>
 
-                    <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] ${isLightMode ? 'text-slate-900' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400'}`}>
-                        {landingConfig?.heroTitle || "Create the Stories You've "} <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
-                        {landingConfig?.heroTitleHighlight || "Always Imagined"}
+                    <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.15] mb-6 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                        Turn Your Ideas Into <br className="hidden md:block" />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600">
+                            Complete Comic Stories
                         </span>
                     </h1>
 
-                    <p className={`text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                        {landingConfig?.heroSubtitle || "Whether you're crafting complex manga, creating magical picture books for kids, or journaling your next great short story, Story.Menu gives you the AI tools to bring your imagination to life."}
+                    <p className={`text-xl md:text-2xl font-light leading-relaxed max-w-3xl mx-auto mb-10 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>
+                        Showcase Your Talent to the World. Transform everyday ideas...into structured, warm, shareable comic stories.
                     </p>
-                </div>
 
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 w-full max-w-2xl mx-auto">
+                        <button 
+                            onClick={() => {
+                                window.dispatchEvent(new Event('trigger-auth-dialog'));
+                            }}
+                            className="px-10 py-5 rounded-full font-black text-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 text-white shadow-[0_0_40px_rgba(168,85,247,0.4)] transition-all hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(168,85,247,0.6)] border border-white/20"
+                        >
+                            Sign Up Free ✨
+                        </button>
+                    </div>
 
-                {/* The 3 Paths (Feature Cards) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                    <div className={`flex flex-col items-center gap-3 mb-16 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>
+                        <div className="flex text-amber-400 text-xl">
+                            ★★★★★
+                        </div>
+                        <p className="font-medium text-sm md:text-base">Trusted by over 300,000 people.</p>
+                    </div>
+
+                    {/* Premium Features Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-4xl mx-auto">
+                        <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                            <Zap className="w-6 h-6 text-orange-400 mb-2" />
+                            <h4 className="font-bold text-sm">Enhanced Models</h4>
+                            <p className="text-xs opacity-70">Stronger Prompt Following</p>
+                        </div>
+                        <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                            <ImageIcon className="w-6 h-6 text-purple-400 mb-2" />
+                            <h4 className="font-bold text-sm">Higher Resolution</h4>
+                            <p className="text-xs opacity-70">Crystal clear artwork</p>
+                        </div>
+                        <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                            <ShieldCheck className="w-6 h-6 text-cyan-400 mb-2" />
+                            <h4 className="font-bold text-sm">Watermark-Free</h4>
+                            <p className="text-xs opacity-70">Clean exports</p>
+                        </div>
+                        <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
+                            <Globe className="w-6 h-6 text-pink-400 mb-2" />
+                            <h4 className="font-bold text-sm">Social-Ready</h4>
+                            <p className="text-xs opacity-70">Optimized assets</p>
+                        </div>
+                    </div>
                     
-                    {/* Comic Studio */}
-                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
-                        isLightMode 
-                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
-                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
-                    }`}>
-                        <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
-                            ✍️
-                        </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathComicTitle || "Comic Studio"}</h3>
-                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            {landingConfig?.pathComicDesc || "Make complex comic books including anime and manga with simple tools and deep AI integration to maximize your output."}
-                        </p>
-                        <button 
-                            onClick={() => handleLaunchStudio('comic')}
-                            className="w-full py-4 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 transition-all"
-                        >
-                            {landingConfig?.pathComicBtn || "Launch Studio"}
-                        </button>
-                    </div>
-
-                    {/* Kid Storymaker */}
-                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
-                        isLightMode 
-                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
-                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
-                    }`}>
-                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
-                            🌟
-                        </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathKidTitle || "Kid Storymaker"}</h3>
-                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            {landingConfig?.pathKidDesc || "A fun, wizard-driven picture book creator. Pick a theme, name your hero, and generate a story to share or print instantly."}
-                        </p>
-                        <button 
-                            onClick={() => handleLaunchStudio('kid-story')}
-                            className="w-full py-4 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 transition-all"
-                        >
-                            {landingConfig?.pathKidBtn || "Start Adventure"}
-                        </button>
-                    </div>
-
-                    {/* Writer's Journal */}
-                    <div className={`p-8 rounded-[2rem] border shadow-xl flex flex-col items-center text-center transition-transform hover:-translate-y-2 ${
-                        isLightMode 
-                        ? 'bg-white border-slate-200 hover:shadow-2xl' 
-                        : 'bg-slate-900/80 border-slate-700/50 backdrop-blur-md'
-                    }`}>
-                        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-4xl mb-6 shadow-inner">
-                            📖
-                        </div>
-                        <h3 className={`text-2xl font-black mb-3 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.pathWriterTitle || "Writer's Journal"}</h3>
-                        <p className={`mb-8 flex-1 ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            {landingConfig?.pathWriterDesc || "Write 10-page short stories in a structured journal format, generate matching visuals for each scene, and publish online."}
-                        </p>
-                        <button 
-                            onClick={() => handleLaunchStudio('writers-journal')}
-                            className="w-full py-4 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-lg shadow-amber-500/30 transition-all"
-                        >
-                            {landingConfig?.pathWriterBtn || "Open Journal"}
-                        </button>
-                    </div>
-
+                    <p className="mt-12 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-400 to-gray-600">
+                        Your Imagination, Unleashed by AI.
+                    </p>
                 </div>
 
                 {/* Visual Style Showcase Grid (Moved Up!) */}

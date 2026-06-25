@@ -27,7 +27,7 @@ export const ModeSelectionScreen: React.FC<ModeSelectionScreenProps> = ({ onSele
                     What kind of story do you want to create today? You can always change this later in your profile settings.
                 </p>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                     {/* Comic Studio */}
                     <button 
                         onClick={() => onSelect('comic')}
@@ -45,7 +45,7 @@ export const ModeSelectionScreen: React.FC<ModeSelectionScreenProps> = ({ onSele
                         </p>
                     </button>
 
-                    {/* Writer's Journal */}
+                    {/* Writer's Journal (Hidden)
                     <button 
                         onClick={() => onSelect('writers-journal')}
                         className="group relative flex flex-col items-center text-left p-8 rounded-3xl bg-slate-900/50 border-2 border-slate-800 hover:border-fuchsia-500 transition-all overflow-hidden"
@@ -61,6 +61,7 @@ export const ModeSelectionScreen: React.FC<ModeSelectionScreenProps> = ({ onSele
                             Write 10-page short stories with a clean, sequential page layout.
                         </p>
                     </button>
+                    */}
 
                     {/* Kid Story */}
                     <button 

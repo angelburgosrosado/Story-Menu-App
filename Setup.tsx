@@ -1577,6 +1577,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                           >
                                {t('setup.dashboard.skinComic')}
                           </button>
+                          {/*
                           <button
                                type="button"
                                onClick={() => setAppSkin('writers-journal')}
@@ -1584,6 +1585,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                           >
                                Writer's Journal
                           </button>
+                          */}
                           <button
                                type="button"
                                onClick={() => setAppSkin('kid-story')}

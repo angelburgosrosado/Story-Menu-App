@@ -305,7 +305,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/4 right-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none" style={{ animationDelay: '3s' }}></div>
 
                 {/* 3D Spline Background */}
-                <div className="absolute top-0 left-0 w-full h-full min-h-[800px] z-0 pointer-events-auto overflow-hidden opacity-100 flex items-center justify-center">
+                <div className="absolute top-0 left-0 w-full h-[700px] z-0 pointer-events-auto overflow-hidden opacity-100 flex items-center justify-center [mask-image:linear-gradient(to_bottom,white_60%,transparent_100%)] -webkit-mask-image:linear-gradient(to_bottom,white_60%,transparent_100%)">
                     <Spline 
                         scene="/animated_characters.splinecode" 
                         style={{ width: '100%', height: '100%' }}

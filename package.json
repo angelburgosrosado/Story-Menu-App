@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.27.0",
+    "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^1.12.98",
     "@stripe/react-stripe-js": "^6.6.0",
     "@stripe/stripe-js": "^9.8.0",
     "dotenv": "^17.4.2",

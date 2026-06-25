@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import Spline from '@splinetool/react-spline';
 import { CommunityGallery } from './CommunityGallery';
 import { 
   Sparkles, Layers, Flame, BookOpen, Star, GitMerge, 
@@ -302,6 +303,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 {/* Background glowing ambient grids */}
                 <div className="ambient-orb cyan w-[500px] h-[500px] top-10 left-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none"></div>
                 <div className="ambient-orb fuchsia w-[600px] h-[600px] top-1/4 right-1/4 animate-pulse-glow -z-10 transition-colors absolute pointer-events-none" style={{ animationDelay: '3s' }}></div>
+
+                {/* 3D Spline Background */}
+                <div className="absolute inset-0 z-0 pointer-events-auto w-full h-[800px] overflow-hidden opacity-80" style={{ transform: 'translateY(-100px)' }}>
+                    <Spline scene="https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode" />
+                </div>
 
                 {/* Magical Hero Section */}
                 <div className="w-full flex flex-col items-center text-center max-w-5xl mx-auto mb-24 relative z-10 pt-10">

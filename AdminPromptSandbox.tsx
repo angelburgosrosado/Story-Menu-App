@@ -15,6 +15,7 @@ export const AdminPromptSandbox: React.FC = () => {
     const [sequenceResults, setSequenceResults] = useState<string[]>([]);
     const [analysisResult, setAnalysisResult] = useState<string>('');
     const [error, setError] = useState('');
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
     // Sandbox Inputs
     const [selectedGenre, setSelectedGenre] = useState(GENRES[0]);
@@ -550,17 +551,17 @@ export const AdminPromptSandbox: React.FC = () => {
                             {sequenceResults.length > 0 ? (
                                 <div className="grid grid-cols-3 gap-2 h-full">
                                     {sequenceResults.map((url, i) => (
-                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-200 flex items-center justify-center relative hover:opacity-90 transition-opacity cursor-pointer">
+                                        <div key={i} onClick={() => setExpandedImage(url)} className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-200 flex items-center justify-center relative hover:opacity-90 transition-opacity cursor-pointer">
                                             <img src={url} alt={`Sequence ${i}`} className="w-full h-full object-cover" />
                                             <div className="absolute top-1 left-1 bg-black/60 text-white text-[8px] px-1 rounded">Panel {i+1}</div>
-                                        </a>
+                                        </div>
                                     ))}
                                 </div>
                             ) : imageResult ? (
                                 <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-200 flex items-center justify-center relative">
-                                    <a href={imageResult} target="_blank" rel="noopener noreferrer" className="w-full h-full flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer">
+                                    <div onClick={() => setExpandedImage(imageResult)} className="w-full h-full flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer">
                                         <img src={imageResult} alt="Generated visual" className="max-w-full max-h-full object-contain" />
-                                    </a>
+                                    </div>
                                     
                                     {showLayout && beatResult && (
                                         <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
@@ -612,6 +613,29 @@ export const AdminPromptSandbox: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Fullscreen Image Modal */}
+            {expandedImage && (
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <div className="relative max-w-[95vw] max-h-[95vh] rounded-2xl overflow-hidden shadow-2xl bg-black flex items-center justify-center">
+                        <img 
+                            src={expandedImage} 
+                            alt="Expanded panel" 
+                            className="max-w-full max-h-[95vh] object-contain cursor-default"
+                            onClick={(e) => e.stopPropagation()} 
+                        />
+                        <button 
+                            onClick={() => setExpandedImage(null)}
+                            className="absolute top-4 right-4 bg-black/50 hover:bg-black text-white p-2 rounded-full backdrop-blur-md transition-colors font-bold text-sm"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

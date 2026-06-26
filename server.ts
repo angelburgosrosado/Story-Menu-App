@@ -1297,17 +1297,38 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 contents.push({ inlineData: { mimeType: 'image/jpeg', data: villainRef.clothesBase64 } });
             }
         }
+        const getPhysicalTraits = async (base64Img: string | undefined, characterRole: string): Promise<string> => {
+            if (!base64Img) return "";
+            try {
+                const ai = getAIClient(req.headers['x-gemini-key'] as string);
+                const response = await callGeminiSafely(ai, {
+                    model: 'gemini-2.5-flash',
+                    contents: [
+                        { inlineData: { mimeType: 'image/jpeg', data: base64Img } },
+                        { text: `Analyze this face and provide a highly concise physical description (age, gender, hair style, eye color, jawline, facial hair, skin tone) formatted as a single sentence. Focus only on permanent facial/head features. Do not describe the background or image quality.` }
+                    ]
+                });
+                return response && response.text ? `[Physical traits for ${characterRole}: ${response.text.trim()}]` : "";
+            } catch (e: any) {
+                console.error(`Failed to extract traits for ${characterRole}:`, e.message);
+                return "";
+            }
+        };
+
+        const heroTraits = await getPhysicalTraits(heroRef?.base64, "Hero");
+        const friendTraits = await getPhysicalTraits(friendRef?.base64, "Co-star");
+        const villainTraits = await getPhysicalTraits(villainRef?.base64, "Arc-rival");
 
         let promptText = `STYLE: ${artStyle || styleEra || selectedGenre} art style. VISUAL AESTHETICS: ${styleKeywords || ''}. `;
         
-        if (heroVisuals?.trim()) {
-            promptText += `HERO GUIDELINES (Use Hero references to align likeness, hair/head suggestions and clothing style): ${heroVisuals}. `;
+        if (heroVisuals?.trim() || heroTraits) {
+            promptText += `HERO GUIDELINES (Use Hero references to align likeness, hair/head suggestions and clothing style): ${heroVisuals || ''} ${heroTraits}. `;
         }
-        if (friendVisuals?.trim() && friendRef) {
-            promptText += `CO-STAR GUIDELINES (Use Co-star references to align likeness, hair/head suggestions and clothing style): ${friendVisuals}. `;
+        if ((friendVisuals?.trim() || friendTraits) && friendRef) {
+            promptText += `CO-STAR GUIDELINES (Use Co-star references to align likeness, hair/head suggestions and clothing style): ${friendVisuals || ''} ${friendTraits}. `;
         }
-        if (villainVisuals?.trim() && villainRef) {
-            promptText += `VILLAIN GUIDELINES (Use Arc-rival references to align likeness, hair/head suggestions and clothing style): ${villainVisuals}. `;
+        if ((villainVisuals?.trim() || villainTraits) && villainRef) {
+            promptText += `VILLAIN GUIDELINES (Use Arc-rival references to align likeness, hair/head suggestions and clothing style): ${villainVisuals || ''} ${villainTraits}. `;
         }
         
         if (type === 'cover') {
@@ -1527,8 +1548,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 await processCharacterRef(friendRef);
                 await processCharacterRef(villainRef);
 
-                // Enhance prompt to fight photograph bias
-                const styleEnforcer = "(((COMIC BOOK ART STYLE, 2D ILLUSTRATION, FICTIONAL UNIVERSE))) heavily stylized, vibrant colors, dynamic shading. NOT a photograph. NOT realistic.";
+                // Enhance prompt to fight photograph bias and enforce camera angle
+                const styleEnforcer = "(((COMIC BOOK ART STYLE, 2D ILLUSTRATION, FICTIONAL UNIVERSE))) heavily stylized, vibrant colors, dynamic shading. NOT a photograph. NOT realistic. (close-up portrait:1.2), clearly visible face, facing the camera, unmasked, highly detailed facial features.";
                 const payload: any = {
                     prompt: `${styleEnforcer} ${promptText}`.substring(0, 1450),
                     modelId: "1e60896f-3c26-4296-8ecc-53e2afecc132",

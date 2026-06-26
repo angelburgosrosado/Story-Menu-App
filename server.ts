@@ -1563,6 +1563,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
                     console.log(`Leonardo generation started. Job ID: ${generationId}. Waiting for completion...`);
                     
+                    let finalUrl = null;
                     // Poll for completion (up to 20 attempts, waiting 3 seconds each)
                     for (let i = 0; i < 20; i++) {
                         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -1579,23 +1580,82 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                             console.log(`Poll ${i+1}/20 for ${generationId}: Status = ${status}`);
                             
                             if (status === 'COMPLETE') {
-                                const finalUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
+                                finalUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
                                 if (finalUrl) {
                                     console.log("Leonardo image generation complete!");
-                                    return res.json({ imageUrl: finalUrl, jobId: generationId });
+                                    break;
                                 }
-                                break; // Break out to return fallback if complete but no URL
                             } else if (status === 'FAILED') {
                                 throw new Error("Leonardo API generation job failed.");
                             }
                         }
                     }
 
-                    return res.json({ 
-                        imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
-                        jobId: generationId,
-                        info: "Generation timed out."
-                    });
+                    if (!finalUrl) {
+                        return res.json({ 
+                            imageUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=500&q=80",
+                            jobId: generationId,
+                            info: "Generation timed out."
+                        });
+                    }
+
+                    // --- PASS 2: FACE SWAP VIA REPLICATE ---
+                    const replicateToken = process.env.REPLICATE_API_TOKEN;
+                    if (replicateToken && (heroRef?.base64 || friendRef?.base64 || villainRef?.base64)) {
+                        console.log("Replicate API token found. Initiating Pass 2: Face Swapping...");
+                        try {
+                            // We will swap the Hero face as the primary priority for now.
+                            // In a full production app, you can use multi-face models or sequential swaps.
+                            const primaryFaceBase64 = heroRef?.base64 || friendRef?.base64 || villainRef?.base64;
+                            
+                            const replicateRes = await fetch("https://api.replicate.com/v1/predictions", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Token ${replicateToken.trim()}`,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    // Using lucataco/faceswap model
+                                    version: "9a4298548422074c3f57258c5d544497314ae4112df80d116f0d2109e843d20d",
+                                    input: {
+                                        target_image: finalUrl,
+                                        swap_image: `data:image/jpeg;base64,${primaryFaceBase64}`
+                                    }
+                                })
+                            });
+
+                            if (replicateRes.ok) {
+                                const replicateData: any = await replicateRes.json();
+                                let predictionId = replicateData.id;
+                                console.log(`Replicate face swap started. ID: ${predictionId}`);
+                                
+                                // Poll Replicate for completion
+                                for (let j = 0; j < 20; j++) {
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    const pollRepRes = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+                                        headers: { "Authorization": `Token ${replicateToken.trim()}` }
+                                    });
+                                    if (pollRepRes.ok) {
+                                        const repPollData: any = await pollRepRes.json();
+                                        if (repPollData.status === 'succeeded') {
+                                            console.log("Face swap complete!");
+                                            finalUrl = repPollData.output;
+                                            break;
+                                        } else if (repPollData.status === 'failed') {
+                                            console.warn("Face swap failed, using original generated image.");
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                console.warn("Replicate API request failed. Using original generated image.");
+                            }
+                        } catch (swapErr: any) {
+                            console.error("Face swapping error:", swapErr.message);
+                        }
+                    }
+
+                    return res.json({ imageUrl: finalUrl, jobId: generationId });
                 }
                 const errText = await response.text();
                 throw new Error(`Leonardo API returned code: ${response.status}. Details: ${errText}`);

@@ -1211,6 +1211,34 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
+    app.post('/api/gemini/analyze-image', async (req, res): Promise<any> => {
+        const { imageBase64, prompt, userEmail } = req.body;
+        if (!(await consumeTokens(userEmail, calculateTokenCost('gemini-2.5-flash', 200)))) return res.status(402).json({ error: 'Insufficient tokens' });
+        
+        if (!imageBase64) return res.status(400).json({ error: 'imageBase64 is required' });
+        
+        try {
+            const ai = getAIClient(req.headers['x-gemini-key'] as string);
+            
+            const defaultPrompt = "Describe this image in detail. Focus on the art style, characters, mood, and narrative elements visible.";
+            
+            const response = await callGeminiSafely(ai, {
+                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
+                model: 'gemini-2.5-flash',
+                contents: [
+                    { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+                    { text: prompt || defaultPrompt }
+                ]
+            });
+            
+            const text = response.text?.trim() || "";
+            return res.json({ analysis: text });
+        } catch (e: any) {
+            console.error("Analyze image API failed:", e.message);
+            return res.status(500).json({ error: e.message || "Image analysis failed" });
+        }
+    });
+
     app.post('/api/gemini/image', async (req, res): Promise<any> => {
         if (!(await consumeTokens(req.body.userEmail, calculateTokenCost('gemini-2.5-flash-image', 1)))) return res.status(402).json({ error: 'Insufficient tokens' });
         const {

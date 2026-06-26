@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, AlertTriangle, Shield, Layers, Layout, CreditCard, DollarSign, Activity, Settings, Cpu, TrendingUp, X, RefreshCw, Trash2, CheckCircle, Search, Globe } from "lucide-react";
+import { Users, AlertTriangle, Shield, Layers, Layout, CreditCard, DollarSign, Activity, Settings, Cpu, TrendingUp, X, RefreshCw, Trash2, CheckCircle, Search, Globe, Play } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -28,6 +28,7 @@ interface AdminDashboardProps {
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { AuthScreen } from "./Account";
+import { AdminPromptSandbox } from "./AdminPromptSandbox";
 
 const MONETIZABLE_FEATURES = [
     'Basic Art Styles',
@@ -47,7 +48,7 @@ export const AdminApp: React.FC = () => {
   const [adminToken, setAdminToken] = useState<string>("");
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authLoading, setAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'diagnostics' | 'features' | 'ai_config' | 'ai_costs' | 'administrators'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'diagnostics' | 'features' | 'ai_config' | 'ai_costs' | 'administrators' | 'ai_sandbox'>('dashboard');
   const [customLoginUsername, setCustomLoginUsername] = useState('');
   const [customLoginPassword, setCustomLoginPassword] = useState('');
   const [customLoginError, setCustomLoginError] = useState('');
@@ -339,9 +340,10 @@ export const AdminApp: React.FC = () => {
            <NavItem tab="ai_config" icon={Cpu} label="AI Settings" />
            <NavItem tab="ai_costs" icon={TrendingUp} label="AI Cost Analytics" />
            
-           <div className="px-6 mt-8 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">Security</div>
+           <div className="px-6 mt-8 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">Security & Testing</div>
            <NavItem tab="administrators" icon={Shield} label="Administrators" />
            <NavItem tab="diagnostics" icon={Activity} label="Diagnostics" />
+           <NavItem tab="ai_sandbox" icon={Play} label="Prompt Sandbox" />
         </div>
         
         <div className="p-5 border-t border-slate-800/50 bg-slate-900/50">
@@ -1067,6 +1069,13 @@ export const AdminApp: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* AI Sandbox Panel */}
+                    {activeTab === 'ai_sandbox' && (
+                        <div className="p-0">
+                            <AdminPromptSandbox />
                         </div>
                     )}
                 </div>

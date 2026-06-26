@@ -61,11 +61,10 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess }) => 
         </div>
         
         <div className="space-y-6 max-w-md">
-          <h2 className="text-4xl font-extrabold leading-tight">
-            Your Imagination, <br/>Unleashed by AI.
+          <h2 className="text-4xl font-extrabold leading-tight" dangerouslySetInnerHTML={{ __html: t('signup.headline', 'Your Imagination, <br/>Unleashed by AI.') }}>
           </h2>
           <p className="text-lg text-gray-400 font-light leading-relaxed">
-            Join the community of creators turning everyday ideas into structured, beautiful, shareable comic stories in seconds.
+            {t('signup.subhead', 'Join the community of creators turning everyday ideas into structured, beautiful, shareable comic stories in seconds.')}
           </p>
           
           <div className="flex items-center gap-4 pt-6">
@@ -88,7 +87,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess }) => 
           onClick={onBack}
           className="absolute top-8 left-8 md:top-12 md:left-12 flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
         >
-          <ArrowLeft size={16} /> Back to Home
+          <ArrowLeft size={16} /> {t('signup.backHome', 'Back to Home')}
         </button>
 
         <div className="w-full max-w-md space-y-8">
@@ -166,7 +165,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess }) => 
               ) : (
                 <>
                   <Sparkles size={20} />
-                  Sign Up Free
+                  {t('signup.submitBtn', 'Sign Up Free')}
                 </>
               )}
             </button>
@@ -174,9 +173,9 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess }) => 
 
           <div className="text-center pt-6">
             <p className="text-gray-400 text-sm">
-              Already have an account?{' '}
+              {t('signup.haveAccount', 'Already have an account?')} {' '}
               <button onClick={() => window.dispatchEvent(new Event('trigger-auth-dialog'))} className="text-purple-400 font-semibold hover:text-purple-300 transition-colors">
-                Log In
+                {t('signup.logIn', 'Log In')}
               </button>
             </p>
           </div>

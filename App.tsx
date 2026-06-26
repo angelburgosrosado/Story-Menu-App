@@ -639,6 +639,18 @@ const App: React.FC = () => {
         }
     }
 
+    let enhancedCreativeDirectives = `${creativeDirectives || ''} Artistic Style Keywords: ${STYLE_KEYWORDS[selectedGenre] || STYLE_KEYWORDS['Custom']}.`;
+    let narrativeGuidance = "";
+    if (isFinalPage) {
+        narrativeGuidance = "This is the final page. Conclude the story with a satisfying resolution, a clear ending, or a poignant moment. Ensure all plot threads are tied up.";
+    } else if (pageNum % 3 === 0 && pageNum !== 1) {
+        narrativeGuidance = "This page should advance the main plot significantly, introduce a new challenge, or reveal a key piece of information. Build towards the climax.";
+    } else if (isDecisionPage) {
+        narrativeGuidance = "This page ends with a decision. Ensure the narrative naturally leads to a point where the main character must make a crucial choice. Set up the stakes for the upcoming decision.";
+    } else {
+        narrativeGuidance = "Continue the story naturally. Focus on character development, dialogue, and advancing the current scene.";
+    }
+
     try {
         const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
         const response = await fetch('/api/gemini/beat', {
@@ -647,37 +659,29 @@ const App: React.FC = () => {
             body: JSON.stringify({
                 userEmail: currentUser?.email,
                 history: relevantHistory,
+                hero: heroRef.current,
+                friendInstruction,
+                villainInstruction,
+                creativeDirectives: enhancedCreativeDirectives, // Use enhanced directives
+                narrativeGuidance, // Add narrative guidance
+                genre: selectedGenre,
+                language: selectedLanguage,
+                tone: storyTone,
+                customPremise,
                 pageNum,
                 isDecisionPage,
-                selectedGenre,
-                selectedLanguage,
-                storyTone,
-                customPremise,
-                creativeDirectives: (() => {
-                    let enhancedCreativeDirectives = `${creativeDirectives || ''} Artistic Style Keywords: ${STYLE_KEYWORDS[selectedGenre] || STYLE_KEYWORDS['Custom']}.`;
-                    let narrativeGuidance = "";
-                    if (isFinalPage) {
-                        narrativeGuidance = "This is the final page. Conclude the story with a satisfying resolution, a clear ending, or a poignant moment. Ensure all plot threads are tied up.";
-                    } else if (pageNum % 3 === 0 && pageNum !== 1) {
-                        narrativeGuidance = "This page should advance the main plot significantly, introduce a new challenge, or reveal a key piece of information. Build towards the climax.";
-                    } else if (isDecisionPage) {
-                        narrativeGuidance = "This page ends with a decision. Ensure the narrative naturally leads to a point where the main character must make a crucial choice. Set up the stakes for the upcoming decision.";
-                    } else {
-                        narrativeGuidance = "Continue the story naturally. Focus on character development, dialogue, and advancing the current scene.";
-                    }
-                    enhancedCreativeDirectives += ` NARRATIVE GUIDANCE for this beat: ${narrativeGuidance}`;
-                    return enhancedCreativeDirectives;
-                })(),
+                selectedGenre, // Ensure genre is passed again
+                selectedLanguage, // Ensure language is passed again
+                storyTone, // Ensure tone is passed again
+                soundPrompt,
+                friendRef: friendRef.current, // Pass full friend object if available
+                villainRef: villainRef.current, // Pass full villain object if available
                 richMode,
                 heroVisuals,
                 friendVisuals,
                 villainVisuals,
                 villainDna, // Villain DNA Power Profile
                 nemesisDNA, // Structured nemesis DNA Coordinates
-                soundPrompt, // Synthesizer auditory prompt
-                friendInstruction,
-                villainInstruction,
-                langName,
                 storyBlueprint
             })
         });
@@ -733,6 +737,26 @@ const App: React.FC = () => {
   const generateImage = async (beat: Beat, type: ComicFace['type']): Promise<string> => {
     await handleTokenDeduction('gemini-2.5-flash-image', 1);
     const styleEra = selectedGenre === 'Custom' ? "Modern American" : selectedGenre;
+
+    // --- Enhanced Style Description for Image Generation ---
+    const styleKeywords = STYLE_KEYWORDS[selectedGenre] || STYLE_KEYWORDS['Custom'] || 'clean illustration, modern aesthetic';
+    let imageStylePrompt = `Art Style: ${styleKeywords}. `;
+    
+    // --- Reinforce Character Consistency ---
+    let characterConsistencyPrompt = "";
+    if (heroRef.current) characterConsistencyPrompt += `Hero: ${heroRef.current.desc}. Visuals: ${heroVisuals}. `;
+    if (friendRef.current) characterConsistencyPrompt += `Friend: ${friendRef.current.desc}. Visuals: ${friendVisuals}. `;
+    if (villainRef.current) characterConsistencyPrompt += `Villain: ${villainRef.current.desc}. Visuals: ${villainVisuals}. `;
+    
+    // --- Incorporate Narrative Details ---
+    let narrativeImagePrompt = `Scene: ${beat.scene}. `;
+    if (beat.dialogue) narrativeImagePrompt += `Dialogue: "${beat.dialogue}". `;
+    if (beat.caption) narrativeImagePrompt += `Caption: "${beat.caption}". `;
+    if (beat.choices && beat.choices.length > 0) narrativeImagePrompt += `Choices: ${beat.choices.join(', ')}. `;
+    
+    // Combine all parts for the final prompt
+    const finalImagePrompt = `Generate an image for a comic panel. ${imageStylePrompt}${characterConsistencyPrompt}${narrativeImagePrompt}Genre: ${selectedGenre}. Language: ${selectedLanguage}.`;
+
     try {
         const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
         const response = await fetch('/api/gemini/image', {
@@ -752,7 +776,8 @@ const App: React.FC = () => {
                 heroRef: heroRef.current,
                 friendRef: friendRef.current,
                 villainRef: villainRef.current,
-                provider: imageProvider
+                provider: imageProvider,
+                finalImagePrompt // Pass the constructed prompt
             })
         });
         if (!response.ok) {

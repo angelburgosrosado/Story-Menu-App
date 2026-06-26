@@ -168,12 +168,18 @@ export const auto_en = {
   },
   "signup": {
     "auto1": "The Ultimate Generative Comic Studio",
+    "headline": "Your Imagination, <br/>Unleashed by AI.",
+    "subhead": "Join the community of creators turning everyday ideas into structured, beautiful, shareable comic stories in seconds.",
     "auto2": "Trusted by over 300,000 creators",
+    "backHome": "Back to Home",
     "auto3": "Create your account",
     "auto4": "Start crafting your first story today.",
     "auto5": "Full Name",
     "auto6": "Email Address",
-    "auto7": "Password"
+    "auto7": "Password",
+    "submitBtn": "Sign Up Free",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log In"
   },
   "layout": {
     "nav.logoComic": "Story Menu",
@@ -425,7 +431,13 @@ export const auto_ar = {
     "auto4": "ابدأ في صياغة قصتك الأولى اليوم.",
     "auto5": "الاسم الكامل",
     "auto6": "عنوان البريد الإلكتروني",
-    "auto7": "كلمة المرور"
+    "auto7": "كلمة المرور",
+    "headline": "خيالك،<br/>أطلقه الذكاء الاصطناعي.",
+    "subhead": "انضم إلى مجتمع المبدعين الذين يقومون بتحويل الأفكار اليومية إلى قصص كوميدية منظمة وجميلة وقابلة للمشاركة في ثوانٍ.",
+    "backHome": "العودة إلى المنزل",
+    "submitBtn": "الاشتراك مجاني",
+    "haveAccount": "هل لديك حساب بالفعل؟",
+    "logIn": "تسجيل الدخول"
   },
   "sandbox6": {
     "sfxTitle": "لوحة SFX المكانية",
@@ -681,7 +693,13 @@ export const auto_bg = {
     "auto4": "Започнете да създавате първата си история днес.",
     "auto5": "Пълно име",
     "auto6": "Имейл адрес",
-    "auto7": "Парола"
+    "auto7": "Парола",
+    "headline": "Вашето въображение, <br/>отприщено от AI.",
+    "subhead": "Присъединете се към общността на създателите, превръщащи ежедневните идеи в структурирани, красиви комични истории за споделяне за секунди.",
+    "backHome": "Обратно към дома",
+    "submitBtn": "Регистрирайте се безплатно",
+    "haveAccount": "Вече имате акаунт?",
+    "logIn": "влезте"
   },
   "sandbox6": {
     "sfxTitle": "Пространствена SFX дъска",
@@ -937,7 +955,13 @@ export const auto_bn = {
     "auto4": "আজই আপনার প্রথম গল্প তৈরি করা শুরু করুন।",
     "auto5": "পুরো নাম",
     "auto6": "ইমেইল ঠিকানা",
-    "auto7": "পাসওয়ার্ড"
+    "auto7": "পাসওয়ার্ড",
+    "headline": "আপনার কল্পনা, <br/>এআই দ্বারা প্রকাশিত।",
+    "subhead": "প্রতিদিনের ধারনাকে কাঠামোগত, সুন্দর, ভাগ করে নেওয়ার যোগ্য কমিক গল্পে কয়েক সেকেন্ডে পরিণত করে নির্মাতাদের সম্প্রদায়ে যোগ দিন।",
+    "backHome": "হোমে ফিরে যান",
+    "submitBtn": "বিনামূল্যে সাইন আপ করুন",
+    "haveAccount": "ইতিমধ্যে একটি অ্যাকাউন্ট আছে?",
+    "logIn": "লগ ইন করুন"
   },
   "sandbox6": {
     "sfxTitle": "স্থানিক SFX বোর্ড",
@@ -1193,7 +1217,13 @@ export const auto_cs = {
     "auto4": "Začněte vytvářet svůj první příběh ještě dnes.",
     "auto5": "Celé jméno",
     "auto6": "E-mailová adresa",
-    "auto7": "Heslo"
+    "auto7": "Heslo",
+    "headline": "Vaše představivost, <br/>Uvolněná umělou inteligencí.",
+    "subhead": "Připojte se ke komunitě tvůrců, kteří během několika sekund proměňují každodenní nápady ve strukturované, krásné a sdílené komiksové příběhy.",
+    "backHome": "Zpět na domovskou stránku",
+    "submitBtn": "Zaregistrujte se zdarma",
+    "haveAccount": "Už máte účet?",
+    "logIn": "Přihlaste se"
   },
   "sandbox6": {
     "sfxTitle": "Prostorová SFX deska",
@@ -1449,7 +1479,13 @@ export const auto_da = {
     "auto4": "Begynd at lave din første historie i dag.",
     "auto5": "Fuldt navn",
     "auto6": "Email adresse",
-    "auto7": "Adgangskode"
+    "auto7": "Adgangskode",
+    "headline": "Din fantasi, <br/>Udløst af AI.",
+    "subhead": "Slut dig til fællesskabet af skabere, der gør hverdagens idéer til strukturerede, smukke, delbare tegneseriehistorier på få sekunder.",
+    "backHome": "Tilbage til Hjemmet",
+    "submitBtn": "Tilmeld dig gratis",
+    "haveAccount": "Har du allerede en konto?",
+    "logIn": "Log ind"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -1705,7 +1741,13 @@ export const auto_de = {
     "auto4": "Beginnen Sie noch heute mit dem Verfassen Ihrer ersten Geschichte.",
     "auto5": "Vollständiger Name",
     "auto6": "E-Mail-Adresse",
-    "auto7": "Passwort"
+    "auto7": "Passwort",
+    "headline": "Ihre Fantasie, <br/>Entfesselt durch KI.",
+    "subhead": "Treten Sie der Community von Entwicklern bei, die alltägliche Ideen in Sekundenschnelle in strukturierte, schöne und teilbare Comic-Geschichten verwandeln.",
+    "backHome": "Zurück nach Hause",
+    "submitBtn": "Melden Sie sich kostenlos an",
+    "haveAccount": "Sie haben bereits ein Konto?",
+    "logIn": "Einloggen"
   },
   "sandbox6": {
     "sfxTitle": "Räumliches SFX-Board",
@@ -1961,7 +2003,13 @@ export const auto_el = {
     "auto4": "Ξεκινήστε να φτιάχνετε την πρώτη σας ιστορία σήμερα.",
     "auto5": "Ονοματεπώνυμο",
     "auto6": "Διεύθυνση Email",
-    "auto7": "Σύνθημα"
+    "auto7": "Σύνθημα",
+    "headline": "Η φαντασία σας, <br/>Απελευθερώθηκε από AI.",
+    "subhead": "Γίνετε μέλος της κοινότητας των δημιουργών που μετατρέπουν τις καθημερινές ιδέες σε δομημένες, όμορφες, κοινοποιήσιμες ιστορίες κόμικ μέσα σε δευτερόλεπτα.",
+    "backHome": "Επιστροφή στο σπίτι",
+    "submitBtn": "Εγγραφείτε Δωρεάν",
+    "haveAccount": "Έχετε ήδη λογαριασμό;",
+    "logIn": "Συνδεθείτε"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -2217,7 +2265,13 @@ export const auto_es = {
     "auto4": "Comience a elaborar su primera historia hoy.",
     "auto5": "Nombre completo",
     "auto6": "Dirección de correo electrónico",
-    "auto7": "Contraseña"
+    "auto7": "Contraseña",
+    "headline": "Tu imaginación, <br/>liberada por la IA.",
+    "subhead": "Únase a la comunidad de creadores que convierten ideas cotidianas en historias cómicas estructuradas, hermosas y que se pueden compartir en segundos.",
+    "backHome": "Volver a Inicio",
+    "submitBtn": "Regístrate gratis",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "logIn": "Acceso"
   },
   "sandbox6": {
     "sfxTitle": "Tablero SFX espacial",
@@ -2473,7 +2527,13 @@ export const auto_fi = {
     "auto4": "Aloita ensimmäisen tarinasi luominen tänään.",
     "auto5": "Koko nimi",
     "auto6": "Sähköpostiosoite",
-    "auto7": "Salasana"
+    "auto7": "Salasana",
+    "headline": "Sinun mielikuvituksesi, <br/>AI vapauttaa tekoäly.",
+    "subhead": "Liity luovien tekijöiden yhteisöön, joka muuttaa jokapäiväisistä ideoista jäsenneltyjä, kauniita ja jaettavia sarjakuvia sekunneissa.",
+    "backHome": "Takaisin etusivulle",
+    "submitBtn": "Rekisteröidy ilmaiseksi",
+    "haveAccount": "Onko sinulla jo tili?",
+    "logIn": "Kirjaudu sisään"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -2729,7 +2789,13 @@ export const auto_fr = {
     "auto4": "Commencez à créer votre première histoire dès aujourd’hui.",
     "auto5": "Nom et prénom",
     "auto6": "Adresse email",
-    "auto7": "Mot de passe"
+    "auto7": "Mot de passe",
+    "headline": "Votre imagination, <br/>Libérée par l'IA.",
+    "subhead": "Rejoignez la communauté de créateurs qui transforment des idées du quotidien en histoires comiques structurées, belles et partageables en quelques secondes.",
+    "backHome": "Retour à la maison",
+    "submitBtn": "Inscrivez-vous gratuitement",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "logIn": "Se connecter"
   },
   "sandbox6": {
     "sfxTitle": "Carte SFX spatiale",
@@ -2985,7 +3051,13 @@ export const auto_he = {
     "auto4": "התחל לעצב את הסיפור הראשון שלך עוד היום.",
     "auto5": "שם מלא",
     "auto6": "כתובת אימייל",
-    "auto7": "סִיסמָה"
+    "auto7": "סִיסמָה",
+    "headline": "הדמיון שלך, <br/>שוחרר על ידי AI.",
+    "subhead": "הצטרף לקהילת היוצרים שהופכים רעיונות יומיומיים לסיפורי קומיקס מובנים, יפים וניתנים לשיתוף תוך שניות.",
+    "backHome": "חזרה לבית",
+    "submitBtn": "הרשמה חינם",
+    "haveAccount": "כבר יש לך חשבון?",
+    "logIn": "התחבר"
   },
   "sandbox6": {
     "sfxTitle": "לוח SFX מרחבי",
@@ -3241,7 +3313,13 @@ export const auto_hi = {
     "auto4": "आज ही अपनी पहली कहानी तैयार करना शुरू करें।",
     "auto5": "पूरा नाम",
     "auto6": "मेल पता",
-    "auto7": "पासवर्ड"
+    "auto7": "पासवर्ड",
+    "headline": "आपकी कल्पना, एआई द्वारा प्रकाशित।",
+    "subhead": "रोजमर्रा के विचारों को सेकंडों में संरचित, सुंदर, साझा करने योग्य हास्य कहानियों में बदलने वाले रचनाकारों के समुदाय में शामिल हों।",
+    "backHome": "घर वापिस जा रहा हूँ",
+    "submitBtn": "निशुल्क साइन अप करें",
+    "haveAccount": "क्या आपके पास पहले से एक खाता मौजूद है?",
+    "logIn": "लॉग इन करें"
   },
   "sandbox6": {
     "sfxTitle": "स्थानिक एसएफएक्स बोर्ड",
@@ -3497,7 +3575,13 @@ export const auto_hr = {
     "auto4": "Počnite stvarati svoju prvu priču danas.",
     "auto5": "Puno ime",
     "auto6": "E-mail adresa",
-    "auto7": "Lozinka"
+    "auto7": "Lozinka",
+    "headline": "Vaša mašta, <br/>oslobodila AI.",
+    "subhead": "Pridružite se zajednici kreatora koji svakodnevne ideje pretvaraju u strukturirane, lijepe strip priče koje se mogu dijeliti u sekundi.",
+    "backHome": "Povratak kući",
+    "submitBtn": "Prijavite se besplatno",
+    "haveAccount": "Već imate račun?",
+    "logIn": "Prijavite se"
   },
   "sandbox6": {
     "sfxTitle": "Prostorna SFX ploča",
@@ -3753,7 +3837,13 @@ export const auto_hu = {
     "auto4": "Kezdje el megalkotni első történetét még ma.",
     "auto5": "Teljes név",
     "auto6": "E-mail cím",
-    "auto7": "Jelszó"
+    "auto7": "Jelszó",
+    "headline": "Az Ön képzelete, <br/>az AI szabadjára engedte.",
+    "subhead": "Csatlakozz az alkotók közösségéhez, akik a mindennapi ötleteket strukturált, gyönyörű, megosztható képregényes történetekké alakítják másodpercek alatt.",
+    "backHome": "Vissza a Kezdőlapra",
+    "submitBtn": "Regisztráció ingyenes",
+    "haveAccount": "Már van fiókja?",
+    "logIn": "Bejelentkezés"
   },
   "sandbox6": {
     "sfxTitle": "Térbeli SFX tábla",
@@ -4009,7 +4099,13 @@ export const auto_id = {
     "auto4": "Mulailah menyusun cerita pertama Anda hari ini.",
     "auto5": "Nama Lengkap",
     "auto6": "Alamat Surel",
-    "auto7": "Kata sandi"
+    "auto7": "Kata sandi",
+    "headline": "Imajinasi Anda,<br/>Dikeluarkan oleh AI.",
+    "subhead": "Bergabunglah dengan komunitas pembuat konten yang mengubah ide sehari-hari menjadi cerita komik yang terstruktur, indah, dan dapat dibagikan dalam hitungan detik.",
+    "backHome": "Kembali ke Rumah",
+    "submitBtn": "Daftar Gratis",
+    "haveAccount": "Sudah punya akun?",
+    "logIn": "Masuk"
   },
   "sandbox6": {
     "sfxTitle": "Dewan SFX Spasial",
@@ -4265,7 +4361,13 @@ export const auto_it = {
     "auto4": "Inizia a creare la tua prima storia oggi.",
     "auto5": "Nome e cognome",
     "auto6": "Indirizzo e-mail",
-    "auto7": "Password"
+    "auto7": "Password",
+    "headline": "La tua immaginazione, <br/>Scatenata dall'intelligenza artificiale.",
+    "subhead": "Unisciti alla community di creatori che trasformano in pochi secondi le idee di tutti i giorni in storie a fumetti strutturate, belle e condivisibili.",
+    "backHome": "Ritorno a casa",
+    "submitBtn": "Iscriviti gratuitamente",
+    "haveAccount": "Hai già un account?",
+    "logIn": "Login"
   },
   "sandbox6": {
     "sfxTitle": "Scheda SFX spaziale",
@@ -4521,7 +4623,13 @@ export const auto_ja = {
     "auto4": "今日から最初のストーリーの作成を始めましょう。",
     "auto5": "フルネーム",
     "auto6": "電子メールアドレス",
-    "auto7": "パスワード"
+    "auto7": "パスワード",
+    "headline": "あなたの想像力を<br/>AI が解き放ちます。",
+    "subhead": "クリエイターのコミュニティに参加して、日常のアイデアを数秒で構造化された美しく共有可能なコミックストーリーに変えましょう。",
+    "backHome": "ホームに戻る",
+    "submitBtn": "無料でサインアップ",
+    "haveAccount": "すでにアカウントをお持ちですか?",
+    "logIn": "ログイン"
   },
   "sandbox6": {
     "sfxTitle": "空間SFXボード",
@@ -4777,7 +4885,13 @@ export const auto_ko = {
     "auto4": "오늘부터 첫 번째 이야기를 만들어보세요.",
     "auto5": "성명",
     "auto6": "이메일 주소",
-    "auto7": "비밀번호"
+    "auto7": "비밀번호",
+    "headline": "당신의 상상력이 <br/>AI로 실현됩니다.",
+    "subhead": "일상의 아이디어를 단 몇 초 만에 구조화되고 아름답고 공유 가능한 만화 스토리로 바꾸는 제작자 커뮤니티에 참여하세요.",
+    "backHome": "홈으로 돌아가기",
+    "submitBtn": "무료로 가입하세요",
+    "haveAccount": "이미 계정이 있나요?",
+    "logIn": "로그인"
   },
   "sandbox6": {
     "sfxTitle": "공간 SFX 보드",
@@ -5033,7 +5147,13 @@ export const auto_ms = {
     "auto4": "Mula mencipta cerita pertama anda hari ini.",
     "auto5": "Nama Penuh",
     "auto6": "Alamat E-mel",
-    "auto7": "Kata laluan"
+    "auto7": "Kata laluan",
+    "headline": "Imaginasi Anda, <br/>Dilepaskan oleh AI.",
+    "subhead": "Sertai komuniti pencipta mengubah idea setiap hari menjadi cerita komik yang tersusun, cantik dan boleh dikongsi dalam beberapa saat.",
+    "backHome": "Kembali ke Rumah",
+    "submitBtn": "Daftar Percuma",
+    "haveAccount": "Sudah mempunyai akaun?",
+    "logIn": "Log Masuk"
   },
   "sandbox6": {
     "sfxTitle": "Papan SFX Spatial",
@@ -5289,7 +5409,13 @@ export const auto_nl = {
     "auto4": "Begin vandaag nog met het maken van je eerste verhaal.",
     "auto5": "Volledige naam",
     "auto6": "E-mailadres",
-    "auto7": "Wachtwoord"
+    "auto7": "Wachtwoord",
+    "headline": "Jouw verbeelding, <br/>Ontketend door AI.",
+    "subhead": "Sluit je aan bij de gemeenschap van makers die alledaagse ideeën binnen enkele seconden omzetten in gestructureerde, mooie, deelbare komische verhalen.",
+    "backHome": "Terug naar Thuis",
+    "submitBtn": "Meld u gratis aan",
+    "haveAccount": "Heeft u al een account?",
+    "logIn": "Inloggen"
   },
   "sandbox6": {
     "sfxTitle": "Ruimtelijk SFX-bord",
@@ -5545,7 +5671,13 @@ export const auto_no = {
     "auto4": "Begynn å lage din første historie i dag.",
     "auto5": "Fullt navn",
     "auto6": "E-postadresse",
-    "auto7": "Passord"
+    "auto7": "Passord",
+    "headline": "Din fantasi, <br/>utløst av AI.",
+    "subhead": "Bli med i fellesskapet av skapere som gjør hverdagslige ideer til strukturerte, vakre, delbare tegneseriehistorier på sekunder.",
+    "backHome": "Tilbake til Hjemmet",
+    "submitBtn": "Registrer deg gratis",
+    "haveAccount": "Har du allerede en konto?",
+    "logIn": "Logg inn"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -5801,7 +5933,13 @@ export const auto_pl = {
     "auto4": "Zacznij tworzyć swoją pierwszą historię już dziś.",
     "auto5": "Pełne imię i nazwisko",
     "auto6": "Adres e-mail",
-    "auto7": "Hasło"
+    "auto7": "Hasło",
+    "headline": "Twoja wyobraźnia <br/>uwolniona przez sztuczną inteligencję.",
+    "subhead": "Dołącz do społeczności twórców, którzy w ciągu kilku sekund zamieniają codzienne pomysły w uporządkowane, piękne i udostępniane historie komiksowe.",
+    "backHome": "Powrót do domu",
+    "submitBtn": "Zarejestruj się za darmo",
+    "haveAccount": "Masz już konto?",
+    "logIn": "Zaloguj się"
   },
   "sandbox6": {
     "sfxTitle": "Przestrzenna tablica SFX",
@@ -6057,7 +6195,13 @@ export const auto_pt = {
     "auto4": "Comece a elaborar sua primeira história hoje.",
     "auto5": "Nome completo",
     "auto6": "Endereço de email",
-    "auto7": "Senha"
+    "auto7": "Senha",
+    "headline": "Sua imaginação, <br/>liberada pela IA.",
+    "subhead": "Junte-se à comunidade de criadores que transformam ideias cotidianas em histórias em quadrinhos estruturadas, bonitas e compartilháveis ​​em segundos.",
+    "backHome": "De volta para casa",
+    "submitBtn": "Cadastre-se gratuitamente",
+    "haveAccount": "Já tem uma conta?",
+    "logIn": "Conecte-se"
   },
   "sandbox6": {
     "sfxTitle": "Placa SFX Espacial",
@@ -6313,7 +6457,13 @@ export const auto_ro = {
     "auto4": "Începeți să vă creați prima poveste astăzi.",
     "auto5": "Numele complet",
     "auto6": "Adresa de e-mail",
-    "auto7": "Parolă"
+    "auto7": "Parolă",
+    "headline": "Imaginația ta, <br/>Dezlănțuită de AI.",
+    "subhead": "Alăturați-vă comunității de creatori care transformă ideile de zi cu zi în povești comice structurate, frumoase și care pot fi împărtășite în câteva secunde.",
+    "backHome": "Înapoi la Acasă",
+    "submitBtn": "Înscrieți-vă gratuit",
+    "haveAccount": "Aveți deja un cont?",
+    "logIn": "Log in"
   },
   "sandbox6": {
     "sfxTitle": "Placă SFX spațială",
@@ -6569,7 +6719,13 @@ export const auto_ru = {
     "auto4": "Начните создавать свою первую историю уже сегодня.",
     "auto5": "Полное имя",
     "auto6": "Адрес электронной почты",
-    "auto7": "Пароль"
+    "auto7": "Пароль",
+    "headline": "Ваше воображение, <br/>развязанное искусственным интеллектом.",
+    "subhead": "Присоединяйтесь к сообществу авторов, превращающих повседневные идеи в структурированные, красивые, которыми можно поделиться, за считанные секунды комические истории.",
+    "backHome": "Вернуться домой",
+    "submitBtn": "Зарегистрируйтесь бесплатно",
+    "haveAccount": "У вас уже есть аккаунт?",
+    "logIn": "Авторизоваться"
   },
   "sandbox6": {
     "sfxTitle": "Пространственная плата SFX",
@@ -6825,7 +6981,13 @@ export const auto_sk = {
     "auto4": "Začnite vytvárať svoj prvý príbeh ešte dnes.",
     "auto5": "Celé meno",
     "auto6": "E-mailová adresa",
-    "auto7": "heslo"
+    "auto7": "heslo",
+    "headline": "Vaša predstavivosť, <br/>Uvoľnená AI.",
+    "subhead": "Pripojte sa ku komunite tvorcov, ktorí behom niekoľkých sekúnd premieňajú každodenné nápady na štruktúrované, krásne a zdieľateľné komiksové príbehy.",
+    "backHome": "Späť na Domov",
+    "submitBtn": "Zaregistrujte sa zadarmo",
+    "haveAccount": "Už máte účet?",
+    "logIn": "Prihláste sa"
   },
   "sandbox6": {
     "sfxTitle": "Priestorová SFX doska",
@@ -7081,7 +7243,13 @@ export const auto_sv = {
     "auto4": "Börja skapa din första berättelse idag.",
     "auto5": "Fullständigt namn",
     "auto6": "E-postadress",
-    "auto7": "Lösenord"
+    "auto7": "Lösenord",
+    "headline": "Din fantasi, <br/>Utsläppt av AI.",
+    "subhead": "Gå med i gruppen av kreatörer som förvandlar vardagliga idéer till strukturerade, vackra, delbara komiska berättelser på några sekunder.",
+    "backHome": "Tillbaka till hemmet",
+    "submitBtn": "Registrera dig gratis",
+    "haveAccount": "Har du redan ett konto?",
+    "logIn": "Logga in"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -7337,7 +7505,13 @@ export const auto_ta = {
     "auto4": "இன்றே உங்கள் முதல் கதையை உருவாக்கத் தொடங்குங்கள்.",
     "auto5": "முழுப் பெயர்",
     "auto6": "மின்னஞ்சல் முகவரி",
-    "auto7": "கடவுச்சொல்"
+    "auto7": "கடவுச்சொல்",
+    "headline": "உங்கள் கற்பனை, <br/>AI ஆல் கட்டவிழ்க்கப்பட்டது.",
+    "subhead": "அன்றாட யோசனைகளை நொடிகளில் கட்டமைக்கப்பட்ட, அழகான, பகிரக்கூடிய நகைச்சுவைக் கதைகளாக மாற்றும் படைப்பாளிகளின் சமூகத்தில் சேரவும்.",
+    "backHome": "முகப்புக்குத் திரும்பு",
+    "submitBtn": "இலவசமாக பதிவு செய்யுங்கள்",
+    "haveAccount": "ஏற்கனவே கணக்கு உள்ளதா?",
+    "logIn": "உள்நுழைக"
   },
   "sandbox6": {
     "sfxTitle": "ஸ்பேஷியல் எஸ்எஃப்எக்ஸ் போர்டு",
@@ -7593,7 +7767,13 @@ export const auto_th = {
     "auto4": "เริ่มสร้างเรื่องราวแรกของคุณวันนี้",
     "auto5": "ชื่อเต็ม",
     "auto6": "ที่อยู่อีเมล",
-    "auto7": "รหัสผ่าน"
+    "auto7": "รหัสผ่าน",
+    "headline": "จินตนาการของคุณ <br/>ปลดปล่อยโดย AI",
+    "subhead": "เข้าร่วมชุมชนผู้สร้างที่เปลี่ยนไอเดียในชีวิตประจำวันให้เป็นเรื่องราวการ์ตูนที่มีโครงสร้าง สวยงาม และแชร์ได้ภายในไม่กี่วินาที",
+    "backHome": "กลับไปที่บ้าน",
+    "submitBtn": "ลงทะเบียนฟรี",
+    "haveAccount": "มีบัญชีอยู่แล้ว?",
+    "logIn": "เข้าสู่ระบบ"
   },
   "sandbox6": {
     "sfxTitle": "คณะกรรมการ SFX เชิงพื้นที่",
@@ -7849,7 +8029,13 @@ export const auto_tl = {
     "auto4": "Simulan ang paggawa ng iyong unang kuwento ngayon.",
     "auto5": "Buong Pangalan",
     "auto6": "Email Address",
-    "auto7": "Password"
+    "auto7": "Password",
+    "headline": "Iyong Imahinasyon, <br/>Inilabas ng AI.",
+    "subhead": "Sumali sa komunidad ng mga creator na ginagawa ang mga pang-araw-araw na ideya sa mga structured, maganda, naibabahaging mga komiks na kwento sa ilang segundo.",
+    "backHome": "Bumalik sa Bahay",
+    "submitBtn": "Mag-sign Up nang Libre",
+    "haveAccount": "Mayroon ka nang account?",
+    "logIn": "Mag-log In"
   },
   "sandbox6": {
     "sfxTitle": "Spatial SFX Board",
@@ -8105,7 +8291,13 @@ export const auto_tr = {
     "auto4": "Bugün ilk hikayenizi oluşturmaya başlayın.",
     "auto5": "Ad Soyad",
     "auto6": "E-posta Adresi",
-    "auto7": "Şifre"
+    "auto7": "Şifre",
+    "headline": "<br/>Hayal Gücünüz Yapay Zeka Tarafından Serbest Bırakılıyor.",
+    "subhead": "Gündelik fikirleri saniyeler içinde yapılandırılmış, güzel, paylaşılabilir çizgi roman hikayelerine dönüştüren yaratıcılar topluluğuna katılın.",
+    "backHome": "Ana Sayfaya Geri Dön",
+    "submitBtn": "Ücretsiz Kayıt Ol",
+    "haveAccount": "Zaten bir hesabınız var mı?",
+    "logIn": "Giriş yapmak"
   },
   "sandbox6": {
     "sfxTitle": "Uzamsal SFX Kurulu",
@@ -8361,7 +8553,13 @@ export const auto_uk = {
     "auto4": "Почніть створювати свою першу історію вже сьогодні.",
     "auto5": "ПІБ",
     "auto6": "Адреса електронної пошти",
-    "auto7": "Пароль"
+    "auto7": "Пароль",
+    "headline": "Ваша уява, <br/>вивільнена ШІ.",
+    "subhead": "Приєднуйтеся до спільноти творців, які за лічені секунди перетворюють повсякденні ідеї на структуровані, красиві комікси, якими можна поділитися.",
+    "backHome": "Назад додому",
+    "submitBtn": "Зареєструйтеся безкоштовно",
+    "haveAccount": "Вже маєте акаунт?",
+    "logIn": "Увійти"
   },
   "sandbox6": {
     "sfxTitle": "Просторова дошка SFX",
@@ -8617,7 +8815,13 @@ export const auto_vi = {
     "auto4": "Bắt đầu tạo câu chuyện đầu tiên của bạn ngay hôm nay.",
     "auto5": "Tên đầy đủ",
     "auto6": "Địa chỉ email",
-    "auto7": "Mật khẩu"
+    "auto7": "Mật khẩu",
+    "headline": "Trí tưởng tượng của bạn, <br/>Được giải phóng bởi AI.",
+    "subhead": "Tham gia cộng đồng những người sáng tạo, biến những ý tưởng hàng ngày thành những câu chuyện hài hước có cấu trúc, đẹp mắt và có thể chia sẻ chỉ trong vài giây.",
+    "backHome": "Quay lại trang chủ",
+    "submitBtn": "Đăng ký miễn phí",
+    "haveAccount": "Đã có tài khoản?",
+    "logIn": "Đăng nhập"
   },
   "sandbox6": {
     "sfxTitle": "Bảng SFX không gian",
@@ -8873,7 +9077,13 @@ export const auto_zh_CN = {
     "auto4": "今天就开始创作你的第一个故事。",
     "auto5": "姓名",
     "auto6": "电子邮件",
-    "auto7": "密码"
+    "auto7": "密码",
+    "headline": "<br/>人工智能释放您的想象力。",
+    "subhead": "加入创作者社区，在几秒钟内将日常想法转变为结构化、美丽、可分享的漫画故事。",
+    "backHome": "返回首页",
+    "submitBtn": "免费注册",
+    "haveAccount": "已经有帐户？",
+    "logIn": "登录"
   },
   "sandbox6": {
     "sfxTitle": "空间特效板",
@@ -9129,7 +9339,13 @@ export const auto_zh_TW = {
     "auto4": "今天就開始創作你的第一個故事。",
     "auto5": "姓名",
     "auto6": "電子郵件",
-    "auto7": "密碼"
+    "auto7": "密碼",
+    "headline": "<br/>人工智慧釋放您的想像。",
+    "subhead": "加入創作者社區，在幾秒鐘內將日常想法轉變為結構化、美麗、可分享的漫畫故事。",
+    "backHome": "回首頁",
+    "submitBtn": "免費註冊",
+    "haveAccount": "已經有帳戶？",
+    "logIn": "登入"
   },
   "sandbox6": {
     "sfxTitle": "空間特效板",

@@ -1608,10 +1608,10 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                             // In a full production app, you can use multi-face models or sequential swaps.
                             const primaryFaceBase64 = heroRef?.base64 || friendRef?.base64 || villainRef?.base64;
                             
-                            const replicateRes = await fetch("https://api.replicate.com/v1/predictions", {
+                                const replicateRes = await fetch("https://api.replicate.com/v1/predictions", {
                                 method: "POST",
                                 headers: {
-                                    "Authorization": `Token ${replicateToken.trim()}`,
+                                    "Authorization": `Bearer ${replicateToken.trim()}`,
                                     "Content-Type": "application/json"
                                 },
                                 body: JSON.stringify({
@@ -1633,7 +1633,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                                 for (let j = 0; j < 20; j++) {
                                     await new Promise(resolve => setTimeout(resolve, 2000));
                                     const pollRepRes = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-                                        headers: { "Authorization": `Token ${replicateToken.trim()}` }
+                                        headers: { "Authorization": `Bearer ${replicateToken.trim()}` }
                                     });
                                     if (pollRepRes.ok) {
                                         const repPollData: any = await pollRepRes.json();

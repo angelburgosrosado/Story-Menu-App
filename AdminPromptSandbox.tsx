@@ -259,9 +259,17 @@ export const AdminPromptSandbox: React.FC = () => {
             
             const results = [];
             for (const angle of angles) {
-                const url = await _generateSingleImage(angle);
-                results.push(url);
+                try {
+                    const url = await _generateSingleImage(angle);
+                    results.push(url);
+                } catch (e: any) {
+                    console.error("Failed sequence panel:", e);
+                    // Push a placeholder error image
+                    results.push("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNmOGU3ZTciIC8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZWY0NDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RmFpbGVkPC90ZXh0Pjwvc3ZnPg==");
+                }
                 setSequenceResults([...results]); // Update progressively
+                // Add delay to prevent rate limits
+                await new Promise(r => setTimeout(r, 4000));
             }
         } catch (err: any) {
             setError(err.message || 'Failed to generate sequence');

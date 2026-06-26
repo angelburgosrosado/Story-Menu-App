@@ -1508,15 +1508,28 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 });
             }
             try {
-                let initImageId = null;
-                if (heroRef?.base64) {
-                    console.log("Uploading character reference to Leonardo...");
-                    initImageId = await uploadToLeonardo(heroRef.base64, apiKey);
-                    console.log(`Upload successful. ID: ${initImageId}`);
-                }
+                const controlnets: any[] = [];
+                const processCharacterRef = async (charRef: any) => {
+                    if (charRef?.base64) {
+                        console.log(`Uploading character reference for ${charRef.name} to Leonardo...`);
+                        const id = await uploadToLeonardo(charRef.base64, apiKey);
+                        controlnets.push({
+                            initImageId: id,
+                            initImageType: "UPLOADED",
+                            preprocessorId: 67, // Face/Character Reference
+                            strengthType: "Medium" // Lower strength allows the comic style to shine through
+                        });
+                    }
+                };
 
+                await processCharacterRef(heroRef);
+                await processCharacterRef(friendRef);
+                await processCharacterRef(villainRef);
+
+                // Enhance prompt to fight photograph bias
+                const styleEnforcer = "(((COMIC BOOK ART STYLE, 2D ILLUSTRATION, FICTIONAL UNIVERSE))) heavily stylized, vibrant colors, dynamic shading. NOT a photograph. NOT realistic.";
                 const payload: any = {
-                    prompt: promptText.substring(0, 1450),
+                    prompt: `${styleEnforcer} ${promptText}`.substring(0, 1450),
                     modelId: "1e60896f-3c26-4296-8ecc-53e2afecc132",
                     width: 768,
                     height: 1024,
@@ -1524,15 +1537,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     promptMagic: true
                 };
 
-                if (initImageId) {
-                    payload.controlnets = [
-                        {
-                            initImageId: initImageId,
-                            initImageType: "UPLOADED",
-                            preprocessorId: 67,
-                            strengthType: "High"
-                        }
-                    ];
+                if (controlnets.length > 0) {
+                    payload.controlnets = controlnets;
                 }
 
                 const response = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {

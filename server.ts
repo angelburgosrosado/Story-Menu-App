@@ -99,8 +99,9 @@ if (typeof __dirname !== 'undefined' && __dirname) {
  */
 async function consumeTokens(email: string, amount: number): Promise<boolean> {
     if (!email) return false;
-    if (email === 'admin-sandbox@example.com') return true;
-
+    
+    const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
+    if (email === 'admin-sandbox@example.com' || adminEmails.includes(email)) return true;
     try {
         const db = getFirestore();
         const snapshot = await db.collection('users').where('email', '==', email).get();

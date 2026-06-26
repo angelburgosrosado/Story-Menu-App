@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Home } from './Home';
+import { SignupPage } from './SignupPage';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { PrivacyPolicy, TermsOfService, CookiePolicy, DMCA } from './LegalPages';
@@ -21,7 +22,7 @@ const getActiveSkin = (): 'comic' | 'kid-story' => {
 // It wraps your existing App (Creator Studio) inside the 'studio' route.
 export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNode }) => {
     const { t, i18n } = useTranslation();
-    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca'>('home');
+    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca' | 'signup'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
     const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
     const [tokenBalance, setTokenBalance] = useState<number | null>(null);
@@ -197,6 +198,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             {/* Router View */}
             <main>
                 {currentView === 'home' && <Home onNavigate={handleNavigate} />}
+                {currentView === 'signup' && <SignupPage onBack={() => handleNavigate('home')} onSuccess={() => handleNavigate('studio')} />}
                 {currentView === 'studio' && skin === 'writers-journal' && <WritersJournalDashboard onNavigate={handleNavigate} />}
                 {currentView === 'studio' && skin === 'kid-story' && <KidStoryDashboard onNavigate={handleNavigate} />}
                 {currentView === 'studio' && skin === 'comic' && StudioComponent}
@@ -236,30 +238,30 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             </span>
                         </div>
                         <p className={`text-sm max-w-sm ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
-                            The ultimate interactive AI creator suite. Epic multi-agent narrative arcs, locked character DNA, and real-time soundtracks served on-demand.
+                            {t('layout.footer.desc', 'The ultimate interactive AI creator suite. Epic multi-agent narrative arcs, locked character DNA, and real-time soundtracks served on-demand.')}
                         </p>
                     </div>
                     <div>
-                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>Product</h4>
+                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>{t('layout.footer.product', 'Product')}</h4>
                         <ul className={`space-y-2 text-sm ${isEditorial ? 'text-stone-600' : 'text-gray-400'}`}>
-                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Features</button></li>
-                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Pricing</button></li>
-                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">Showcase</button></li>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">{t('layout.footer.features', 'Features')}</button></li>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">{t('layout.footer.pricing', 'Pricing')}</button></li>
+                            <li><button onClick={() => handleNavigate('home')} className="hover:underline">{t('layout.footer.showcase', 'Showcase')}</button></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>Legal & Compliance</h4>
+                        <h4 className={`font-bold mb-4 ${isEditorial ? 'text-stone-900' : 'text-white'}`}>{t('layout.footer.legal', 'Legal & Compliance')}</h4>
                         <ul className={`space-y-2 text-sm ${isEditorial ? 'text-stone-600' : 'text-gray-400'}`}>
-                            <li><button onClick={() => handleNavigate('privacy')} className="hover:underline">Privacy Policy</button></li>
-                            <li><button onClick={() => handleNavigate('terms')} className="hover:underline">Terms of Service</button></li>
-                            <li><button onClick={() => handleNavigate('cookies')} className="hover:underline">Cookie Policy</button></li>
-                            <li><button onClick={() => handleNavigate('dmca')} className="hover:underline">DMCA & Copyright</button></li>
+                            <li><button onClick={() => handleNavigate('privacy')} className="hover:underline">{t('layout.footer.privacy', 'Privacy Policy')}</button></li>
+                            <li><button onClick={() => handleNavigate('terms')} className="hover:underline">{t('layout.footer.terms', 'Terms of Service')}</button></li>
+                            <li><button onClick={() => handleNavigate('cookies')} className="hover:underline">{t('layout.footer.cookies', 'Cookie Policy')}</button></li>
+                            <li><button onClick={() => handleNavigate('dmca')} className="hover:underline">{t('layout.footer.dmca', 'DMCA & Copyright')}</button></li>
                         </ul>
                     </div>
                 </div>
                 <div className={`max-w-6xl mx-auto mt-12 pt-8 border-t flex flex-col md:flex-row items-center justify-between text-xs ${isEditorial ? 'border-stone-200 text-stone-500' : 'border-gray-800 text-gray-500'}`}>
-                    <p>&copy; {new Date().getFullYear()} Story.Menu. All rights reserved.</p>
-                    <p>Designed for the next generation of storytelling.</p>
+                    <p>&copy; {new Date().getFullYear()} {t('layout.footer.copyright', 'Story.Menu. All rights reserved.')}</p>
+                    <p>{t('layout.footer.tagline', 'Designed for the next generation of storytelling.')}</p>
                 </div>
             </footer>
             )}

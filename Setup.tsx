@@ -618,7 +618,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [personaStudioName, setPersonaStudioName] = useState('');
     const [personaStudioConcept, setPersonaStudioConcept] = useState('');
     const [personaStudioStyle, setPersonaStudioStyle] = useState(props.selectedGenre || 'Superhero Action');
-    const [selectedArtStyle, setSelectedArtStyle] = useState(props.selectedArtStyle || 'vibrant-comic');
+    const [selectedArtStyle, setSelectedArtStyle] = useState(() => {
+        return props.selectedArtStyle || localStorage.getItem('story_menu_preferred_style') || 'vibrant-comic';
+    });
 
     const [personaStudioSuggestedName, setPersonaStudioSuggestedName] = useState('');
     const [personaStudioSuggestedBio, setPersonaStudioSuggestedBio] = useState('');

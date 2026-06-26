@@ -12,9 +12,25 @@ import {
   stopProceduralSoundtrack, 
   playLaserSFX, 
   playExplosionSFX, 
-  playPageTurnSFX 
+  playPageTurnSFX,
+  playPunchSFX,
+  playSparkleSFX
 } from './audio';
 import { LANGUAGES, ART_STYLES } from './types';
+
+// Dummy translations for DB-driven plans so the translation script picks them up:
+const _dummyTranslations = (t: any) => [
+    t('home.planName.Free', 'Free'),
+    t('home.planName.Starter', 'Starter'),
+    t('home.planName.Pro', 'Pro'),
+    t('home.planFeature.Basic_Art_Styles', 'Basic Art Styles'),
+    t('home.planFeature.Standard_Generation_Queue', 'Standard Generation Queue'),
+    t('home.planFeature.Priority_GPU_Queue', 'Priority GPU Queue'),
+    t('home.planFeature.Advanced_Art_Styles', 'Advanced Art Styles'),
+    t('home.planFeature.Watermark_Removal', 'Watermark Removal'),
+    t('home.planFeature.Commercial_Usage_Rights', 'Commercial Usage Rights'),
+    t('home.planFeature.Premium_LLMs', 'Premium LLMs')
+];
 
 export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) => void }) => {
     const { i18n } = useTranslation();
@@ -53,28 +69,28 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
     const defaultStylePreviews = {
         anime: {
-            title: "Retro Anime 90s",
+            title: t('home.styleAnimeTitle', "Retro Anime 90s"),
             desc: t('sandbox6.styleDesc1', "Cell-shaded hand-painted watercolor backgrounds, deep cinematic dramatic gradients, classic vintage overlay."),
-            cover: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80",
-            badge: "Trending"
+            cover: "/anime.png",
+            badge: t('home.styleBadgeTrending', "Trending")
         },
         noir: {
-            title: "Noir Graphic Novel",
-            desc: "Heavy shadows, high contrast inks, ink-wash textures, retro comic newsprint halftones.",
-            cover: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=800&q=80",
-            badge: "Classic"
+            title: t('home.styleNoirTitle', "Noir Graphic Novel"),
+            desc: t('home.styleNoirDesc', "Heavy shadows, high contrast inks, ink-wash textures, retro comic newsprint halftones."),
+            cover: "/noir.png",
+            badge: t('home.styleBadgeClassic', "Classic")
         },
         pixar: {
-            title: "Pixar 3D Adventure",
-            desc: "Subtle clay shaders, rich global illumination, colorful and expressive caricature models, high depth of field.",
-            cover: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80",
-            badge: "Kids"
+            title: t('home.stylePixarTitle', "Pixar 3D Adventure"),
+            desc: t('home.stylePixarDesc', "Subtle clay shaders, rich global illumination, colorful and expressive caricature models, high depth of field."),
+            cover: "/pixar.png",
+            badge: t('home.styleBadgeKids', "Kids")
         },
         handdrawn: {
-            title: "Artisanal Sketch & Watercolor",
-            desc: "Warm textures, sketch lines, watercolor bleeding, personal hand-crafted storytelling ambiance.",
-            cover: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-            badge: "Artisanal"
+            title: t('home.styleHanddrawnTitle', "Artisanal Sketch & Watercolor"),
+            desc: t('home.styleHanddrawnDesc', "Warm textures, sketch lines, watercolor bleeding, personal hand-crafted storytelling ambiance."),
+            cover: "/handdrawn.png",
+            badge: t('home.styleBadgeArtisanal', "Artisanal")
         }
     };
 
@@ -151,11 +167,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     <div className="flex items-center gap-3">
                         <img 
                             src="logo.png" 
-                            alt="Story.Menu Logo" 
+                            alt={t('home.logoAlt', 'Story.Menu Logo')} 
                             className="w-10 h-10 object-contain rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-1 shadow-md shadow-indigo-500/10"
                         />
                         <span className={`text-xl font-extrabold tracking-tight font-sans bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500`}>
-                            Story.Menu
+                            {t('home.logoText', 'Story.Menu')}
                         </span>
                     </div>
 
@@ -166,7 +182,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         <a href="#capabilities" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.capabilities', 'Capabilities')}</a>
                         <a href="#pricing" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.pricing', 'Pricing')}</a>
                         <a href="#trending" className={`transition-colors hover:text-indigo-500 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>{t('home.nav.trending', 'Trending')}</a>
-                        <button onClick={() => window.location.href='/admin'} className={`transition-colors font-bold text-indigo-500 hover:text-indigo-400`}>Admin Dashboard</button>
+                        <button onClick={() => window.location.href='/admin'} className={`transition-colors font-bold text-indigo-500 hover:text-indigo-400`}>{t('home.nav.admin', 'Admin Dashboard')}</button>
                     </nav>
 
                     {/* Right side items */}
@@ -316,64 +332,55 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div className="w-full flex flex-col items-center text-center max-w-5xl mx-auto mb-24 relative z-10 pt-10">
                     <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border backdrop-blur-md mb-8 ${isLightMode ? 'bg-amber-100 border-amber-300' : 'bg-amber-500/20 border-amber-500/40'}`}>
                         <span className="flex h-3 w-3 rounded-full bg-amber-500 animate-pulse"></span>
-                        <span className={`text-sm font-bold tracking-wide ${isLightMode ? 'text-amber-700' : 'text-amber-300'}`}>👑 Premium Features Now Available</span>
+                        <span className={`text-sm font-bold tracking-wide ${isLightMode ? 'text-amber-700' : 'text-amber-300'}`}>{t('home.auto1', '👑 Premium Features Now Available')}</span>
                     </div>
 
                     <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.15] mb-6 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
-                        Turn Your Ideas Into <br className="hidden md:block" />
+                        {t('home.heroTitle1', 'Turn Your Ideas Into')} <br className="hidden md:block" />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600">
-                            Complete Comic Stories
+                            {t('home.heroTitle2', 'Complete Comic Stories')}
                         </span>
                     </h1>
 
                     <p className={`text-xl md:text-2xl font-light leading-relaxed max-w-3xl mx-auto mb-10 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>
-                        Showcase Your Talent to the World. Transform everyday ideas...into structured, warm, shareable comic stories.
+                        {t('home.heroSub2', 'Showcase Your Talent to the World. Transform everyday ideas...into structured, warm, shareable comic stories.')}
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 w-full max-w-2xl mx-auto">
                         <button 
-                            onClick={() => {
-                                window.dispatchEvent(new Event('trigger-auth-dialog'));
-                            }}
+                            onClick={() => onNavigate('signup')}
                             className="px-10 py-5 rounded-full font-black text-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-400 text-white shadow-[0_0_40px_rgba(168,85,247,0.4)] transition-all hover:-translate-y-1 hover:shadow-[0_0_60px_rgba(168,85,247,0.6)] border border-white/20"
                         >
-                            Sign Up Free ✨
+                            {t('home.heroSignupBtn', 'Sign Up Free ✨')}
                         </button>
-                    </div>
-
-                    <div className={`flex flex-col items-center gap-3 mb-16 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>
-                        <div className="flex text-amber-400 text-xl">
-                            ★★★★★
-                        </div>
-                        <p className="font-medium text-sm md:text-base">Trusted by over 300,000 people.</p>
                     </div>
 
                     {/* Premium Features Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-4xl mx-auto">
                         <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                             <Zap className="w-6 h-6 text-orange-400 mb-2" />
-                            <h4 className="font-bold text-sm">Enhanced Models</h4>
-                            <p className="text-xs opacity-70">Stronger Prompt Following</p>
+                            <h4 className="font-bold text-sm">{t('home.auto2', 'Enhanced Models')}</h4>
+                            <p className="text-xs opacity-70">{t('home.auto3', 'Stronger Prompt Following')}</p>
                         </div>
                         <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                             <ImageIcon className="w-6 h-6 text-purple-400 mb-2" />
-                            <h4 className="font-bold text-sm">Higher Resolution</h4>
-                            <p className="text-xs opacity-70">Crystal clear artwork</p>
+                            <h4 className="font-bold text-sm">{t('home.auto4', 'Higher Resolution')}</h4>
+                            <p className="text-xs opacity-70">{t('home.auto5', 'Crystal clear artwork')}</p>
                         </div>
                         <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                             <ShieldCheck className="w-6 h-6 text-cyan-400 mb-2" />
-                            <h4 className="font-bold text-sm">Watermark-Free</h4>
-                            <p className="text-xs opacity-70">Clean exports</p>
+                            <h4 className="font-bold text-sm">{t('home.auto6', 'Watermark-Free')}</h4>
+                            <p className="text-xs opacity-70">{t('home.auto7', 'Clean exports')}</p>
                         </div>
                         <div className={`p-4 rounded-2xl border backdrop-blur-sm flex flex-col items-center justify-center text-center ${isLightMode ? 'bg-white/80 border-slate-200' : 'bg-white/5 border-white/10'}`}>
                             <Globe className="w-6 h-6 text-pink-400 mb-2" />
-                            <h4 className="font-bold text-sm">Social-Ready</h4>
-                            <p className="text-xs opacity-70">Optimized assets</p>
+                            <h4 className="font-bold text-sm">{t('home.auto8', 'Social-Ready')}</h4>
+                            <p className="text-xs opacity-70">{t('home.auto9', 'Optimized assets')}</p>
                         </div>
                     </div>
                     
                     <p className="mt-12 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-400 to-gray-600">
-                        Your Imagination, Unleashed by AI.
+                        {t('home.heroSub', 'Your Imagination, Unleashed by AI.')}
                     </p>
                 </div>
 
@@ -381,10 +388,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div id="showcase" className="mb-24">
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
-                            <PenTool size={12} /> Artistic Diversity
+                            <PenTool size={12} /> {t('home.artDiversity', 'Artistic Diversity')}
                         </div>
-                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Artisanal & Storybook Styles</h2>
-                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Choose a visual framework that aligns with your story's soul. Hand-drawn aesthetics meet modern SaaS tools.</p>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{t('home.auto10', 'Artisanal & Storybook Styles')}</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto11', 'Choose a visual framework that aligns with your story\'s soul. Hand-drawn aesthetics meet modern SaaS tools.')}</p>
                     </div>
 
                     {/* Switcher tabs */}
@@ -429,7 +436,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                             
                             <div className="pt-4 flex gap-4">
                                 <button 
-                                    onClick={handleActionLaunchSandbox}
+                                    onClick={() => {
+                                        localStorage.setItem('story_menu_preferred_style', selectedStyleTab);
+                                        handleActionLaunchSandbox();
+                                    }}
                                     className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all cursor-pointer border ${
                                         isLightMode 
                                         ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800' 
@@ -437,7 +447,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     }`}
                                 >
                                     <Sparkles size={16} className="text-indigo-500" />
-                                    Launch with this Style
+                                    {t('home.launchStyleBtn', 'Launch with this Style')}
                                 </button>
                             </div>
                         </div>
@@ -451,8 +461,8 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent opacity-85"></div>
                                 <div className="absolute bottom-6 left-6 text-left">
-                                    <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">Rendering Lock</p>
-                                    <p className="text-lg font-bold text-white">Consistent Art Direction Engine</p>
+                                    <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">{t('home.auto12', 'Rendering Lock')}</p>
+                                    <p className="text-lg font-bold text-white">{t('home.auto13', 'Consistent Art Direction Engine')}</p>
                                 </div>
                             </div>
                         </div>
@@ -475,13 +485,13 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <Music size={24} />
                             </div>
                             <div>
-                                <h3 className={`text-2xl font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Interactive Soundscapes</h3>
-                                <p className={`text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Web Audio procedural synth engine</p>
+                                <h3 className={`text-2xl font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto14', 'Interactive Soundscapes')}</h3>
+                                <p className={`text-xs font-mono ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>{t('home.auto15', 'Web Audio procedural synth engine')}</p>
                             </div>
                         </div>
 
                         <p className={`font-light leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>
-                            Every multiverse genre carries its own generative procedural theme. Change genres to watch the synthetic frequency arpeggios shift live in your browser's audio nodes.
+                            {t('home.proceduralAudioDesc', "Every multiverse genre carries its own generative procedural theme. Change genres to watch the synthetic frequency arpeggios shift live in your browser's audio nodes.")}
                         </p>
 
                         {/* Audio controller display */}
@@ -504,8 +514,21 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                     {isPlayingAudio ? <Pause size={28} fill="currentColor" /> : <Play size={28} className="translate-x-0.5" fill="currentColor" />}
                                 </button>
                                 <div>
-                                    <p className={`text-xs uppercase font-bold tracking-wider ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>Soundtrack Status</p>
-                                    <p className={`text-lg font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{isPlayingAudio ? 'Procedural Audio Running' : 'Synthesizer Standby'}</p>
+                                    <p className={`text-xs uppercase font-bold tracking-wider ${isLightMode ? 'text-slate-400' : 'text-gray-500'}`}>{t('home.auto16', 'Soundtrack Status')}</p>
+                                    <p className={`text-lg font-bold ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{isPlayingAudio ? t('home.audioRunning', 'Procedural Audio Running') : t('home.audioStandby', 'Synthesizer Standby')}</p>
+                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                        <a href="#sfx-board" className="text-xs text-indigo-500 hover:text-indigo-400 font-semibold transition-colors inline-block mr-2">
+                                            {t('home.exploreSFX', 'Explore Spatial SFX Board ↓')}
+                                        </a>
+                                        {/* Quick Sound Links */}
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={playLaserSFX} className="text-lg hover:scale-110 transition-transform" title="Laser">⚡</button>
+                                            <button onClick={playExplosionSFX} className="text-lg hover:scale-110 transition-transform" title="Explosion">💥</button>
+                                            <button onClick={playPageTurnSFX} className="text-lg hover:scale-110 transition-transform" title="Page Turn">📖</button>
+                                            <button onClick={playPunchSFX} className="text-lg hover:scale-110 transition-transform" title="Punch">🥊</button>
+                                            <button onClick={playSparkleSFX} className="text-lg hover:scale-110 transition-transform" title="Sparkle">✨</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -555,7 +578,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                     </div>
 
                     {/* SFX triggers pad */}
-                    <div className={`lg:col-span-5 rounded-[2rem] p-8 border text-left flex flex-col justify-between space-y-6 transition-all ${
+                    <div id="sfx-board" className={`lg:col-span-5 rounded-[2rem] p-8 border text-left flex flex-col justify-between space-y-6 transition-all ${
                         isLightMode 
                         ? 'bg-white border-slate-200 shadow-xl' 
                         : 'glass-panel border-white/10'
@@ -566,11 +589,11 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 {t('sandbox6.sfxTitle', 'Spatial SFX Board')}
                             </h3>
                             <p className={`text-sm mt-2 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                                Click any trigger block to command the sound synthesis engine directly.
+                                {t('home.sfxDesc', 'Click any trigger block to command the sound synthesis engine directly.')}
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <button 
                                 onClick={playLaserSFX}
                                 className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
@@ -580,7 +603,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 }`}
                             >
                                 <span className="block text-2xl mb-1">⚡</span>
-                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Laser Beam</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">{t('home.auto17', 'Laser Beam')}</span>
                             </button>
                             <button 
                                 onClick={playExplosionSFX}
@@ -591,7 +614,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 }`}
                             >
                                 <span className="block text-2xl mb-1">💥</span>
-                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Explosion</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">{t('home.auto18', 'Explosion')}</span>
                             </button>
                             <button 
                                 onClick={playPageTurnSFX}
@@ -602,7 +625,29 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 }`}
                             >
                                 <span className="block text-2xl mb-1">📖</span>
-                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">Page Turn</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">{t('home.auto19', 'Page Turn')}</span>
+                            </button>
+                            <button 
+                                onClick={playPunchSFX}
+                                className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
+                                    isLightMode 
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-pink-500/40 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-pink-500/40'
+                                }`}
+                            >
+                                <span className="block text-2xl mb-1">🥊</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">{t('home.auto20', 'Punch Action')}</span>
+                            </button>
+                            <button 
+                                onClick={playSparkleSFX}
+                                className={`border rounded-2xl p-5 text-center transition-all cursor-pointer group ${
+                                    isLightMode 
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-pink-500/40 shadow-sm' 
+                                    : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-pink-500/40'
+                                }`}
+                            >
+                                <span className="block text-2xl mb-1">✨</span>
+                                <span className="block text-xs uppercase font-mono tracking-widest text-gray-500 group-hover:text-pink-500">{t('home.auto21', 'Magic Sparkle')}</span>
                             </button>
                             <button 
                                 onClick={() => {
@@ -612,7 +657,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 className="bg-gradient-to-r from-pink-500/10 to-indigo-500/10 hover:from-pink-500/20 hover:to-indigo-500/20 border border-indigo-500/30 rounded-2xl p-5 text-center transition-all cursor-pointer group"
                             >
                                 <span className="block text-2xl mb-1">🚀</span>
-                                <span className={`block text-xs uppercase font-mono tracking-widest group-hover:text-indigo-600 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>Combo Synthesis</span>
+                                <span className={`block text-xs uppercase font-mono tracking-widest group-hover:text-indigo-600 ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>{t('home.auto22', 'Combo Synthesis')}</span>
                             </button>
                         </div>
 
@@ -627,10 +672,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 <div id="capabilities" className="mb-24">
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
-                            <Cpu size={12} /> {landingConfig?.capabilitiesBadge || "Chassis v3.11 Publishing Workshop"}
+                            <Cpu size={12} /> {landingConfig?.capabilitiesBadge || t('home.capBadge', "Chassis v3.11 Publishing Workshop")}
                         </div>
-                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.capabilitiesTitle || "Built For Dynamic Multi-Tenant Publishing"}</h2>
-                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{landingConfig?.capabilitiesDesc || "A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting."}</p>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{landingConfig?.capabilitiesTitle || t('home.capTitle', "Built For Dynamic Multi-Tenant Publishing")}</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{landingConfig?.capabilitiesDesc || t('home.capDesc', "A high-end creative workshop structured to keep your graphic novels continuous, atmospheric, and visually arresting.")}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -644,10 +689,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/20 shadow-inner">
                                     <Layers size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Story Blueprint Architect</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Map chapter goals from inciting incident triggers on page 1 to decision branches on page 3, climbing to the climax on page 9. Strictly structured outline grids.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto23', 'Story Blueprint Architect')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto24', 'Map chapter goals from inciting incident triggers on page 1 to decision branches on page 3, climbing to the climax on page 9. Strictly structured outline grids.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-indigo-400 uppercase mt-6 block">● CHAPTER CONTROL ACTIVE</span>
+                            <span className="text-[10px] font-mono font-semibold text-indigo-400 uppercase mt-6 block">{t('home.auto25', '● CHAPTER CONTROL ACTIVE')}</span>
                         </div>
 
                         {/* Feature 2: Multi-Tenant Casting Vault */}
@@ -660,10 +705,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center mb-6 border border-purple-500/20 shadow-inner">
                                     <PenTool size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Multi-Tenant Casting Vault</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Forge persistent files containing character biometrics, facial weights, clothing references, and style lock keys. Keep heroes and archenemies consistent.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto26', 'Multi-Tenant Casting Vault')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto27', 'Forge persistent files containing character biometrics, facial weights, clothing references, and style lock keys. Keep heroes and archenemies consistent.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-purple-400 uppercase mt-6 block">● MODEL SYNTAX LOCKED</span>
+                            <span className="text-[10px] font-mono font-semibold text-purple-400 uppercase mt-6 block">{t('home.auto28', '● MODEL SYNTAX LOCKED')}</span>
                         </div>
 
                         {/* Feature 3: Multi-Engine Diffusion Router */}
@@ -676,10 +721,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/20 shadow-inner">
                                     <Cpu size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Multi-Engine Diffusion Router</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Choose your renderer: LlamaGen.ai (Comic API) for panel grids, Stable Diffusion (via ComfyUI) for raw workflow control, Leonardo.ai (CharRef), or Gemini 2.5 Flash.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto29', 'Multi-Engine Diffusion Router')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto30', 'Choose your renderer: LlamaGen.ai (Comic API) for panel grids, Stable Diffusion (via ComfyUI) for raw workflow control, Leonardo.ai (CharRef), or Gemini 2.5 Flash.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-cyan-400 uppercase mt-6 block">● DIFFUSION ENGINES STABLE</span>
+                            <span className="text-[10px] font-mono font-semibold text-cyan-400 uppercase mt-6 block">{t('home.auto31', '● DIFFUSION ENGINES STABLE')}</span>
                         </div>
 
                         {/* Feature 4: Synthesized Speech Narration */}
@@ -692,10 +737,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-pink-500/10 text-pink-400 rounded-2xl flex items-center justify-center mb-6 border border-pink-500/20 shadow-inner">
                                     <Volume2 size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Synthesized Speech Narration</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Hear dialogue panels narrated instantly! Generates character text-to-speech outputs in multiple actor voice accents alongside backing audio.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto32', 'Synthesized Speech Narration')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto33', 'Hear dialogue panels narrated instantly! Generates character text-to-speech outputs in multiple actor voice accents alongside backing audio.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-pink-400 uppercase mt-6 block">● VOICE ENGINES READY</span>
+                            <span className="text-[10px] font-mono font-semibold text-pink-400 uppercase mt-6 block">{t('home.auto34', '● VOICE ENGINES READY')}</span>
                         </div>
 
                         {/* Feature 5: Procedural Soundscapes */}
@@ -708,10 +753,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20 shadow-inner">
                                     <Music size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Procedural Soundscapes</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Generative arpeggios, frequency oscillators, and synthesized background themes that adapt dynamically to your selected story genres.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto35', 'Procedural Soundscapes')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto36', 'Generative arpeggios, frequency oscillators, and synthesized background themes that adapt dynamically to your selected story genres.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-emerald-400 uppercase mt-6 block">● AUDIOPROCESSOR OPERATIONAL</span>
+                            <span className="text-[10px] font-mono font-semibold text-emerald-400 uppercase mt-6 block">{t('home.auto37', '● AUDIOPROCESSOR OPERATIONAL')}</span>
                         </div>
 
                         {/* Feature 6: Publishing & Export Hub */}
@@ -724,92 +769,21 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <div className="w-14 h-14 bg-yellow-500/10 text-yellow-400 rounded-2xl flex items-center justify-center mb-6 border border-yellow-500/20 shadow-inner">
                                     <BookOpen size={26} />
                                 </div>
-                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>Unified Book & PDF Export</h3>
-                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Compile completed comics directly to high-fidelity PDF documents. Automatically packages page layouts, panels, speech bubbles, and text logs.</p>
+                                <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto38', 'Unified Book & PDF Export')}</h3>
+                                <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto39', 'Compile completed comics directly to high-fidelity PDF documents. Automatically packages page layouts, panels, speech bubbles, and text logs.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-yellow-400 uppercase mt-6 block">● EXPORTER STANDBY</span>
+                            <span className="text-[10px] font-mono font-semibold text-yellow-400 uppercase mt-6 block">{t('home.auto40', '● EXPORTER STANDBY')}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Upgraded Trending Universes Feed */}
-                <div id="trending" className={`flex items-center justify-between mb-10 pt-8 border-t ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-pink-500/20 p-2.5 rounded-xl border border-pink-500/30 text-pink-500">
-                            <Flame size={24} />
-                        </div>
-                        <h2 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Trending Multiverses</h2>
-                    </div>
-                    <button 
-                        onClick={handleActionLaunchSandbox}
-                        className={`flex items-center gap-1.5 text-sm font-semibold transition-colors cursor-pointer ${isLightMode ? 'text-slate-500 hover:text-slate-800' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        Create Your Story <ArrowRight size={16} />
-                    </button>
-                </div>
 
-                <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 mb-24 pb-8 -mx-6 px-6 hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
-                    {trendingStories.map(story => (
-                        <div 
-                            key={story.id} 
-                            onClick={() => onNavigate('reader', { id: story.id })}
-                            className={`min-w-[85vw] sm:min-w-[45vw] lg:min-w-[22vw] snap-center shrink-0 rounded-2xl overflow-hidden border transition-all duration-300 group cursor-pointer flex flex-col ${
-                                isLightMode 
-                                ? 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-lg' 
-                                : 'glass-panel border-white/10 hover:border-indigo-500/40 hover:shadow-[0_10px_30px_rgba(99,102,241,0.15)]'
-                            }`}
-                        >
-                            <div className="h-56 overflow-hidden relative">
-                                <img src={story.cover} alt={story.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.2s] ease-out" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent opacity-85"></div>
-                                
-                                {/* Tags overlay */}
-                                <div className="absolute top-4 left-4 flex gap-2">
-                                    <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 border border-white/10 text-gray-250">
-                                        {story.type === 'Comic' ? <BookOpen size={10} className="text-indigo-400" /> : <Layers size={10} className="text-pink-400"/>}
-                                        {story.type}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-5 relative flex-1 flex flex-col justify-between">
-                                <div>
-                                    <h3 className={`text-lg font-bold mb-1 group-hover:text-indigo-500 transition-colors line-clamp-1 text-left ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{story.title}</h3>
-                                    <p className={`text-xs mb-3 text-left ${isLightMode ? 'text-slate-400' : 'text-gray-400'}`}>by @{story.creator}</p>
-                                    
-                                    <div className="flex flex-wrap gap-1.5 mb-4 justify-start">
-                                        {story.tags.map(tag => (
-                                            <span key={tag} className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${isLightMode ? 'text-slate-600 bg-slate-100 border-slate-200' : 'text-gray-400 bg-white/5 border-white/5'}`}>
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={`flex justify-between items-center text-xs font-semibold pt-3 border-t ${isLightMode ? 'border-slate-100' : 'border-white/5'}`}>
-                                    <div className={`flex items-center gap-1 ${isLightMode ? 'text-slate-600' : 'text-gray-300'}`}>
-                                        <Star size={14} className="text-amber-400 fill-amber-400" /> {story.likes}
-                                    </div>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onNavigate('remix', { id: story.id });
-                                        }}
-                                        className="flex items-center gap-1 text-indigo-400 hover:text-white bg-indigo-500/10 hover:bg-indigo-600 px-3.5 py-1.5 rounded-lg transition-all border border-indigo-500/20 cursor-pointer"
-                                    >
-                                        <GitMerge size={12} /> Remix
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
 
                 {/* Pricing Section (Original copy, repurposed in high-end Glassmorphic styles) */}
                 <div id="pricing" className={`mb-24 pt-8 border-t ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Choose Your Multiverse Studio Tier</h2>
-                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>Instantly deploy professional-grade publication features and take your original comics directly to your global audience.</p>
+                        <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{t('home.auto41', 'Choose Your Multiverse Studio Tier')}</h2>
+                        <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto42', 'Instantly deploy professional-grade publication features and take your original comics directly to your global audience.')}</p>
                     </div>
 
                     <div className="flex justify-center mb-8">
@@ -818,13 +792,13 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 onClick={() => setIsSubscription(true)}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${isSubscription ? (isLightMode ? 'bg-white shadow text-indigo-600' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20') : (isLightMode ? 'text-slate-500 hover:text-slate-700' : 'text-gray-400 hover:text-gray-200')}`}
                             >
-                                Monthly Subscription
+                                {t('home.pricingMonthly', 'Monthly Subscription')}
                             </button>
                             <button 
                                 onClick={() => setIsSubscription(false)}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${!isSubscription ? (isLightMode ? 'bg-white shadow text-indigo-600' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20') : (isLightMode ? 'text-slate-500 hover:text-slate-700' : 'text-gray-400 hover:text-gray-200')}`}
                             >
-                                One-Time Purchase
+                                {t('home.pricingOneTime', 'One-Time Purchase')}
                             </button>
                         </div>
                     </div>
@@ -842,20 +816,20 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 }`}>
                                     {isMiddle && (
                                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-full border border-indigo-400/30 shadow-md">
-                                            ✨ Recommended
+                                            {t('home.recommendedBadge', '✨ Recommended')}
                                         </div>
                                     )}
                                     <div className="space-y-4">
-                                        <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>Tier {idx + 1}</span>
-                                        <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{plan.name}</h3>
+                                        <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-md uppercase border ${isLightMode ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-gray-300 border-white/10'}`}>{t('home.tier', 'Tier')} {idx + 1}</span>
+                                        <h3 className={`text-2xl font-bold mt-2 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t(`home.planName.${plan.name.replace(/\s+/g, '_')}`, plan.name)}</h3>
                                         <div className="flex items-baseline py-2">
                                             <span className={`text-4xl font-extrabold font-mono ${isMiddle ? 'text-indigo-500' : (isLightMode ? 'text-slate-800' : 'text-white')}`}>${price}</span>
-                                            <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/{isSubscription ? 'month' : 'forever'}</span>
+                                            <span className={`text-xs ml-1 font-mono ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>/{isSubscription ? t('home.month', 'month') : t('home.forever', 'forever')}</span>
                                         </div>
 
                                         <ul className={`space-y-2.5 text-xs border-t pt-4 ${isLightMode ? 'text-slate-600 border-slate-100' : 'border-white/5 text-gray-300'}`}>
                                             {plan.features.map((f: string, i: number) => (
-                                                <li key={i} className={isMiddle && i === 0 ? (isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300 font-semibold') : ''}>✓ {f}</li>
+                                                <li key={i} className={isMiddle && i === 0 ? (isLightMode ? 'text-indigo-600 font-semibold' : 'text-indigo-300 font-semibold') : ''}>✓ {t(`home.planFeature.${f.replace(/\s+/g, '_')}`, f)}</li>
                                             ))}
                                         </ul>
                                     </div>
@@ -867,14 +841,22 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                             : (isLightMode ? 'bg-slate-900 text-white border-slate-800 hover:bg-slate-800 shadow-sm' : 'bg-white/5 hover:bg-white/10 text-white border-white/15')
                                         }`}
                                     >
-                                        {price === 0 ? 'Start Creating Free' : 'Build Your Plan'}
+                                        {price === 0 ? t('home.startFreeBtn', 'Start Creating Free') : t('home.buildPlanBtn', 'Build Your Plan')}
                                     </button>
                                 </div>
                             );
                         }) : (
-                            <div className="col-span-3 text-center text-gray-500">Loading plans...</div>
+                            <div className="col-span-3 text-center text-gray-500">{t('home.auto43', 'Loading plans...')}</div>
                         )}
                 </div>
+                </div>
+
+                {/* Social Proof Block Moved from Hero */}
+                <div className={`flex flex-col items-center gap-3 mb-16 ${isLightMode ? 'text-slate-700' : 'text-gray-300'}`}>
+                    <div className="flex text-amber-400 text-xl">
+                        ★★★★★
+                    </div>
+                    <p className="font-medium text-sm md:text-base">{t('home.auto44', 'Trusted by over 300,000 people.')}</p>
                 </div>
 
                 {/* Bottom CTA Section */}
@@ -885,10 +867,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 }`}>
                     <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none"></div>
                     <h2 className={`text-2xl sm:text-4xl font-extrabold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
-                        Ready to claim your place in the multiverse?
+                        {t('home.bottomCtaTitle', 'Ready to claim your place in the multiverse?')}
                     </h2>
                     <p className={`text-sm max-w-xl mx-auto leading-relaxed ${isLightMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                        Unlock the creative potential of multimodal artificial intelligence. Draft script blueprints, mold actors, and release immersive visual graphic books safely stored in Firestore today.
+                        {t('home.bottomCtaDesc', 'Unlock the creative potential of multimodal artificial intelligence. Draft script blueprints, mold actors, and release immersive visual graphic books safely stored in Firestore today.')}
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-sm mx-auto">
@@ -896,7 +878,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                             onClick={handleActionUnlockCloud}
                             className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 py-3.5 rounded-xl transition-all cursor-pointer border border-indigo-400/20 shadow-lg"
                         >
-                            Access Creative Console
+                            {t('home.accessConsoleBtn', 'Access Creative Console')}
                         </button>
                         <button
                             onClick={handleActionLaunchSandbox}
@@ -906,7 +888,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 : 'bg-white/5 hover:bg-white/10 text-slate-350 border-white/10'
                             }`}
                         >
-                            Launch local sandbox
+                            {t('home.launchLocalBtn', 'Launch local sandbox')}
                         </button>
                     </div>
                 </div>

@@ -1517,8 +1517,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                         controlnets.push({
                             initImageId: id,
                             initImageType: "UPLOADED",
-                            preprocessorId: 67, // Face/Character Reference
-                            strengthType: "Medium" // Lower strength allows the comic style to shine through
+                            preprocessorId: 133, // 133 = Character Reference in SDXL models
+                            strengthType: "High" // High strength ensures structural facial likeness
                         });
                     }
                 };

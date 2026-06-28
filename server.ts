@@ -1682,22 +1682,21 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 const errText = await response.text();
                 throw new Error(`Leonardo API returned code: ${response.status}. Details: ${errText}`);
             } catch (err: any) {
-                console.error("Leonardo.ai API error:", err.message);
+                console.error("Leonardo.ai API error:", err.message, err.stack); require("fs").appendFileSync("error.log", "LEO_ERR:" + err.message + "\n" + err.stack + "\n");
                 return res.status(500).json({ error: `Leonardo failed: ${err.message}` });
             }
         }
 
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
-            const resObj = await callGeminiSafely(ai, {
-                safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
-              model: 'gemini-2.5-flash-image',
-              contents: contents,
-              config: { imageConfig: { aspectRatio: '2:3' } }
+            const resObj = await ai.models.generateImages({
+                model: 'imagen-3.0-generate-001',
+                prompt: promptText.substring(0, 480), // Imagen prompts usually have a length limit
+                config: { numberOfImages: 1, aspectRatio: '3:4', outputMimeType: 'image/jpeg' }
             });
-            const part = resObj.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-            if (part?.inlineData?.data) {
-                return res.json({ imageUrl: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` });
+            const base64Data = resObj?.generatedImages?.[0]?.image?.imageBytes;
+            if (base64Data) {
+                return res.json({ imageUrl: `data:image/jpeg;base64,${base64Data}` });
             }
             return res.status(500).json({ error: "Failed to generate comic image" });
         } catch (e: any) {

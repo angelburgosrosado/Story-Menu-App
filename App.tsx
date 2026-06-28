@@ -45,6 +45,7 @@ const App: React.FC = () => {
     email: 'local-creator@infinite.multiverse',
     tier: 'Free'
   });
+  const [isLightMode, setIsLightMode] = useState(false);
 
   const [villainDna, setVillainDna] = useState("");
   const [nemesisDNA, setNemesisDNA] = useState<CharacterIdentitySchema>({

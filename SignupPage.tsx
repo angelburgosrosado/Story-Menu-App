@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, User, Mail, Lock, Sparkles } from 'lucide-react';
 import { auth, db } from './firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -10,6 +11,7 @@ interface SignupPageProps {
 }
 
 export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

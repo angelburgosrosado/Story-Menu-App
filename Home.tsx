@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
+import { useScrollReveal } from './useScrollReveal';
 import Spline from '@splinetool/react-spline';
 import { CommunityGallery } from './CommunityGallery';
 import { 
@@ -39,6 +41,10 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     // Soundtrack state
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     const [selectedAudioGenre, setSelectedAudioGenre] = useState('Sci-Fi Cyberpunk');
+    const [showcaseRef, showcaseVisible] = useScrollReveal() as [any, boolean];
+    const [capsRef, capsVisible] = useScrollReveal() as [any, boolean];
+    const [pricingRef, pricingVisible] = useScrollReveal() as [any, boolean];
+
 
     // Style selector state
     const [selectedStyleTab, setSelectedStyleTab] = useState('anime');
@@ -156,6 +162,29 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
     return (
         <div className={`min-h-screen w-full transition-colors duration-500 relative ${isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-gray-950 text-white'}`}>
             
+            
+            <Helmet>
+                <title>{t('home.seoTitle', 'Story.Menu - AI Comic & Storytelling Studio')}</title>
+                <meta name="description" content={t('home.seoDesc', 'Create, translate, and publish stunning AI-generated comics, manga, and graphic novels in multiple languages instantly.')} />
+                <meta property="og:title" content={t('home.seoTitle', 'Story.Menu - AI Comic & Storytelling Studio')} />
+                <meta property="og:description" content={t('home.seoDesc', 'Create, translate, and publish stunning AI-generated comics, manga, and graphic novels in multiple languages instantly.')} />
+                <script type="application/ld+json">
+                    {`
+                        {
+                            "@context": "https://schema.org",
+                            "@type": "SoftwareApplication",
+                            "name": "Story.Menu",
+                            "applicationCategory": "DesignApplication",
+                            "offers": {
+                                "@type": "Offer",
+                                "price": "0.00",
+                                "priceCurrency": "USD"
+                            }
+                        }
+                    `}
+                </script>
+            </Helmet>
+
             {/* Main Header / Navigation Bar */}
             <header className={`sticky top-0 z-[100] w-full backdrop-blur-md border-b transition-all ${
                 isLightMode 
@@ -353,6 +382,12 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                         >
                             {t('home.heroSignupBtn', 'Sign Up Free ✨')}
                         </button>
+                        <button 
+                            onClick={() => onNavigate('login')}
+                            className={`px-10 py-5 rounded-full font-black text-xl transition-all hover:-translate-y-1 border ${isLightMode ? 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm' : 'bg-transparent text-white border-white/20 hover:bg-white/5 shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}`}
+                        >
+                            {t('home.heroLoginBtn', 'Log In')}
+                        </button>
                     </div>
 
                     {/* Premium Features Grid */}
@@ -385,7 +420,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 </div>
 
                 {/* Visual Style Showcase Grid (Moved Up!) */}
-                <div id="showcase" className="mb-24">
+                <div id="showcase" ref={showcaseRef} className={`mb-24 transition-all duration-1000 transform ${showcaseVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
                             <PenTool size={12} /> {t('home.artDiversity', 'Artistic Diversity')}
@@ -669,7 +704,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                 </div>
 
                 {/* Core Capabilities Section (Repurposed from original page bento grid) */}
-                <div id="capabilities" className="mb-24">
+                <div id="capabilities" ref={capsRef} className={`mb-24 transition-all duration-1000 transform ${capsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}>
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${isLightMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
                             <Cpu size={12} /> {landingConfig?.capabilitiesBadge || t('home.capBadge', "Chassis v3.11 Publishing Workshop")}
@@ -708,7 +743,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto26', 'Multi-Tenant Casting Vault')}</h3>
                                 <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto27', 'Forge persistent files containing character biometrics, facial weights, clothing references, and style lock keys. Keep heroes and archenemies consistent.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-purple-400 uppercase mt-6 block">{t('home.auto28', '● MODEL SYNTAX LOCKED')}</span>
+                            <span className="text-[10px] font-mono font-semibold text-purple-400 uppercase mt-6 block">{t('home.auto28', '✨ PRO • MODEL SYNTAX LOCKED')}</span>
                         </div>
 
                         {/* Feature 3: Multi-Engine Diffusion Router */}
@@ -724,7 +759,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto29', 'Multi-Engine Diffusion Router')}</h3>
                                 <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto30', 'Choose your renderer: LlamaGen.ai (Comic API) for panel grids, Stable Diffusion (via ComfyUI) for raw workflow control, Leonardo.ai (CharRef), or Gemini 2.5 Flash.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-cyan-400 uppercase mt-6 block">{t('home.auto31', '● DIFFUSION ENGINES STABLE')}</span>
+                            <span className="text-[10px] font-mono font-semibold text-cyan-400 uppercase mt-6 block">{t('home.auto31', '🔥 PREMIUM GPU • ENGINES STABLE')}</span>
                         </div>
 
                         {/* Feature 4: Synthesized Speech Narration */}
@@ -740,7 +775,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto32', 'Synthesized Speech Narration')}</h3>
                                 <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto33', 'Hear dialogue panels narrated instantly! Generates character text-to-speech outputs in multiple actor voice accents alongside backing audio.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-pink-400 uppercase mt-6 block">{t('home.auto34', '● VOICE ENGINES READY')}</span>
+                            <span className="text-[10px] font-mono font-semibold text-pink-400 uppercase mt-6 block">{t('home.auto34', '⚡ STARTER • VOICE ENGINES READY')}</span>
                         </div>
 
                         {/* Feature 5: Procedural Soundscapes */}
@@ -772,7 +807,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
                                 <h3 className={`text-xl font-bold mb-3 ${isLightMode ? 'text-slate-800' : 'text-white'}`}>{t('home.auto38', 'Unified Book & PDF Export')}</h3>
                                 <p className={`text-sm leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto39', 'Compile completed comics directly to high-fidelity PDF documents. Automatically packages page layouts, panels, speech bubbles, and text logs.')}</p>
                             </div>
-                            <span className="text-[10px] font-mono font-semibold text-yellow-400 uppercase mt-6 block">{t('home.auto40', '● EXPORTER STANDBY')}</span>
+                            <span className="text-[10px] font-mono font-semibold text-yellow-400 uppercase mt-6 block">{t('home.auto40', '💎 ENTERPRISE • EXPORTER STANDBY')}</span>
                         </div>
                     </div>
                 </div>
@@ -780,7 +815,7 @@ export const Home = ({ onNavigate }: { onNavigate: (view: string, data?: any) =>
 
 
                 {/* Pricing Section (Original copy, repurposed in high-end Glassmorphic styles) */}
-                <div id="pricing" className={`mb-24 pt-8 border-t ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
+                <div id="pricing" ref={pricingRef} className={`mb-24 pt-8 border-t transition-all duration-1000 transform ${pricingVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"} ${isLightMode ? 'border-slate-200' : 'border-white/10'}`}>
                     <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                         <h2 className={`text-3xl md:text-5xl font-extrabold tracking-tight ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{t('home.auto41', 'Choose Your Multiverse Studio Tier')}</h2>
                         <p className={`font-light ${isLightMode ? 'text-slate-600' : 'text-gray-400'}`}>{t('home.auto42', 'Instantly deploy professional-grade publication features and take your original comics directly to your global audience.')}</p>

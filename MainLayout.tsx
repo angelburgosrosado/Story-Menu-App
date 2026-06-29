@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Home } from './Home';
 import { SignupPage } from './SignupPage';
+import { LoginPage } from './LoginPage';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { PrivacyPolicy, TermsOfService, CookiePolicy, DMCA } from './LegalPages';
@@ -22,7 +23,7 @@ const getActiveSkin = (): 'comic' | 'kid-story' => {
 // It wraps your existing App (Creator Studio) inside the 'studio' route.
 export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNode }) => {
     const { t, i18n } = useTranslation();
-    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca' | 'signup'>('home');
+    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca' | 'signup' | 'login'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
     const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
     const [tokenBalance, setTokenBalance] = useState<number | null>(null);
@@ -198,7 +199,8 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
             {/* Router View */}
             <main>
                 {currentView === 'home' && <Home onNavigate={handleNavigate} />}
-                {currentView === 'signup' && <SignupPage onBack={() => handleNavigate('home')} onSuccess={() => handleNavigate('studio')} />}
+                {currentView === 'signup' && <SignupPage onBack={() => handleNavigate('home')} onSuccess={() => handleNavigate('studio')} onSwitchToLogin={() => handleNavigate('login')} />}
+                {currentView === 'login' && <LoginPage onBack={() => handleNavigate('home')} onSuccess={() => handleNavigate('studio')} onSwitchToSignup={() => handleNavigate('signup')} />}
                 {currentView === 'studio' && skin === 'writers-journal' && <WritersJournalDashboard onNavigate={handleNavigate} />}
                 {currentView === 'studio' && skin === 'kid-story' && <KidStoryDashboard onNavigate={handleNavigate} />}
                 {currentView === 'studio' && skin === 'comic' && StudioComponent}

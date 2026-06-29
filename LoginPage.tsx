@@ -2,24 +2,23 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, User, Mail, Lock, Sparkles } from 'lucide-react';
 import { auth, db, signInWithGoogle } from './firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
-interface SignupPageProps {
+interface LoginPageProps {
   onBack: () => void;
   onSuccess: () => void;
-  onSwitchToLogin: () => void;
+  onSwitchToSignup: () => void;
 }
 
-export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwitchToLogin }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSuccess, onSwitchToSignup }) => {
   const { t } = useTranslation();
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGoogleSignup = async () => {
+  const handleGoogleLogin = async () => {
     setError(null);
     setLoading(true);
     try {
@@ -36,36 +35,22 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
 
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'An error occurred during Google signup.');
+      setError(err.message || 'An error occurred during Google login.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      // Create user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update profile
-      await updateProfile(userCredential.user, { displayName: name });
-      
-      // Store in Firestore for future connections
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        email: email,
-        displayName: name,
-        createdAt: new Date().toISOString(),
-        tier: 'Free',
-        tokenBalance: 50
-      }, { merge: true });
-
+      await signInWithEmailAndPassword(auth, email, password);
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'An error occurred during signup.');
+      setError(err.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -118,27 +103,11 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
 
         <div className="w-full max-w-md space-y-8">
           <div className="text-center md:text-left">
-            <h2 className="text-3xl font-bold mb-2 text-white">{t('signup.auto3', 'Create your account')}</h2>
-            <p className="text-gray-400">{t('signup.auto4', 'Start crafting your first story today.')}</p>
+            <h2 className="text-3xl font-bold mb-2 text-white">{t('login.auto3', 'Welcome back')}</h2>
+            <p className="text-gray-400">{t('login.auto4', 'Log in to continue your creative journey.')}</p>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-5">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-300 ml-1">{t('signup.auto5', 'Full Name')}</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User size={18} className="text-gray-500" />
-                </div>
-                <input 
-                  type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  placeholder="Alex Mercer"
-                  required
-                />
-              </div>
-            </div>
+          <form onSubmit={handleLogin} className="space-y-5">
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-300 ml-1">{t('signup.auto6', 'Email Address')}</label>
@@ -191,7 +160,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
               ) : (
                 <>
                   <Sparkles size={20} />
-                  {t('signup.submitBtn', 'Sign Up Free')}
+                  {t('login.submitBtn', 'Log In')}
                 </>
               )}
             </button>
@@ -204,7 +173,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
 
             <button 
               type="button"
-              onClick={handleGoogleSignup}
+              onClick={handleGoogleLogin}
               disabled={loading}
               className="w-full py-4 rounded-xl font-bold text-lg bg-white text-slate-900 hover:bg-gray-100 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
@@ -214,16 +183,16 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
-              Sign up with Google
+              Log in with Google
             </button>
             
           </form>
 
           <div className="text-center pt-6">
             <p className="text-gray-400 text-sm">
-              {t('signup.haveAccount', 'Already have an account?')} {' '}
-              <button type="button" onClick={onSwitchToLogin} className="text-purple-400 font-semibold hover:text-purple-300 transition-colors">
-                {t('signup.logIn', 'Log In')}
+              {t('login.noAccount', 'Don\'t have an account?')} {' '}
+              <button type="button" onClick={onSwitchToSignup} className="text-purple-400 font-semibold hover:text-purple-300 transition-colors">
+                {t('login.signUp', 'Sign Up')}
               </button>
             </p>
           </div>

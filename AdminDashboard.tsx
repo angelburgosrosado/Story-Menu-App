@@ -40,7 +40,7 @@ const MONETIZABLE_FEATURES = [
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'landing' | 'diagnostics'>('memberships');
+  const [activeTab, setActiveTab] = useState<'memberships' | 'categories' | 'moderation' | 'plans' | 'integrations' | 'landing' | 'diagnostics' | 'security'>('memberships');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>({ name: "", priceSubscription: 0, priceOneTime: 0, features: [] });
   const [healthData, setHealthData] = useState<any>(null);
@@ -55,17 +55,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
   const [landingConfig, setLandingConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
+  // Security Tab States
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+
+  // Integrations Tab States
+  const [stripeSecret, setStripeSecret] = useState('');
+  const [stripePub, setStripePub] = useState('');
+  const [paypalClient, setPaypalClient] = useState('');
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, custRes, catRes, flagRes, plansRes, settingsRes, landingRes] = await Promise.all([
+      const [statsRes, custRes, catRes, flagRes, plansRes, settingsRes, landingRes, adminRes] = await Promise.all([
         fetch('/api/admin/stats').then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/admin/customers').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/categories').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/moderation').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/plans').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/settings').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/public/landing').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+        fetch('/api/public/landing').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        fetch('/api/admin/auth/users').then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
       if(statsRes) setStats(statsRes);
       setCustomers(custRes);
@@ -74,6 +85,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
       setPlans(plansRes);
       setSettings(Array.isArray(settingsRes) ? settingsRes : []);
       setLandingConfig(landingRes || {});
+      
+      setAdminUsers(Array.isArray(adminRes) ? adminRes : []);
+      if (Array.isArray(settingsRes)) {
+          setStripeSecret(settingsRes.find(s => s.key_name === 'stripe_secret_key')?.key_value || '');
+          setStripePub(settingsRes.find(s => s.key_name === 'stripe_publishable_key')?.key_value || '');
+          setPaypalClient(settingsRes.find(s => s.key_name === 'paypal_client_id')?.key_value || '');
+      }
       runDiagnostics();
     } catch (error) {
       console.error('Admin API Error:', error);
@@ -122,6 +140,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
       } catch (e: any) {
           console.error("[VERIFICATION] FAILED", e);
           alert(`❌ VERIFICATION FAILED.\n\nReason: ${e.message}\n\nPlease check your API keys or database status and try again.`);
+      }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newAdminEmail || !newAdminPassword) return;
+      try {
+          await fetch('/api/admin/auth/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: newAdminEmail, password: newAdminPassword })
+          });
+          setNewAdminEmail('');
+          setNewAdminPassword('');
+          fetchData();
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
+  const handleDeleteAdmin = async (username: string) => {
+      if (!confirm(`Revoke admin access for ${username}?`)) return;
+      try {
+          await fetch(`/api/admin/auth/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+          fetchData();
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
+  const handleSaveSetting = async (keyName: string, keyValue: string, isSecret: boolean) => {
+      try {
+          await fetch('/api/admin/settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ keyName, keyValue, isSecret })
+          });
+          alert(`${keyName} saved successfully.`);
+          fetchData();
+      } catch (err) {
+          console.error(err);
+          alert(`Failed to save ${keyName}`);
       }
   };
 
@@ -210,6 +270,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         className={`px-4 py-2 font-bold uppercase text-xs ${activeTab === 'landing' ? 'border-b-2 border-green-400 text-green-400' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         Landing Page
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('security')} 
+                        className={`px-4 py-2 font-bold uppercase text-xs flex items-center gap-2 ${activeTab === 'security' ? 'border-b-2 border-yellow-400 text-yellow-400' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                        <Shield size={14} /> Security
                     </button>
                     <button 
                         onClick={() => setActiveTab('diagnostics')} 
@@ -443,24 +509,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                             <h3 className="font-bold text-sm text-cyan-400">Payment Gateway Integrations</h3>
                             <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded text-xs font-bold" onClick={() => fetchData()}>Refresh</button>
                         </div>
-                        <div className="text-xs text-yellow-500 font-mono mb-4 italic">
-                            * Tokens stored here override sandbox mocks. Leave empty to use local test mode.
+                        <div className="text-xs text-yellow-500 font-mono mb-6 bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
+                            * Tokens stored here override sandbox mocks. API keys are persisted securely in the database (`app_settings`) and synced to local environment variables.
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Stripe */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
-                                <h4 className="font-bold text-indigo-400 mb-2">Stripe</h4>
-                                <div className="space-y-2 text-xs text-green-400">
-                                    <p>🔒 Managed securely via Google Cloud Run Environment Variables.</p>
+                            <div className="p-5 bg-slate-900 border border-slate-800 rounded">
+                                <h4 className="font-bold text-indigo-400 mb-4 flex items-center gap-2">Stripe Processor</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Publishable Key</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="pk_live_..." />
+                                            <button onClick={() => handleSaveSetting('stripe_publishable_key', stripePub, false)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Secret Key (Restricted)</label>
+                                        <div className="flex gap-2">
+                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="sk_live_..." />
+                                            <button onClick={() => handleSaveSetting('stripe_secret_key', stripeSecret, true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
                             {/* PayPal */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded">
-                                <h4 className="font-bold text-blue-400 mb-2">PayPal</h4>
-                                <div className="space-y-2 text-xs text-green-400">
-                                    <p>🔒 Managed securely via Google Cloud Run Environment Variables.</p>
+                            <div className="p-5 bg-slate-900 border border-slate-800 rounded">
+                                <h4 className="font-bold text-blue-400 mb-4 flex items-center gap-2">PayPal Processor</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Client ID</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="Client ID from PayPal Developer Dashboard..." />
+                                            <button onClick={() => handleSaveSetting('paypal_client_id', paypalClient, false)} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -566,6 +651,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         alert("Invalid JSON: " + e.message);
                                     }
                                 }}>Save JSON Config</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'security' && (
+                    <div className="bg-slate-950 border border-slate-700 p-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="font-bold text-lg text-yellow-400 flex items-center gap-2">
+                                    <Shield size={20} /> Access Control Lists
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-1">Manage users who have Super Admin clearance.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 className="font-bold text-sm text-slate-300 mb-3 border-b border-slate-800 pb-2">Authorized Administrators</h4>
+                                {adminUsers.length === 0 ? (
+                                    <div className="text-gray-500 text-xs italic bg-slate-900 p-4 rounded text-center">No admins configured. Check default credentials.</div>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {adminUsers.map((user: any) => (
+                                            <li key={user.username} className="flex justify-between items-center p-3 bg-slate-900 border border-slate-800 rounded">
+                                                <div>
+                                                    <div className="font-bold text-sm text-slate-200">{user.username}</div>
+                                                    <div className="text-[10px] text-gray-500">Role: {user.role || 'Admin'} • Created: {new Date(user.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleDeleteAdmin(user.username)}
+                                                    className="text-red-500 hover:text-red-400 p-2 rounded hover:bg-red-500/10 transition-colors"
+                                                    title="Revoke Access"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div className="bg-slate-900 p-4 rounded border border-slate-800">
+                                <h4 className="font-bold text-sm text-slate-300 mb-4">Grant Access</h4>
+                                <form onSubmit={handleCreateAdmin} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 mb-1">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            value={newAdminEmail}
+                                            onChange={e => setNewAdminEmail(e.target.value)}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white focus:border-yellow-400 outline-none"
+                                            placeholder="e.g. admin@story.menu"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 mb-1">Secure Password</label>
+                                        <input 
+                                            type="password" 
+                                            value={newAdminPassword}
+                                            onChange={e => setNewAdminPassword(e.target.value)}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white focus:border-yellow-400 outline-none"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                    </div>
+                                    <button 
+                                        type="submit"
+                                        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 rounded transition-colors text-sm"
+                                    >
+                                        Create Administrator
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>

@@ -83,6 +83,7 @@ const App: React.FC = () => {
   const [friend, setFriendState] = useState<Persona | null>(null);
   const [villain, setVillainState] = useState<Persona | null>(null);
   const [selectedGenre, setSelectedGenre] = useState(GENRES[0]);
+  const [selectedStyle, setSelectedStyle] = useState('storybook');
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].code);
   const [customPremise, setCustomPremise] = useState("");
   const [storyTone, setStoryTone] = useState(TONES[0]);

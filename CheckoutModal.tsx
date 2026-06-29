@@ -110,17 +110,17 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
     logAnalyticsEvent('begin_checkout', {
       value: tier === 'Pro' ? 19.0 : 79.0,
       currency: 'USD',
-      items: [{ item_name: pricing[tier].label, item_category: 'Subscriptions' }],
+      items: [{ item_name: pricing[tier]?.label, item_category: 'Subscriptions' }],
     });
 
     try {
       let finalizeResponse;
 
       if (paymentMethod === 'Stripe') {
-        const basePrice = parseFloat(pricing[tier].price);
+        const basePrice = parseFloat(pricing[tier]?.price);
         const addonTotal = selectedAddons.reduce((sum, key) => sum + parseFloat(addons[key as keyof typeof addons].price), 0);
         const totalSubPrice = basePrice + addonTotal;
-        const amountCents = (purchaseType === 'subscription' ? totalSubPrice : parseFloat(topupPricing[topupTier].price)) * 100;
+        const amountCents = (purchaseType === 'subscription' ? totalSubPrice : parseFloat(topupPricing[topupTier]?.price)) * 100;
         
         // 1. Create PaymentIntent on the backend
         const intentRes = await fetch('/api/checkout/intent', {
@@ -147,13 +147,13 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
         
         // 3. Finalize the subscription on the backend
         const addonLabels = selectedAddons.map(key => addons[key as keyof typeof addons].label).join(', ');
-        const tierString = purchaseType === 'subscription' ? `${pricing[tier].label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier].label;
+        const tierString = purchaseType === 'subscription' ? `${pricing[tier]?.label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier]?.label;
 
         const payload: any = {
             email,
             type: purchaseType,
             tier: tierString,
-            tokensAwarded: purchaseType === 'subscription' ? pricing[tier].tokensAwarded : topupPricing[topupTier].tokens,
+            tokensAwarded: purchaseType === 'subscription' ? pricing[tier]?.tokensAwarded : topupPricing[topupTier]?.tokens,
             paymentMethod,
             paymentIntentId: paymentIntent.id
         };
@@ -165,13 +165,13 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
         });
       } else {
         const addonLabels = selectedAddons.map(key => addons[key as keyof typeof addons].label).join(', ');
-        const tierString = purchaseType === 'subscription' ? `${pricing[tier].label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier].label;
+        const tierString = purchaseType === 'subscription' ? `${pricing[tier]?.label}${addonLabels ? ' w/ ' + addonLabels : ''}` : topupPricing[topupTier]?.label;
 
         const payload: any = {
           email,
           type: purchaseType,
           tier: tierString,
-          tokensAwarded: purchaseType === 'subscription' ? pricing[tier].tokensAwarded : topupPricing[topupTier].tokens,
+          tokensAwarded: purchaseType === 'subscription' ? pricing[tier]?.tokensAwarded : topupPricing[topupTier]?.tokens,
           paymentMethod,
           paypalEmail
         };
@@ -199,7 +199,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
         value: tier === 'Pro' ? 19.0 : 79.0,
         currency: 'USD',
         payment_type: paymentMethod,
-        items: [{ item_name: pricing[tier].label, item_category: 'Subscriptions' }],
+        items: [{ item_name: pricing[tier]?.label, item_category: 'Subscriptions' }],
       });
 
       // Emit event to close modal and refresh state
@@ -218,7 +218,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
       if (data.type === 'topup') {
         alert('Payment successful. Tokens have been added to your account.');
       } else {
-        alert('Payment successful. Welcome to ' + pricing[tier].label + '!');
+        alert('Payment successful. Welcome to ' + pricing[tier]?.label + '!');
       }
 
       // Update in Firestore database for the active logged user
@@ -230,7 +230,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
             // Give subscription tokens initially as well
             // tokens awarded on backend natively
             await updateUserSubscriptionInFirestore(currentUser.id, {
-              tier: pricing[tier].label,
+              tier: pricing[tier]?.label,
               subscriptionId: data.subscriptionId,
               paymentMethod: data.paymentMethod,
             });
@@ -244,7 +244,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
 
       setTimeout(() => {
         onUpgradeSuccessful(
-          purchaseType === 'subscription' ? pricing[tier].label : topupPricing[topupTier].label, 
+          purchaseType === 'subscription' ? pricing[tier]?.label : topupPricing[topupTier]?.label, 
           paymentMethod, 
           data.subscriptionId
         );
@@ -358,10 +358,10 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                       </span>
                       <div className="flex justify-between items-baseline mt-2">
                         <h3 className="text-xl font-black font-sans uppercase tracking-wide text-white">
-                          {pricing[tier].label.split('(')[0]}
+                          {pricing[tier]?.label.split('(')[0]}
                         </h3>
                         <span className="text-2xl font-black text-yellow-400 font-mono">
-                          ${pricing[tier].price}
+                          ${pricing[tier]?.price}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 font-mono mt-1">
@@ -396,7 +396,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{t('checkout.auto8', 'ACTIVATED INITIATIVES:')}</h4>
                       <ul className="space-y-1.5 text-[11px] font-mono text-slate-300">
-                        {pricing[tier].features.map((feature, idx) => (
+                        {pricing[tier]?.features.map((feature, idx) => (
                           <li key={idx} className="flex items-start gap-1.5">
                             <span className="text-yellow-400 font-bold">✓</span>
                             <span>{feature}</span>
@@ -421,7 +421,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                             />
                             <div className="flex flex-col">
                               <div className="flex justify-between w-full gap-2">
-                                <span className="text-[11px] font-bold text-white font-mono">{addon.label}</span>
+                                <span className="text-[11px] font-bold text-white font-mono">{addon?.label}</span>
                                 <span className="text-[11px] font-mono text-yellow-400">+${addon.price}/mo</span>
                               </div>
                               <span className="text-[10px] text-slate-400 font-sans mt-0.5">{addon.desc}</span>
@@ -439,10 +439,10 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                       </span>
                       <div className="flex justify-between items-baseline mt-2">
                         <h3 className="text-xl font-black font-sans uppercase tracking-wide text-white">
-                          {topupPricing[topupTier].label}
+                          {topupPricing[topupTier]?.label}
                         </h3>
                         <span className="text-2xl font-black text-cyan-400 font-mono">
-                          ${topupPricing[topupTier].price}
+                          ${topupPricing[topupTier]?.price}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 font-mono mt-1">
@@ -462,8 +462,8 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                               : 'text-slate-400 border-transparent hover:text-white bg-slate-950/50 hover:bg-slate-800'
                           }`}
                         >
-                          <span>{topupPricing[pk].label}</span>
-                          <span>{topupPricing[pk].tokens} Tokens for ${topupPricing[pk].price}</span>
+                          <span>{topupPricing[pk]?.label}</span>
+                          <span>{topupPricing[pk]?.tokens} Tokens for ${topupPricing[pk]?.price}</span>
                         </button>
                       ))}
                     </div>
@@ -636,7 +636,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
                   id="btn-checkout-submit"
                 >
                   <Sparkles size={14} className={loading ? 'animate-spin' : ''} />
-                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${purchaseType === 'subscription' ? parseFloat(pricing[tier].price) + selectedAddons.reduce((sum, key) => sum + parseFloat(addons[key as keyof typeof addons].price), 0) : topupPricing[topupTier].price} ${purchaseType === 'subscription' ? 'SUBSCRIPTION' : 'TOP-UP'}`}</span>
+                  <span>{loading ? 'Processing Cryptographic Authorization...' : `PROCEED WITH $${purchaseType === 'subscription' ? parseFloat(pricing[tier]?.price) + selectedAddons.reduce((sum, key) => sum + parseFloat(addons[key as keyof typeof addons].price), 0) : topupPricing[topupTier]?.price} ${purchaseType === 'subscription' ? 'SUBSCRIPTION' : 'TOP-UP'}`}</span>
                 </button>
 
                 <div className="flex justify-center items-center gap-4 text-[10px] font-mono text-slate-500">

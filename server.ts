@@ -634,7 +634,6 @@ Sitemap: https://storymenu.app/sitemap.xml`
                 const tokensIn = response.usageMetadata?.promptTokenCount || 0;
                 const tokensOut = response.usageMetadata?.candidatesTokenCount || 0;
                 logAiUsage(reqEmail, operationName, aiParams.model, tokensIn, tokensOut).catch(e => console.error("Log usage err:", e));
-                logAICost(reqEmail, 'gemini', aiParams.model, tokensIn, tokensOut);
             }
             return response;
         } catch (e: any) {
@@ -838,7 +837,6 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
                     if (status === 'COMPLETE') {
                         imageUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
                         console.log("Leonardo image generation complete!");
-                                logAICost(userEmail, 'leonardo', 'leonardo-diffusion-xl', 1, 0);
                                 break;
                     } else if (status === 'FAILED') {
                         throw new Error("Leonardo API generation job failed.");
@@ -1667,7 +1665,6 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                                 finalUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
                                 if (finalUrl) {
                                     console.log("Leonardo image generation complete!");
-                                logAICost(userEmail, 'leonardo', 'leonardo-diffusion-xl', 1, 0);
                                 break;
                                 }
                             } else if (status === 'FAILED') {

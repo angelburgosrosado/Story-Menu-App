@@ -54,6 +54,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
   const [flags, setFlags] = useState<any[]>([]);
   const [landingConfig, setLandingConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({message, type});
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // Security Tab States
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
@@ -519,17 +525,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 <h4 className="font-bold text-indigo-400 mb-4 flex items-center gap-2">Stripe Processor</h4>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Publishable Key</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Publishable Key</label>
+                                            {stripePub ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
                                         <div className="flex gap-2">
-                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="pk_live_..." />
-                                            <button onClick={() => handleSaveSetting('stripe_publishable_key', stripePub, false)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="pk_live_..." />
+                                            <button onClick={() => { handleSaveSetting('stripe_publishable_key', stripePub, false); showToast('Stripe Publishable Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Secret Key (Restricted)</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Secret Key (Restricted)</label>
+                                            {stripeSecret ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
                                         <div className="flex gap-2">
-                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="sk_live_..." />
-                                            <button onClick={() => handleSaveSetting('stripe_secret_key', stripeSecret, true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="sk_live_..." />
+                                            <button onClick={() => { handleSaveSetting('stripe_secret_key', stripeSecret, true); showToast('Stripe Secret Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
                                         </div>
                                     </div>
                                 </div>
@@ -540,10 +552,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 <h4 className="font-bold text-blue-400 mb-4 flex items-center gap-2">PayPal Processor</h4>
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Client ID</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Client ID</label>
+                                            {paypalClient ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
                                         <div className="flex gap-2">
-                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="Client ID from PayPal Developer Dashboard..." />
-                                            <button onClick={() => handleSaveSetting('paypal_client_id', paypalClient, false)} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-blue-500 focus:outline-none" placeholder="Client ID from PayPal Developer Dashboard..." />
+                                            <button onClick={() => { handleSaveSetting('paypal_client_id', paypalClient, false); showToast('PayPal Client ID saved', 'success'); }} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-blue-500/20 transition-all active:scale-95">Save</button>
                                         </div>
                                     </div>
                                 </div>

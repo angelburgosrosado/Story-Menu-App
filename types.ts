@@ -153,3 +153,75 @@ export interface ChapterGoal {
   title: string;
   goal: string;
 }
+
+export const WARDROBE_PRESETS = {
+        Hero: {
+            Tactical: {
+                name: "Tactical Vanguard Armor",
+                emoji: "🛡️",
+                desc: "A form-fitting dark charcoal Kevlar weave suit with glowing cybernetic blue trim, carbon-fiber shoulder pauldrons, magnetic leg holsters, and heavy-duty steel-toed combat boots.",
+                styleLock: "Modern American Comic, high contrast digital outlines",
+                sartorialStyle: "High-Tech Military Cyber-Vanguard"
+            },
+            Gala: {
+                name: "Gala Elite Splendor",
+                emoji: "✨",
+                desc: "A pristine tailored satin-lapel midnight blue tuxedo with pristine silver silk embroidery pattern, light-up sapphire cufflinks, and a sleek modern smart-watch chronometer.",
+                styleLock: "Classic Noir Chiaroscuro Comic Art",
+                sartorialStyle: "Sophisticated Metahuman High-Society Executive"
+            },
+            Casual: {
+                name: "Metropolitan Casual",
+                emoji: "👕",
+                desc: "An oversized graphite-gray hoodie emblazoned with a faded neon-green graphic, worn-out vintage blue jeans, scuffed leather high-tops, and dark wire-frame spectacles.",
+                styleLock: "Gothic Graphic Novel Ink Hatching",
+                sartorialStyle: "Gritty Urban Streetwear"
+            }
+        },
+        'Co-Star': {
+            Tactical: {
+                name: "Tactical Shadow Recon",
+                emoji: "🕵️",
+                desc: "A flexible matte-black stealth suit with muted violet ambient strips, thermal goggles perched on the head, lightweight utility belt pouches, and silent rubber-soled infiltration footwear.",
+                styleLock: "High-tension espionage manga style",
+                sartorialStyle: "Covert Spec-Ops Scouting Infiltrator"
+            },
+            Gala: {
+                name: "Gala Velvet Phantom",
+                emoji: "👗",
+                desc: "A flowy backless deep violet velvet sheath gown with emerald-accented lace sleeves, a concealed micro-holster under the thigh slit, and a diamond choker communicator.",
+                styleLock: "Retro 1950s Pulp Illustration, rich color gradients",
+                sartorialStyle: "Elegant Classic Dame espionage dress"
+            },
+            Casual: {
+                name: "Casual Decker Lounge",
+                emoji: "🧥",
+                desc: "A cozy distressed olive bomber jacket, soft black cotton cargo joggers with red accents, fingerless wool gloves, and chunky cyber-runner platform sneakers.",
+                styleLock: "Cozy Pastel Anime Comic Frame",
+                sartorialStyle: "Lo-fi Cyberpunk Hacker Lounge"
+            }
+        },
+        Villain: {
+            Tactical: {
+                name: "Nemesis Warmonger Exoskeleton",
+                emoji: "💀",
+                desc: "Reinforced Obsidian titanium-alloy power armor plates, serrated red-energy shoulder conduits, an opaque crimson-tinted skull facade helmet, and heavy-duty hydraulic energy-venting boots.",
+                styleLock: "Brutalist Sci-Fi Cyber-Illustration, thick heavy linework, extreme dark shadows",
+                sartorialStyle: "Over-engineered Militaristic Warmonger Exoskeleton"
+            },
+            Gala: {
+                name: "Nemesis Oligarch Haute-Couture",
+                emoji: "🍷",
+                desc: "An opulent three-piece burgundy velvet suit with gold-gilded baroque lapel patterns, a dark silk cravat, and a heavy ruby-topped metallic mechanical cane weapon.",
+                styleLock: "Sinister Elitist Noir Comic Art, deep focus chiaroscuro with royal red lighting",
+                sartorialStyle: "Arrogant Plutocratic Syndicate Overlord"
+            },
+            Casual: {
+                name: "Nemesis Viper Lounge Suit",
+                emoji: "👓",
+                desc: "A casual tailored black silk shirt unbuttoned at the collar, slate-grey tailored linen pants, designer emerald-skin loafers, and thick gradient-tinted gold-framed aviators.",
+                styleLock: "Neon Noir Comic Art, high shadow contrast",
+                sartorialStyle: "Luxury Rogue Syndicate Underboss"
+            }
+        }
+    };

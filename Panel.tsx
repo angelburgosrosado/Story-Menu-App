@@ -107,7 +107,9 @@ export const Panel: React.FC<PanelProps> = ({
                         <span className="text-5xl mb-4">⚠️</span>
                         <h4 className="text-red-500 font-comic uppercase text-xl mb-2">Generation Failed</h4>
                         <p className="text-gray-400 font-sans text-sm mb-6 max-w-xs">
-                            We hit a snag while generating this page. Your API key might be missing, or the service is temporarily down.
+                            {face.narrative?.scene?.includes("Generation failed") 
+                                ? face.narrative.scene 
+                                : "We hit a snag while generating this page. Your API key might be missing, or the service is temporarily down."}
                         </p>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onReset(); }}

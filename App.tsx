@@ -70,7 +70,7 @@ const App: React.FC = () => {
   // --- Firebase User Account States ---
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number } | null>(null);
-  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(!!localStorage.getItem('story_menu_skin'));
+  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [landingPreviewTab, setLandingPreviewTab] = useState<'blueprint' | 'visuals' | 'sound'>('blueprint');
   const [landingAuthOpen, setLandingAuthOpen] = useState(false);
@@ -815,9 +815,9 @@ const App: React.FC = () => {
       }
       const data = await response.json();
       return data.imageUrl || '';
-    } catch (e) {
+    } catch (e: any) {
       handleAPIError(e);
-      return '';
+      throw e;
     }
   };
 
@@ -1084,6 +1084,14 @@ const handleVillainUpload = async (file: File) => {
        } catch (e) { alert("Villain upload failed"); }
   }
 
+  if (!hasSelectedMode) {
+    return (
+      <ModeSelectionScreen onSelect={(mode) => { 
+        setHasSelectedMode(true); 
+      }} />
+    );
+  }
+
   return (
     <div className={`app-container relative w-full h-screen overflow-hidden transition-all duration-700 ${isLightMode ? 'bg-amber-50' : 'bg-orange-950'}`}>
       <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700`}>
@@ -1121,8 +1129,6 @@ const handleVillainUpload = async (file: File) => {
               </div>
             </div>
 
-            {/* Mode Selection */}
-            <ModeSelectionScreen isLightMode={isLightMode} />
 
             {/* Genre Selection */}
             <div className="mb-6">

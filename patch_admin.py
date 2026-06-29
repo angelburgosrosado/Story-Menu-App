@@ -1,159 +1,133 @@
-with open('AdminApp.tsx', 'r') as f:
+import re
+
+with open('AdminDashboard.tsx', 'r') as f:
     content = f.read()
 
-# 1. Add bypasses state
-state_target = "const [systemLogs, setSystemLogs] = useState<any[]>([]);"
-state_replacement = """const [systemLogs, setSystemLogs] = useState<any[]>([]);
-  const [bypasses, setBypasses] = useState<any[]>([]);"""
+# Add Toast State
+if 'const [toast, setToast]' not in content:
+    content = content.replace("const [loading, setLoading] = useState(true);", "const [loading, setLoading] = useState(true);\n  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);\n\n  const showToast = (message: string, type: 'success' | 'error' = 'success') => {\n    setToast({message, type});\n    setTimeout(() => setToast(null), 3000);\n  };")
 
-if state_target in content:
-    content = content.replace(state_target, state_replacement)
-else:
-    print("State target not found")
-
-# 2. Add fetch logic in fetchData()
-fetch_target = """        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),"""
-fetch_replacement = """        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),
-        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),"""
-
-if fetch_target in content:
-    content = content.replace(fetch_target, fetch_replacement)
-else:
-    print("Fetch target not found, searching for alternative")
-    # Maybe we need to find where systemLogs is fetched.
-    import re
-    match = re.search(r'fetch\("/api/admin/logs".*?catch\(\(\) => \{\}\),', content)
-    if match:
-        content = content.replace(match.group(0), match.group(0) + '\n        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),')
-    else:
-        # If fetch doesn't exist at all, we inject it in fetchData
-        fetch_base = 'fetch("/api/admin/plans", { headers }).then((res) => res.json()).then(setPlans).catch(() => {}),'
-        if fetch_base in content:
-            content = content.replace(fetch_base, fetch_base + '\n        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),\n        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),')
-        else:
-            print("Fetch base not found either.")
-
-# 3. Add the UI tab rendering before "administrators"
-tab_target = '{activeTab === "administrators" && ('
-tab_replacement = """{activeTab === "logs" && (
-                <div className="p-8 space-y-8 bg-slate-50 relative animate-in fade-in duration-200">
-                  
-                  {/* Operational Bypasses Panel */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
-                    <div className="bg-rose-50 px-6 py-4 border-b border-rose-100 flex items-center gap-3">
-                      <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
-                        <Activity size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-rose-900">Active Operational Bypasses</h3>
-                        <p className="text-sm text-rose-700">Structural overrides and development fallbacks currently overriding security or standard flow.</p>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      {bypasses.length === 0 ? (
-                        <div className="text-sm text-slate-500 italic">No structural bypasses detected. System is running in full production security mode.</div>
-                      ) : (
-                        <div className="space-y-4">
-                          {bypasses.map((bp, i) => (
-                            <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-rose-50/50 rounded-xl border border-rose-100/50">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-200 text-rose-800">{bp.severity}</span>
-                                  <span className="font-bold text-rose-900">{bp.type}</span>
-                                </div>
-                                <p className="text-sm text-rose-700">{bp.description}</p>
-                                <div className="mt-2 text-xs text-rose-600 font-medium">Affected: {bp.affected_components.join(", ")}</div>
-                              </div>
-                              <div className="mt-4 md:mt-0 text-sm font-bold text-rose-500 uppercase tracking-wider px-4 py-2 bg-white rounded-lg shadow-sm border border-rose-100">
-                                {bp.status}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Webhook Allocations */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100">
-                      <h3 className="font-bold text-slate-800">Allocated Webhook Endpoints</h3>
-                      <p className="text-sm text-slate-500">URLs for external integrations to send data to.</p>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+# Add summary cards at the top
+summary_cards = """
+                {/* Summary Cards */}
+                {stats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg flex items-center justify-between">
                         <div>
-                          <h4 className="font-bold text-slate-700 text-sm">Stripe Payments Webhook</h4>
-                          <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">POST /api/webhooks/stripe</code>
+                            <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Total Users</p>
+                            <h4 className="text-2xl font-black text-white">{stats.totalUsers}</h4>
                         </div>
-                        <button onClick={() => navigator.clipboard.writeText(window.location.origin + "/api/webhooks/stripe")} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 text-slate-600 transition-colors">
-                          Copy Full URL
-                        </button>
-                      </div>
+                        <Users className="text-blue-500 opacity-50" size={32} />
                     </div>
-                  </div>
-
-                  {/* Error Stream Console */}
-                  <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-100">Webhook & Error Logs Stream</h3>
-                        <p className="text-sm text-slate-400">Live feed of internal errors and webhook processing failures.</p>
-                      </div>
-                      <button onClick={fetchData} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700 transition-colors flex items-center gap-2">
-                        <Activity size={14} /> Refresh Feed
-                      </button>
+                    <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Pro Users</p>
+                            <h4 className="text-2xl font-black text-white">{stats.proUsers}</h4>
+                        </div>
+                        <Shield className="text-yellow-500 opacity-50" size={32} />
                     </div>
-                    <div className="p-0 overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                          <tr className="bg-slate-950/50">
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Timestamp</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Source</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Event</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Error</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/50 text-sm">
-                          {systemLogs.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-mono text-sm">
-                                [System initialized] No logged errors or webhook failures.
-                              </td>
-                            </tr>
-                          ) : (
-                            systemLogs.map((log: any) => (
-                              <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
-                                <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
-                                  {new Date(log.created_at).toLocaleString()}
-                                </td>
-                                <td className="px-6 py-4 text-slate-300 font-medium">
-                                  {log.source || "System"}
-                                </td>
-                                <td className="px-6 py-4 text-blue-400 font-mono text-xs">
-                                  {log.event_type}
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="text-rose-400 font-mono text-xs truncate max-w-md" title={log.error_message}>
-                                    {log.error_message}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                    <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Est. MRR</p>
+                            <h4 className="text-2xl font-black text-white">${stats.mrrEstimate}</h4>
+                        </div>
+                        <DollarSign className="text-green-500 opacity-50" size={32} />
                     </div>
-                  </div>
+                    <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg flex items-center justify-between">
+                        <div>
+                            <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">System Health</p>
+                            <h4 className="text-2xl font-black text-white">Active</h4>
+                        </div>
+                        <Activity className="text-fuchsia-500 opacity-50" size={32} />
+                    </div>
                 </div>
-              )}
+                )}
+"""
 
-              {activeTab === "administrators" && ("""
+if "Summary Cards" not in content:
+    content = content.replace("                {/* TABS */}", summary_cards + "\n                {/* TABS */}")
 
-if tab_target in content:
-    content = content.replace(tab_target, tab_replacement)
-    with open('AdminApp.tsx', 'w') as f:
-        f.write(content)
-    print("Patched AdminApp.tsx successfully")
-else:
-    print("Tab target not found in AdminApp.tsx")
+# Update Integrations UI
+integrations_old = """                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Publishable Key</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="pk_live_..." />
+                                            <button onClick={() => handleSaveSetting('stripe_publishable_key', stripePub, false)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>"""
+
+integrations_new = """                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Publishable Key</label>
+                                            {stripePub ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="pk_live_..." />
+                                            <button onClick={() => { handleSaveSetting('stripe_publishable_key', stripePub, false); showToast('Stripe Publishable Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
+                                        </div>
+                                    </div>"""
+
+content = content.replace(integrations_old, integrations_new)
+
+integrations_secret_old = """                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Secret Key (Restricted)</label>
+                                        <div className="flex gap-2">
+                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="sk_live_..." />
+                                            <button onClick={() => handleSaveSetting('stripe_secret_key', stripeSecret, true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>"""
+
+integrations_secret_new = """                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Secret Key (Restricted)</label>
+                                            {stripeSecret ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="sk_live_..." />
+                                            <button onClick={() => { handleSaveSetting('stripe_secret_key', stripeSecret, true); showToast('Stripe Secret Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
+                                        </div>
+                                    </div>"""
+
+content = content.replace(integrations_secret_old, integrations_secret_new)
+
+
+paypal_old = """                                    <div>
+                                        <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Client ID</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white" placeholder="Client ID from PayPal Developer Dashboard..." />
+                                            <button onClick={() => handleSaveSetting('paypal_client_id', paypalClient, false)} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded">Save</button>
+                                        </div>
+                                    </div>"""
+
+paypal_new = """                                    <div>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Client ID</label>
+                                            {paypalClient ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-blue-500 focus:outline-none" placeholder="Client ID from PayPal Developer Dashboard..." />
+                                            <button onClick={() => { handleSaveSetting('paypal_client_id', paypalClient, false); showToast('PayPal Client ID saved', 'success'); }} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-blue-500/20 transition-all active:scale-95">Save</button>
+                                        </div>
+                                    </div>"""
+
+content = content.replace(paypal_old, paypal_new)
+
+
+# Insert Toast UI at the bottom of the modal container
+toast_ui = """
+                {/* Toast Notification */}
+                {toast && (
+                    <div className={`fixed bottom-6 right-6 z-[600] px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'success' ? 'bg-green-500/10 border border-green-500 text-green-400' : 'bg-red-500/10 border border-red-500 text-red-400'}`}>
+                        {toast.type === 'success' ? <Shield size={18} /> : <X size={18} />}
+                        <span className="font-bold text-sm">{toast.message}</span>
+                    </div>
+                )}
+"""
+
+if "{toast && (" not in content:
+    content = content.replace("            </div>\n        </div>\n    </div>\n  );\n};\n", toast_ui + "\n            </div>\n        </div>\n    </div>\n  );\n};\n")
+
+with open('AdminDashboard.tsx', 'w') as f:
+    f.write(content)
+
+print("AdminDashboard patched successfully.")

@@ -3,8 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { WorkspaceContext } from './WorkspaceContext';
+import { WorkspaceSidebar } from './WorkspaceSidebar';
+import { WorkspaceLibrary } from './WorkspaceLibrary';
+import { WorkspaceCasting } from './WorkspaceCasting';
+import { WorkspaceDirector } from './WorkspaceDirector';
 import React, { useState, useEffect } from 'react';
-import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal, ART_STYLES } from './types';
+import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal, ART_STYLES, WARDROBE_PRESETS } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -674,77 +679,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
     }, [props.selectedGenre, props.villain]);
 
     // Predefined Wardrobe Presets matching specific rendering aesthetics and character role profiles
-    const WARDROBE_PRESETS = {
-        Hero: {
-            Tactical: {
-                name: "Tactical Vanguard Armor",
-                emoji: "🛡️",
-                desc: "A form-fitting dark charcoal Kevlar weave suit with glowing cybernetic blue trim, carbon-fiber shoulder pauldrons, magnetic leg holsters, and heavy-duty steel-toed combat boots.",
-                styleLock: "Modern American Comic, high contrast digital outlines",
-                sartorialStyle: "High-Tech Military Cyber-Vanguard"
-            },
-            Gala: {
-                name: "Gala Elite Splendor",
-                emoji: "✨",
-                desc: "A pristine tailored satin-lapel midnight blue tuxedo with pristine silver silk embroidery pattern, light-up sapphire cufflinks, and a sleek modern smart-watch chronometer.",
-                styleLock: "Classic Noir Chiaroscuro Comic Art",
-                sartorialStyle: "Sophisticated Metahuman High-Society Executive"
-            },
-            Casual: {
-                name: "Metropolitan Casual",
-                emoji: "👕",
-                desc: "An oversized graphite-gray hoodie emblazoned with a faded neon-green graphic, worn-out vintage blue jeans, scuffed leather high-tops, and dark wire-frame spectacles.",
-                styleLock: "Gothic Graphic Novel Ink Hatching",
-                sartorialStyle: "Gritty Urban Streetwear"
-            }
-        },
-        'Co-Star': {
-            Tactical: {
-                name: "Tactical Shadow Recon",
-                emoji: "🕵️",
-                desc: "A flexible matte-black stealth suit with muted violet ambient strips, thermal goggles perched on the head, lightweight utility belt pouches, and silent rubber-soled infiltration footwear.",
-                styleLock: "High-tension espionage manga style",
-                sartorialStyle: "Covert Spec-Ops Scouting Infiltrator"
-            },
-            Gala: {
-                name: "Gala Velvet Phantom",
-                emoji: "👗",
-                desc: "A flowy backless deep violet velvet sheath gown with emerald-accented lace sleeves, a concealed micro-holster under the thigh slit, and a diamond choker communicator.",
-                styleLock: "Retro 1950s Pulp Illustration, rich color gradients",
-                sartorialStyle: "Elegant Classic Dame espionage dress"
-            },
-            Casual: {
-                name: "Casual Decker Lounge",
-                emoji: "🧥",
-                desc: "A cozy distressed olive bomber jacket, soft black cotton cargo joggers with red accents, fingerless wool gloves, and chunky cyber-runner platform sneakers.",
-                styleLock: "Cozy Pastel Anime Comic Frame",
-                sartorialStyle: "Lo-fi Cyberpunk Hacker Lounge"
-            }
-        },
-        Villain: {
-            Tactical: {
-                name: "Nemesis Warmonger Exoskeleton",
-                emoji: "💀",
-                desc: "Reinforced Obsidian titanium-alloy power armor plates, serrated red-energy shoulder conduits, an opaque crimson-tinted skull facade helmet, and heavy-duty hydraulic energy-venting boots.",
-                styleLock: "Brutalist Sci-Fi Cyber-Illustration, thick heavy linework, extreme dark shadows",
-                sartorialStyle: "Over-engineered Militaristic Warmonger Exoskeleton"
-            },
-            Gala: {
-                name: "Nemesis Oligarch Haute-Couture",
-                emoji: "🍷",
-                desc: "An opulent three-piece burgundy velvet suit with gold-gilded baroque lapel patterns, a dark silk cravat, and a heavy ruby-topped metallic mechanical cane weapon.",
-                styleLock: "Sinister Elitist Noir Comic Art, deep focus chiaroscuro with royal red lighting",
-                sartorialStyle: "Arrogant Plutocratic Syndicate Overlord"
-            },
-            Casual: {
-                name: "Nemesis Viper Lounge Suit",
-                emoji: "👓",
-                desc: "A casual tailored black silk shirt unbuttoned at the collar, slate-grey tailored linen pants, designer emerald-skin loafers, and thick gradient-tinted gold-framed aviators.",
-                styleLock: "Neon Noir Comic Art, high shadow contrast",
-                sartorialStyle: "Luxury Rogue Syndicate Underboss"
-            }
-        }
-    };
+    
 
     // Wardrobe Drawer state tracker
     const [cohesionSliderValue, setCohesionSliderValue] = useState(50);
@@ -1509,7 +1444,161 @@ export const Setup: React.FC<SetupProps> = (props) => {
         "Custom": "Photorealistic Neon Noir Comic Book Style, sharp cinematic chiaroscuro"
     };
 
+    const workspaceContextValue = {
+        ...props,
+        t,
+        isCyberpunk,
+        isEditorial,
+        isKidStory,
+        activePresets,
+        activeTab,
+        appSkin,
+        cloudRunConfig,
+        cohesionSliderValue,
+        creatorEmailInput,
+        dbConnection,
+        dynamicCategories,
+        fileToBase64,
+        geminiKey,
+        generatingBlueprint,
+        generatingPageGoal,
+        handleApplyWardrobePreset,
+        handleAvatarUpload,
+        handleDeleteDraft,
+        handleDeleteFromVault,
+        handleDeleteProject,
+        handleDropAsset,
+        handleEmailSubmit,
+        handleForceReconnect,
+        handleGeminiKeyChange,
+        handleGeneratePageGoal,
+        handleGenerateStoryBlueprint,
+        handleInitializeDefaultBlueprint,
+        handleLoadMyUrl,
+        handleManualPublish,
+        handlePersonaStudioBrainstorm,
+        handlePersonaStudioCastCharacter,
+        handlePersonaStudioGeneratePortrait,
+        handlePersonaStudioSelectRole,
+        handleSaveDraft,
+        handleSaveToVault,
+        handleSuggestField,
+        handleSurpriseMeVault,
+        handleTestConnection,
+        handleVaultGenerate,
+        isPublishingManual,
+        isReconnecting,
+        isSavingDraft,
+        isScanningFriend,
+        isScanningHero,
+        isScanningVillain,
+        isTestingConnection,
+        isUpdatingEmail,
+        isVaultGenerating,
+        isWardrobeOpen,
+        leonardoKey,
+        manualComicCover,
+        manualComicGenre,
+        manualComicLanguage,
+        manualComicTitle,
+        personaStudioConcept,
+        personaStudioGeneratingImg,
+        personaStudioName,
+        personaStudioPortrait,
+        personaStudioRole,
+        personaStudioStatusMsg,
+        personaStudioStyle,
+        personaStudioSuggestedBio,
+        personaStudioSuggestedName,
+        personaStudioSuggestedNemesisDna,
+        personaStudioSuggestedPowers,
+        personaStudioSuggestedVisuals,
+        personaStudioSuggesting,
+        pineconeKey,
+        reconnectResultMessage,
+        savedCharacters,
+        savedDrafts,
+        savedProjects,
+        selectedArtStyle,
+        setActivePresets,
+        setActiveTab,
+        setAppSkin,
+        setAppSkinState,
+        setCloudRunConfig,
+        setCohesionSliderValue,
+        setCreatorEmailInput,
+        setDbConnection,
+        setDynamicCategories,
+        setGeminiKey,
+        setGeneratingBlueprint,
+        setGeneratingPageGoal,
+        setIsPublishingManual,
+        setIsReconnecting,
+        setIsSavingDraft,
+        setIsScanningFriend,
+        setIsScanningHero,
+        setIsScanningVillain,
+        setIsTestingConnection,
+        setIsUpdatingEmail,
+        setIsVaultGenerating,
+        setIsWardrobeOpen,
+        setLeonardoKey,
+        setManualComicCover,
+        setManualComicGenre,
+        setManualComicLanguage,
+        setManualComicTitle,
+        setPersonaStudioConcept,
+        setPersonaStudioGeneratingImg,
+        setPersonaStudioName,
+        setPersonaStudioPortrait,
+        setPersonaStudioRole,
+        setPersonaStudioStatusMsg,
+        setPersonaStudioStyle,
+        setPersonaStudioSuggestedBio,
+        setPersonaStudioSuggestedName,
+        setPersonaStudioSuggestedNemesisDna,
+        setPersonaStudioSuggestedPowers,
+        setPersonaStudioSuggestedVisuals,
+        setPersonaStudioSuggesting,
+        setPineconeKey,
+        setReconnectResultMessage,
+        setSavedCharacters,
+        setSavedDrafts,
+        setSavedProjects,
+        setSelectedArtStyle,
+        setSuggestingFields,
+        setTerminalLogs,
+        setTestConnectionString,
+        setTestResult,
+        setVaultAge,
+        setVaultCharDesc,
+        setVaultCharName,
+        setVaultCharStyle,
+        setVaultEthnicity,
+        setVaultGender,
+        setVaultGeneratedImage,
+        setVaultReferenceImage,
+        setVaultStatusMsg,
+        setWardrobeAlert,
+        setWardrobeTargetRole,
+        suggestingFields,
+        terminalLogs,
+        testConnectionString,
+        testResult,
+        vaultAge,
+        vaultCharDesc,
+        vaultCharName,
+        vaultCharStyle,
+        vaultEthnicity,
+        vaultGender,
+        vaultGeneratedImage,
+        vaultReferenceImage,
+        vaultStatusMsg,
+        wardrobeAlert,
+        wardrobeTargetRole
+    };
     return (
+        <WorkspaceContext.Provider value={workspaceContextValue}>
         <>
         <style>{`
              @keyframes knockout-exit {
@@ -1566,13 +1655,17 @@ export const Setup: React.FC<SetupProps> = (props) => {
             </div>
         )}
         
-        <div className="fixed inset-0 z-[200] overflow-y-auto bg-black/90 backdrop-blur-md transition-all duration-500 ease-in-out"
+                <div className="fixed inset-0 z-[200] bg-black/90 flex flex-row overflow-hidden transition-all duration-500 ease-in-out"
              style={{
                  animation: props.isTransitioning ? 'knockout-exit 1s forwards cubic-bezier(.6,-0.28,.74,.05)' : 'none',
                  pointerEvents: props.isTransitioning ? 'none' : 'auto'
              }}>
           
-          <div className="min-h-full flex items-center justify-center p-4 pb-36 md:p-8">
+          {/* New Vertical Sidebar */}
+          {!isCyberpunk && <WorkspaceSidebar />}
+
+          {/* Main Content Area */}
+          <div className="flex-1 min-h-full overflow-y-auto p-4 pb-36 md:p-8 relative">
             <div className={sOuterContainer}>
                 
                 {/* Comic Halftone texture wrapper behind everything */}
@@ -1710,85 +1803,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         </div>
                     </div>
                 </div>
-
-                {/* TAB NAVIGATION: Generator vs Library */}
-                {!isCyberpunk && (
-<div className={isEditorial ? "mb-6 relative z-10 flex bg-stone-100 p-1.5 gap-2 rounded-xl border border-stone-200" : "mb-6 relative z-10 flex border border-cyan-800/50 rounded-lg overflow-hidden bg-gray-950 p-1.5 gap-2 shadow-[0_0_15px_rgba(34,211,238,0.2)]"}>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('generate')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'generate' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'generate' ? 'bg-gray-900 text-cyan-400 border border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
-                        }`}
-                    >
-                        {isEditorial ? t('setup.tabs.generateEditorial') : t('setup.tabs.generateComic')}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('blueprint')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'blueprint' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'blueprint' ? 'bg-gray-900 text-pink-500 border border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
-                        }`}
-                    >
-                        {isEditorial ? t('setup.tabs.blueprintEditorial') : t('setup.tabs.blueprintComic')}
-                        <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-lg">{t('setup.auto5', 'NEW')}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('persona')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none relative ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'persona' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm md:text-base uppercase font-bold tracking-wider ${activeTab === 'persona' ? 'bg-gray-900 text-emerald-400 border border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`
-                        }`}
-                    >
-                        {isEditorial ? t('setup.tabs.personaEditorial') : t('setup.tabs.personaComic')}
-                        <span className="absolute -top-2 -right-2 bg-gray-900 text-yellow-400 text-black font-bold border border-black text-[10px] px-2 py-0.5 rounded shadow-sm">{t('setup.auto6', 'BETA')}</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('library')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'library' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'library' ? 'bg-gray-900 text-emerald-400 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-emerald-300 hover:bg-gray-900/50 border-cyan-800/30'}`
-                        }`}
-                    >
-                        {isEditorial ? t('setup.tabs.libraryEditorial') : t('setup.tabs.libraryComic')}
-                        {savedDrafts.length > 0 && (
-                            <span className={isEditorial ? "ml-2 bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold" : "ml-2 bg-black text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded"}>
-                                {savedDrafts.length}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('vault')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'vault' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'vault' ? 'bg-gray-900 text-purple-400 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-purple-300 hover:bg-gray-900/50 border-purple-800/30'}`
-                        }`}
-                    >
-                        {isEditorial ? "VAULT" : "VAULT"}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('settings')}
-                        className={`flex-1 py-3 px-4 transition-all duration-200 select-none ${
-                            isEditorial 
-                                ? `font-sans text-xs uppercase font-extrabold tracking-widest rounded-lg ${activeTab === 'settings' ? 'bg-stone-800 text-stone-50 shadow-sm' : 'text-stone-500 hover:text-stone-950 hover:bg-stone-200/50'}`
-                                : `font-mono text-sm font-extrabold tracking-widest rounded-xl uppercase border-2 ${activeTab === 'settings' ? 'bg-gray-900 text-orange-400 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'bg-gray-950/50 text-slate-400 hover:text-orange-300 hover:bg-gray-900/50 border-cyan-800/30'}`
-                        }`}
-                    >
-                        {isEditorial ? 'Settings' : 'Settings'}
-                    </button>
-                </div>
-)}
 
 
                 {(isCyberpunk || activeTab === 'generate') && (
@@ -3086,1201 +3100,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 </div>
             </div>
         )}
-{(isCyberpunk || activeTab === 'persona') && (
-             <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
-                  {/* MULTIVERSE WARDROBE DRAWER COMPONENT */}
-                  <AnimatePresence>
-                       {isWardrobeOpen && (
-                            <>
-                                 {/* Dark Frosted Backdrop */}
-                                 <motion.div
-                                      initial={{ opacity: 0 }}
-                                      animate={{ opacity: 1 }}
-                                      exit={{ opacity: 0 }}
-                                      onClick={() => setIsWardrobeOpen(false)}
-                                      className="absolute inset-0 bg-black/75 backdrop-blur-sm z-[140] rounded-xl flex items-center justify-center p-4 cursor-pointer"
-                                 />
-
-                                 {/* Drawer Sliding Body */}
-                                 <motion.div
-                                      initial={{ x: '100%', opacity: 0.5 }}
-                                      animate={{ x: 0, opacity: 1 }}
-                                      exit={{ x: '100%', opacity: 0.5 }}
-                                      transition={{ type: 'spring', damping: 26, stiffness: 190 }}
-                                      className="absolute top-0 right-0 h-full w-full sm:w-[460px] bg-slate-950 border-l-4 border-black z-[150] shadow-[-10px_0px_0px_rgba(0,0,0,0.8)] rounded-r-lg p-6 flex flex-col font-mono select-none overflow-y-auto cursor-default"
-                                 >
-                                      {/* Drawer Header */}
-                                      <div className="flex items-start justify-between border-b-4 border-black pb-3.5 mb-5 font-mono">
-                                           <div>
-                                                <div className="flex items-center gap-2">
-                                                     <span className="text-2xl">🛍️</span>
-                                                     <span className="text-lg font-black uppercase text-yellow-300 tracking-wider animate-pulse" style={{ textShadow: '1px 1px 0px black' }}>
-                                                          WARDROBE CABINET
-                                                     </span>
-                                                </div>
-                                                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mt-1 block font-bold">
-                                                     SAGA DESIGN UNIFORM PRESETS
-                                                </span>
-                                           </div>
-                                           <button
-                                                type="button"
-                                                onClick={() => setIsWardrobeOpen(false)}
-                                                className="w-8 h-8 rounded border-2 border-black bg-gray-900 text-red-400 hover:bg-gray-900 text-red-400 text-white font-bold flex items-center justify-center shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] active:translate-y-px transition-all text-xs"
-                                           >
-                                                ✕
-                                           </button>
-                                      </div>
-
-                                      {/* Target Character Tabs */}
-                                      <div className="mb-4 font-mono">
-                                           <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2 font-mono">
-                                                Select Active Character Target
-                                           </label>
-                                           <div className="grid grid-cols-3 gap-1.5 bg-slate-900/80 p-1 border-2 border-black rounded">
-                                                {(['Hero', 'Co-Star', 'Villain'] as const).map((role) => {
-                                                     const isActive = wardrobeTargetRole === role;
-                                                     let label = '🦸 HERO';
-                                                     if (role === 'Co-Star') label = '👥 CO-STAR';
-                                                     if (role === 'Villain') label = '🦹 NEMESIS';
-                                                     
-                                                     return (
-                                                          <button
-                                                               key={role}
-                                                               type="button"
-                                                               onClick={() => setWardrobeTargetRole(role)}
-                                                               className={`py-1.5 text-center font-bold text-[10px] uppercase rounded transition-all ${
-                                                                    isActive
-                                                                         ? role === 'Hero'
-                                                                              ? 'bg-blue-600 border border-black text-white shadow-[1px_1px_0px_black]'
-                                                                              : role === 'Co-Star'
-                                                                                   ? 'bg-gray-900 text-purple-400 border border-black text-white shadow-[1px_1px_0px_black]'
-                                                                                   : 'bg-gray-900 text-red-400 border border-black text-white shadow-[1px_1px_0px_black]'
-                                                                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                                                               }`}
-                                                          >
-                                                               {label}
-                                                          </button>
-                                                     );
-                                                })}
-                                           </div>
-                                      </div>
-
-                                      {/* Alert Notification inside Drawer */}
-                                      {wardrobeAlert && (
-                                           <div className="bg-gray-900 text-yellow-400 border-2 border-black text-black font-extrabold text-[10px] p-2 rounded mb-4 animate-bounce text-center uppercase tracking-wide font-mono">
-                                                ⚡ {wardrobeAlert}
-                                           </div>
-                                      )}
-
-                                      {/* Presets Selection Column */}
-                                      <div className="flex-1 space-y-4 font-mono">
-                                           <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold font-mono block mb-1">
-                                                Choose Predefined Sg-Aesthetic
-                                           </span>
-                                           
-                                           {(['Tactical', 'Gala', 'Casual'] as const).map((presetKey) => {
-                                                const pData = WARDROBE_PRESETS[wardrobeTargetRole][presetKey];
-                                                const isActive = activePresets[wardrobeTargetRole] === presetKey;
-                                                
-                                                return (
-                                                     <div
-                                                          key={presetKey}
-                                                          onClick={() => handleApplyWardrobePreset(wardrobeTargetRole, presetKey)}
-                                                          className={`group relative p-3.5 border-2 border-black rounded-lg text-left transition-all cursor-pointer shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-x-px hover:translate-y-px hover:shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] ${
-                                                               isActive 
-                                                                    ? 'bg-slate-900 border-yellow-400 ring-2 ring-yellow-400/20' 
-                                                                    : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60'
-                                                          }`}
-                                                     >
-                                                          {/* Active Tag */}
-                                                          {isActive && (
-                                                               <span className="absolute top-2 right-2 bg-gray-900 text-yellow-400 text-black text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-[1px_1px_0px_black]">
-                                                                    ACTIVE WEAR
-                                                               </span>
-                                                          )}
-
-                                                          <div className="flex items-center gap-2 mb-1.5">
-                                                               <span className="text-xl">{pData.emoji}</span>
-                                                               <span className="text-xs font-extrabold uppercase text-white tracking-wide group-hover:text-yellow-300 transition-colors">
-                                                                    {pData.name} ({presetKey})
-                                                               </span>
-                                                          </div>
-                                                          
-                                                          <div className="space-y-1.5 font-sans">
-                                                               <div>
-                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">{t('setup.auto23', 'GARMENT & HAIR DESCRIPTION')}</span>
-                                                                    <p className="text-[11px] text-slate-200 leading-relaxed italic pr-4 bg-slate-950/30 p-1.5 rounded">
-                                                                         "{pData.desc}"
-                                                                    </p>
-                                                               </div>
-                                                               <div>
-                                                                    <span className="text-[9px] font-bold text-slate-400 block tracking-wide">{t('setup.auto24', 'RENDERING ART STYLE DIRECTIVE')}</span>
-                                                                    <p className="text-[10px] text-yellow-300 mt-0.5 font-semibold font-sans">
-                                                                         ⚔️ {pData.styleLock}
-                                                                    </p>
-                                                               </div>
-                                                          </div>
-                                                     </div>
-                                                );
-                                           })}
-                                      </div>
-
-                                      {/* Drawer Footer controls */}
-                                      <div className="mt-6 border-t-2 border-slate-800 pt-4 text-center font-mono">
-                                           <span className="text-[9.5px] text-slate-400 font-mono uppercase tracking-tight block">
-                                                Updates dynamic rendering directives instantly.
-                                           </span>
-                                           <button
-                                                type="button"
-                                                onClick={() => setIsWardrobeOpen(false)}
-                                                className="w-full mt-2.5 bg-gray-900 text-yellow-400 hover:bg-gray-900 text-yellow-400 text-black font-extrabold text-xs py-2 uppercase border-2 border-black shadow-[2px_2px_0px_black] active:translate-y-px transition-all font-mono"
-                                           >
-                                                🔐 LOCK SARTORIAL MATRIX
-                                           </button>
-                                      </div>
-                                 </motion.div>
-                            </>
-                       )}
-                  </AnimatePresence>
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b-4 border-black pb-4 mb-6 gap-4">
-                       <div>
-                            <span className="block font-mono text-purple-400 font-extrabold text-2xl md:text-3xl uppercase tracking-wider mb-1" style={{ textShadow: '2px 2px 0px black' }}>
-                                 🎭 THE MULTIVERSE AI PERSONA TUNING STUDIO
-                            </span>
-                            <p className="text-xs text-slate-400 font-mono max-w-2xl leading-relaxed">
-                                 Assists you in developing, designing, and brainstorming rich characters. Specify a name, a role type, and select a visual direction. Let the AI brainstorm complete custom coordinates (including hair, garment design, and superpowers), generate detailed character graphic art sheets, and cast them straight into the active comic saga series!
-                            </p>
-                       </div>
-                       <button
-                            type="button"
-                            onClick={() => {
-                                 setWardrobeTargetRole(personaStudioRole);
-                                 setIsWardrobeOpen(true);
-                            }}
-                            className="self-start md:self-center flex items-center gap-1.5 bg-gray-900 text-purple-400 hover:bg-gray-900 text-purple-400 text-white font-mono font-black text-xs uppercase px-4 py-3 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] tracking-wide transition-all"
-                       >
-                            🛍️ CHOOSE WARDROBE
-                       </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                      {/* Left Panel: Creator Workspace */}
-                      <div className="lg:col-span-7 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000]">
-                           <div>
-                                <label className="block text-xs font-mono text-yellow-300 uppercase tracking-wider mb-2">{t('setup.auto25', '1. Select Character Role')}</label>
-                                <div className="grid grid-cols-3 gap-3">
-                                     <button
-                                          type="button"
-                                          onClick={() => handlePersonaStudioSelectRole('Hero')}
-                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
-                                               personaStudioRole === 'Hero'
-                                                    ? 'bg-blue-600 border-black text-white shadow-[2px_2px_0px_black]'
-                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
-                                          }`}
-                                     >
-                                          🦸 HERO
-                                     </button>
-                                     <button
-                                          type="button"
-                                          onClick={() => handlePersonaStudioSelectRole('Co-Star')}
-                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
-                                               personaStudioRole === 'Co-Star'
-                                                    ? 'bg-gray-900 text-purple-400 border-black text-white shadow-[2px_2px_0px_black]'
-                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
-                                          }`}
-                                     >
-                                          👥 CO-STAR
-                                     </button>
-                                     <button
-                                          type="button"
-                                          onClick={() => handlePersonaStudioSelectRole('Villain')}
-                                          className={`py-2 text-center font-mono font-bold text-xs uppercase rounded border-2 transition-all ${
-                                               personaStudioRole === 'Villain'
-                                                    ? 'bg-gray-900 text-red-400 border-black text-white shadow-[2px_2px_0px_black]'
-                                                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
-                                          }`}
-                                     >
-                                          🦹 NEMESIS
-                                     </button>
-                                </div>
-                           </div>
-
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                     <label className="block text-xs font-mono text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto26', 'Character Name Input')}</label>
-                                     <input
-                                          type="text"
-                                          value={personaStudioName}
-                                          onChange={(e) => setPersonaStudioName(e.target.value)}
-                                          placeholder="e.g. Captain Volt, Chrono..."
-                                          className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans"
-                                     />
-                                </div>
-                                <div>
-                                     <div className="flex justify-between items-center mb-1">
-                                          <label className="block text-xs font-mono text-gray-350 uppercase font-semibold">{t('setup.auto27', 'Creative Art Style')}</label>
-                                          {props.selectedGenre !== personaStudioStyle && (
-                                               <button
-                                                    type="button"
-                                                    onClick={() => setPersonaStudioStyle(props.selectedGenre)}
-                                                    className="text-[8.5px] bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-500/30 rounded px-1.5 py-0.5 font-mono tracking-wide transition-all uppercase font-bold"
-                                                    title={`Sync with selected story: ${props.selectedGenre}`}
-                                               >
-                                                    🔗 Sync to {props.selectedGenre || "Selected Story"}
-                                               </button>
-                                          )}
-                                     </div>
-                                     <select
-                                          value={personaStudioStyle}
-                                          onChange={(e) => setPersonaStudioStyle(e.target.value)}
-                                          className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
-                                     >
-                                          {dynamicCategories.filter(c => c.category_type === 'Genre').map((cat) => (
-                                                <option key={cat.name} value={cat.name}>{cat.emoji || "🎨"} {cat.name}</option>
-                                           ))}
-                                     </select>
-                                </div>
-                           </div>
-
-                           <div>
-                                <label className="block text-xs font-mono text-gray-300 uppercase mb-1 font-semibold">{t('setup.auto28', 'Persona Concept Hint / Keywords')}</label>
-                                <textarea
-                                     rows={2}
-                                     value={personaStudioConcept}
-                                     onChange={(e) => setPersonaStudioConcept(e.target.value)}
-                                     placeholder="e.g. cyberpunk hacktivist with electro-kinesis, hot-headed ninja, mysterious shadow commander"
-                                     className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
-                                />
-                                {/* Custom Style Description Templates */}
-                                <div className="mt-2 text-[10px] text-gray-400">
-                                     <span className="font-mono text-[9px] uppercase font-bold text-purple-400 mr-1.5 block mb-1">{t('setup.auto29', '💡 Custom Style Presets (Click to insert):')}</span>
-                                     <div className="flex flex-wrap gap-1">
-                                          {(() => {
-                                               const templatesMap: Record<string, string[]> = {
-                                                    'Anime Story': [
-                                                         "Spiky blue hair, fierce eyes, cosmic energy aura",
-                                                         "Academy school uniform, spellbook, gentle silver gaze"
-                                                    ],
-                                                    'Historical Archeology Tales': [
-                                                         "Tomb explorer, leather bomber vest, dust-smudged cheeks",
-                                                         "Decipherer, gold brass spectacles, ancient stone tablet"
-                                                    ],
-                                                    'Superhero Action': [
-                                                         "High-tech carbon armored nanosuit with glowing lines",
-                                                         "Midnight stealth cowl, long flowing heavy cape"
-                                                    ],
-                                                    'Dark Sci-Fi': [
-                                                         "Cybernetic plates, glowing visor, chrome left arm",
-                                                         "Tactical spacer suit, oxygen tube mask, stellar badges"
-                                                    ],
-                                                    'Classic Horror': [
-                                                         "Camp guide holding a flickering lantern, muddy knees",
-                                                         "Gothic attire, pale porcelain skin, hollow dark expression"
-                                                    ]
-                                               };
-                                               const rawPresets = templatesMap[personaStudioStyle] || [
-                                                    "Rugged futuristic jacket, carbon plating, glowing eyes",
-                                                    "Tailored leather high-collar coat, fingerless gloves"
-                                               ];
-                                               return rawPresets.map((txt, index) => (
-                                                    <button
-                                                         key={index}
-                                                         type="button"
-                                                         onClick={() => setPersonaStudioConcept(txt)}
-                                                         className="text-[9px] bg-slate-950 hover:bg-slate-800 text-gray-300 font-sans tracking-wide px-2 py-0.5 rounded border border-purple-900 hover:border-purple-400 transition-colors truncate max-w-[200px]"
-                                                    >
-                                                         + {txt}
-                                                    </button>
-                                               ));
-                                          })()}
-                                     </div>
-                                </div>
-                           </div>
-
-                           <button
-                                type="button"
-                                onClick={handlePersonaStudioBrainstorm}
-                                disabled={personaStudioSuggesting}
-                                className="w-full bg-gray-900 text-yellow-400 hover:bg-gray-900 text-yellow-400 text-black font-semibold font-mono uppercase text-xs py-3.5 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2"
-                           >
-                                {personaStudioSuggesting ? (
-                                     <>
-                                          <svg className="animate-spin h-4 w-4 text-black" viewBox="0 0 24 24" fill="none">
-                                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                          </svg>
-                                          TRANSCENDING REALITY PLANES...
-                                     </>
-                                ) : (
-                                     "🔮 BRAINSTORM FULL PERSONA PROFILE WITH AI"
-                                )}
-                           </button>
-
-                           {/* Output of AI Suggestion */}
-                           {(personaStudioSuggestedName || personaStudioSuggestedBio || personaStudioSuggestedVisuals) && (
-                                <div className="mt-2 p-4 bg-slate-950 border-2 border-dashed border-purple-500/50 rounded-lg animate-fadeIn text-left">
-                                     <div className="flex justify-between border-b border-slate-700 pb-1.5 mb-2">
-                                          <span className="font-mono text-xs uppercase text-purple-300 font-bold">{t('setup.auto30', '✨ Designed Persona Profile Specs')}</span>
-                                          <span className="bg-purple-900 text-purple-200 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">{t('setup.auto31', 'GEMINI GENERATED')}</span>
-                                     </div>
-                                     <div className="space-y-2.5 text-xs text-gray-300">
-                                          <div>
-                                               <strong className="text-white font-semibold">{t('setup.auto32', 'Brainstormed Name:')}</strong>
-                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 text-yellow-300 font-mono uppercase text-[12px]">{personaStudioSuggestedName}</p>
-                                          </div>
-                                          <div>
-                                               <strong className="text-white font-semibold flex items-center">{t('setup.auto33', 'Story Backstory / Bio:')}</strong>
-                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 leading-relaxed font-sans">{personaStudioSuggestedBio}</p>
-                                          </div>
-                                          <div>
-                                               <strong className="text-white font-semibold">{t('setup.auto34', 'Dressing & Hairstyle Prompt Descriptors:')}</strong>
-                                               <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 italic font-sans">{personaStudioSuggestedVisuals}</p>
-                                          </div>
-                                          {personaStudioRole === 'Villain' && (
-                                               <div>
-                                                    <strong className="text-white font-semibold text-red-400">{t('setup.auto35', 'Nemesis DNA & Core Powers Source:')}</strong>
-                                                    <p className="bg-slate-900/40 p-1.5 rounded mt-0.5 font-sans font-semibold text-red-300">{personaStudioSuggestedPowers}</p>
-                                               </div>
-                                          )}
-                                     </div>
-                                </div>
-                           )}
-
-                            {/* Nemesis Identity Schema Coordination Matrix */}
-                            {personaStudioRole === 'Villain' && (
-                                 <div className="mt-4 p-4 bg-slate-950 border-4 border-black border-red-500/30 rounded-lg text-left shadow-[4px_4px_0px_rgba(0,0,0,1)] animate-fadeIn">
-                                      <div className="flex flex-col border-b border-red-500/25 pb-2.5 mb-4 font-mono">
-                                           <span className="font-mono text-sm uppercase text-red-400 font-extrabold flex items-center gap-1.5 select-none tracking-wide" style={{ textShadow: '1px 1px 0px black' }}>
-                                                💀 Nemesis Cosmic Identity Schema Editor
-                                           </span>
-                                           <span className="text-[10px] text-gray-400 font-mono tracking-wider">
-                                                Fine-tune multi-layer coordinates before committing to catalog & series memory
-                                           </span>
-                                      </div>
-
-                                      <div className="space-y-4 text-xs font-sans">
-                                           {/* Biometric Backbone */}
-                                           <div className="flex flex-col gap-1.5 text-left font-sans">
-                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>{t('setup.auto36', '🧬 1. Biometric Backbone (Faces, Eyes, Likeness Core)')}</span>
-                                                </label>
-                                                <textarea
-                                                     rows={2}
-                                                     value={
-                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.biometric_backbone ?? 
-                                                          props.nemesisDNA?.persistence_layer?.biometric_backbone ?? 
-                                                          ''
-                                                     }
-                                                     onChange={(e) => {
-                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                          const updated = {
-                                                               ...base,
-                                                               persistence_layer: {
-                                                                    ...base.persistence_layer,
-                                                                    biometric_backbone: e.target.value
-                                                               }
-                                                          };
-                                                          setPersonaStudioSuggestedNemesisDna(updated);
-                                                     }}
-                                                     placeholder="Physical appearance elements (e.g. razor sharp facial features, deep-set jade green eyes, long silk black hair)..."
-                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
-                                                />
-                                           </div>
-
-                                           {/* Structural Constants */}
-                                           <div className="flex flex-col gap-1.5 text-left font-sans">
-                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>{t('setup.auto37', '🔩 2. Structural Constants (Identity Marks & Accessories)')}</span>
-                                                </label>
-                                                <textarea
-                                                     rows={2}
-                                                     value={
-                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.structural_constants ?? 
-                                                          props.nemesisDNA?.persistence_layer?.structural_constants ?? 
-                                                          ''
-                                                     }
-                                                     onChange={(e) => {
-                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                          const updated = {
-                                                               ...base,
-                                                               persistence_layer: {
-                                                                    ...base.persistence_layer,
-                                                                    structural_constants: e.target.value
-                                                               }
-                                                          };
-                                                          setPersonaStudioSuggestedNemesisDna(updated);
-                                                     }}
-                                                     placeholder="Identity marks that never change (e.g., discrete dual silver piercings on her left brow, cybernetic skull implant)..."
-                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
-                                                />
-                                           </div>
-
-                                           {/* Chromatic Anchor */}
-                                           <div className="flex flex-col gap-1.5 text-left font-sans">
-                                                <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                                     <span>{t('setup.auto38', '🎨 3. Chromatic Anchor (Visual Atmosphere, Palettes, Rim-light)')}</span>
-                                                </label>
-                                                <textarea
-                                                     rows={2}
-                                                     value={
-                                                          personaStudioSuggestedNemesisDna?.persistence_layer?.chromatic_anchor ?? 
-                                                          props.nemesisDNA?.persistence_layer?.chromatic_anchor ?? 
-                                                          ''
-                                                     }
-                                                     onChange={(e) => {
-                                                          const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                          const updated = {
-                                                               ...base,
-                                                               persistence_layer: {
-                                                                    ...base.persistence_layer,
-                                                                    chromatic_anchor: e.target.value
-                                                               }
-                                                          };
-                                                          setPersonaStudioSuggestedNemesisDna(updated);
-                                                     }}
-                                                     placeholder="Atmospheric tone & lighting (e.g. heavy shadow depth contrast, radiant purple halo backlighting, cold noir tints)..."
-                                                     className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 leading-relaxed font-sans font-semibold"
-                                                />
-                                           </div>
-
-                                           {/* Adaptive Layer */}
-                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans">
-                                                <div className="flex flex-col gap-1.5">
-                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
-                                                          🧥 4. Sartorial Style
-                                                     </label>
-                                                     <input
-                                                          type="text"
-                                                          value={
-                                                               personaStudioSuggestedNemesisDna?.adaptive_layer?.sartorial_style ?? 
-                                                               props.nemesisDNA?.adaptive_layer?.sartorial_style ?? 
-                                                               ''
-                                                          }
-                                                          onChange={(e) => {
-                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                               const updated = {
-                                                                    ...base,
-                                                                    adaptive_layer: {
-                                                                         ...base.adaptive_layer,
-                                                                         sartorial_style: e.target.value
-                                                                    }
-                                                               };
-                                                               setPersonaStudioSuggestedNemesisDna(updated);
-                                                          }}
-                                                          placeholder="e.g. Avant-garde tactical assassin"
-                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
-                                                     />
-                                                </div>
-                                                <div className="flex flex-col gap-1.5">
-                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
-                                                          👗 5. Active Wardrobe
-                                                     </label>
-                                                     <input
-                                                          type="text"
-                                                          value={
-                                                               personaStudioSuggestedNemesisDna?.adaptive_layer?.active_wardrobe ?? 
-                                                               props.nemesisDNA?.adaptive_layer?.active_wardrobe ?? 
-                                                               ''
-                                                          }
-                                                          onChange={(e) => {
-                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                               const updated = {
-                                                                    ...base,
-                                                                    adaptive_layer: {
-                                                                         ...base.adaptive_layer,
-                                                                         active_wardrobe: e.target.value
-                                                                    }
-                                                               };
-                                                               setPersonaStudioSuggestedNemesisDna(updated);
-                                                          }}
-                                                          placeholder="e.g. Tailored matte kevlar suit with silk red sash"
-                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
-                                                     />
-                                                </div>
-                                           </div>
-
-                                           {/* Rendering Directives split */}
-                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left font-sans">
-                                                <div className="flex flex-col gap-1.5">
-                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
-                                                          🔒 6. Art Style Lock
-                                                     </label>
-                                                     <input
-                                                          type="text"
-                                                          value={
-                                                               personaStudioSuggestedNemesisDna?.rendering_directives?.art_style_lock ?? 
-                                                               props.nemesisDNA?.rendering_directives?.art_style_lock ?? 
-                                                               ''
-                                                          }
-                                                          onChange={(e) => {
-                                                               const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                               const updated = {
-                                                                    ...base,
-                                                                    rendering_directives: {
-                                                                         ...base.rendering_directives,
-                                                                         art_style_lock: e.target.value
-                                                                    }
-                                                               };
-                                                               setPersonaStudioSuggestedNemesisDna(updated);
-                                                          }}
-                                                          placeholder="e.g. Deep comic noir, heavy outline vectors"
-                                                          className="w-full bg-slate-900 border border-slate-700/80 text-white text-[11px] p-2 rounded focus:outline-none focus:border-red-500 font-sans font-semibold"
-                                                     />
-                                                </div>
-                                                <div className="flex flex-col gap-1.5">
-                                                     <label className="text-[10px] font-mono text-red-400 font-bold uppercase tracking-wider">
-                                                          ⚖️ 7. Continuity Weight
-                                                     </label>
-                                                     <div className="flex border border-slate-700 rounded overflow-hidden">
-                                                          {['LOW', 'MEDIUM', 'HIGH'].map((w) => {
-                                                               const activeDna = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                               const isCurrent = activeDna?.rendering_directives?.continuity_weight === w;
-                                                               return (
-                                                                    <button
-                                                                         key={w}
-                                                                         type="button"
-                                                                         onClick={() => {
-                                                                              const base = personaStudioSuggestedNemesisDna || props.nemesisDNA;
-                                                                              const updated = {
-                                                                                   ...base,
-                                                                                   rendering_directives: {
-                                                                                        ...base.rendering_directives,
-                                                                                        continuity_weight: w as any
-                                                                                   }
-                                                                              };
-                                                                              setPersonaStudioSuggestedNemesisDna(updated);
-                                                                         }}
-                                                                         className={`flex-1 text-[10px] py-1.5 text-center font-mono font-bold transition-colors ${
-                                                                              isCurrent 
-                                                                                   ? 'bg-red-650 text-white font-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.6)]' 
-                                                                                   : 'bg-slate-900 text-slate-400 hover:text-white font-normal'
-                                                                         }`}
-                                                                    >
-                                                                         {w}
-                                                                    </button>
-                                                               );
-                                                          })}
-                                                     </div>
-                                                </div>
-                                           </div>
-                                      </div>
-                                 </div>
-                            )}
-
-                      </div>
-
-                      {/* Right Panel: Portrait and Casting Panel */}
-                      <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-800 border-4 border-black p-5 rounded-lg shadow-[4px_4px_0px_#000] text-center min-h-[450px] justify-between font-mono font-bold">
-                           <div>
-                                <label className="block text-xs font-mono text-yellow-300 uppercase tracking-wider mb-2 text-left">{t('setup.auto39', '2. Character Avatar Portrait')}</label>
-                                <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-950 border-4 border-black rounded-lg overflow-hidden group shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                                     {personaStudioPortrait ? (
-                                          <img
-                                               src={personaStudioPortrait.startsWith('data:') ? personaStudioPortrait : `data:image/jpeg;base64,${personaStudioPortrait}`}
-                                               alt="Summoned Avatar"
-                                               className="w-full h-full object-cover select-none"
-                                               referrerPolicy="no-referrer"
-                                          />
-                                     ) : (
-                                          <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                                               <span className="text-5xl mb-2 select-none">🎭</span>
-                                               <span className="font-mono text-sm text-purple-300 uppercase font-extrabold pb-1">{t('setup.auto40', 'AWAITING SUMMONS')}</span>
-                                               <span className="text-[10px] text-gray-400 uppercase font-mono tracking-widest mt-1">{t('setup.auto41', 'SAGA PORTRAIT PORTAL')}</span>
-                                          </div>
-                                     )}
-
-                                     {personaStudioGeneratingImg && (
-                                          <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-4">
-                                               <div className="w-12 h-12 border-4 border-t-purple-500 border-r-purple-500 border-b-transparent border-l-transparent rounded-full animate-spin mb-3" />
-                                               <span className="font-mono text-xs uppercase text-purple-400 tracking-wider">{t('setup.auto42', 'SUMMONING VISUAL CORES')}</span>
-                                               <span className="text-[9px] font-mono text-gray-400 uppercase mt-1 animate-pulse">{t('setup.auto43', 'GENERATING COMIC PORTRAIT...')}</span>
-                                          </div>
-                                     )}
-                                </div>
-
-                                <p className="text-[10.5px] mt-3 font-mono text-yellow-405/90 leading-tight">
-                                     {personaStudioStatusMsg || "Define character specs & run brainstorm to prepare artistic portrait generation."}
-                                 </p>
-                           </div>
-
-                           <div className="flex flex-col gap-2">
-                                <button
-                                     type="button"
-                                     onClick={handlePersonaStudioGeneratePortrait}
-                                     disabled={personaStudioGeneratingImg || (!personaStudioSuggestedVisuals && !personaStudioConcept)}
-                                     className="w-full bg-gray-900 text-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:pointer-events-none text-black font-semibold font-mono uppercase text-xs py-3 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px transition-all"
-                                >
-                                     🎨 CONJURE AI CARTOON PORTRAIT MAP
-                                </button>
-                                <button
-                                     type="button"
-                                     onClick={handlePersonaStudioCastCharacter}
-                                     disabled={!personaStudioPortrait}
-                                     className="w-full bg-red-656 hover:bg-gray-900 text-red-400 disabled:opacity-40 disabled:pointer-events-none text-white font-mono uppercase text-sm font-bold py-3.5 px-4 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] active:translate-y-px transition-all"
-                                >
-                                     🔥 COMMIT PERSONA & CAST AS {personaStudioRole.toUpperCase()}
-                                </button>
-                           </div>
-                      </div>
-                  </div>
-             </div>
+        {(isCyberpunk || activeTab === 'persona') && (
+            <WorkspaceCasting />
         )}
-{(isCyberpunk || activeTab === 'blueprint') && (
-             <div className="relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none animate-fadeIn">
-                  {/* HEADER BANNER */}
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-black pb-4 mb-6">
-                       <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                 <span className="text-3xl">🔮</span>
-                                 <span className="font-mono text-xl lg:text-2xl font-black uppercase text-cyan-300 tracking-wider" style={{ textShadow: '2px 2px 0px black' }}>
-                                      Story Blueprint Manager
-                                 </span>
-                            </div>
-                            <p className="text-xs text-slate-400 font-mono max-w-xl">
-                                 Draft or AI-generate detailed chapter-level goals and guidelines. This full layout is sent to the Gemini generator to maintain robust narrative cohesion.
-                            </p>
-                       </div>
-                       
-                       <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-                            <button
-                                 type="button"
-                                 onClick={handleGenerateStoryBlueprint}
-                                 disabled={generatingBlueprint}
-                                 className="bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 text-black font-semibold font-mono uppercase text-xs px-3.5 py-2.5 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
-                            >
-                                 {generatingBlueprint ? (
-                                      <>
-                                           <div className="w-3.5 h-3.5 border-2 border-slate-955 border-t-transparent rounded-full animate-spin" />
-                                           Saga Thinking...
-                                      </>
-                                 ) : (
-                                      <>{t('setup.auto44', '✨ AI Brainstorm Saga Path')}</>
-                                 )}
-                            </button>
-                            <button
-                                 type="button"
-                                 onClick={handleInitializeDefaultBlueprint}
-                                 className="bg-gray-900 text-purple-400 hover:bg-gray-900 text-purple-400 text-white font-semibold font-mono uppercase text-xs px-3.5 py-2.5 rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:translate-y-px transition-all flex items-center gap-1.5"
-                            >
-                                 📋 Load Default Template
-                            </button>
-                            <button
-                                 type="button"
-                                 onClick={() => props.onStoryBlueprintChange([])}
-                                 className="bg-slate-950 hover:bg-slate-900 text-red-450 border-2 border-black font-semibold font-mono uppercase text-xs px-3 py-2 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-                            >
-                                 ❌ Clear Blueprint
-                            </button>
-                       </div>
-                  </div>
-
-                  {/* ACTIVE SAGA CONTEXT FEED */}
-                  <div className="bg-slate-950/80 p-3 rounded-lg border-2 border-black mb-6 flex flex-wrap gap-x-6 gap-y-2 text-xs font-mono">
-                       <div>
-                            <span className="text-cyan-400 font-bold uppercase">{t('setup.auto45', 'Active Genre:')}</span> {props.selectedGenre || "Custom"}
-                       </div>
-                       {props.customPremise && (
-                            <div className="max-w-md truncate">
-                                 <span className="text-cyan-400 font-bold uppercase">{t('setup.auto46', 'Premise:')}</span> {props.customPremise}
-                            </div>
-                       )}
-                       <div>
-                            <span className="text-cyan-400 font-bold uppercase">{t('setup.auto47', 'Language:')}</span> {props.selectedLanguage || "English"}
-                       </div>
-                  </div>
-
-                  {/* MAIN CHAPTER CARD LIST / GRID */}
-                  {!props.storyBlueprint || props.storyBlueprint.length === 0 ? (
-                       <div className="text-center py-16 px-4 bg-slate-950/40 rounded-xl border-4 border-dashed border-slate-800">
-                            <span className="text-5xl block mb-3">🔮</span>
-                            <h3 className="font-mono text-base font-extrabold text-yellow-500 uppercase mb-2">{t('setup.auto48', 'Saga Blueprint Blank')}</h3>
-                            <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed mb-4">
-                                 Your blueprint configuration is currently empty. Click above to auto-generate a custom plot-line tailored to your active genre and characters, or load a default template structure to write goals manually!
-                            </p>
-                            <div className="flex justify-center gap-3">
-                                 <button
-                                      type="button"
-                                      onClick={handleGenerateStoryBlueprint}
-                                      disabled={generatingBlueprint}
-                                      className="bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 px-4 py-2 text-black font-semibold font-mono uppercase text-xs rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
-                                 >
-                                      {generatingBlueprint ? "⚡ Brainstorming Saga..." : "✨ Generate AI Saga Path"}
-                                 </button>
-                                 <button
-                                      type="button"
-                                      onClick={handleInitializeDefaultBlueprint}
-                                      className="bg-purple-700 hover:bg-gray-900 text-purple-400 px-4 py-2 text-white font-semibold font-mono uppercase text-xs rounded border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
-                                 >
-                                      📋 Load Default Structure
-                                 </button>
-                            </div>
-                       </div>
-                  ) : (
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[580px] overflow-y-auto pr-2 custom-scrollbar">
-                            {Array.from({ length: 10 }).map((_, idx) => {
-                                 const pageNum = idx + 1;
-                                 const node = props.storyBlueprint.find((b: any) => b.chapterNum === pageNum) || {
-                                      chapterNum: pageNum,
-                                      title: `Chapter Beat ${pageNum}`,
-                                      goal: ""
-                                 };
-
-                                 // Unique visual identifier theme per Chapter slot
-                                 let themeClasses = "border-slate-800 focus-within:border-cyan-500";
-                                 let tagColor = "bg-slate-950 text-slate-300";
-                                 let emoji = "📖";
-
-                                 if (pageNum === 1) {
-                                      themeClasses = "border-emerald-950 bg-emerald-950/10 focus-within:border-emerald-500";
-                                      tagColor = "bg-emerald-950 text-emerald-400 border-emerald-800/40";
-                                      emoji = "🎬";
-                                 } else if (pageNum === 3) {
-                                      themeClasses = "border-amber-950 bg-amber-950/10 focus-within:border-amber-500";
-                                      tagColor = "bg-amber-950 text-amber-400 border-amber-800/40";
-                                      emoji = "⚖️";
-                                 } else if (pageNum === 9) {
-                                      themeClasses = "border-red-950 bg-red-955/10 focus-within:border-red-500";
-                                      tagColor = "bg-red-950 text-red-200 border-red-800/40";
-                                      emoji = "⚔️";
-                                 } else if (pageNum === 10) {
-                                      themeClasses = "border-purple-950 bg-purple-950/10 focus-within:border-purple-500";
-                                      tagColor = "bg-purple-950 text-purple-300 border-purple-800/40";
-                                      emoji = "🏁";
-                                 }
-
-                                 return (
-                                      <div 
-                                           key={pageNum}
-                                           className={`p-4 rounded-xl border-2 transition-all bg-slate-950/60 flex flex-col gap-3 shadow-[inset_0px_2px_8px_rgba(255,255,255,0.02)] ${themeClasses}`}
-                                      >
-                                           {/* Slot Header */}
-                                           <div className="flex justify-between items-center">
-                                                <div className="flex items-center gap-2">
-                                                     <span className={`text-[10px] font-mono uppercase font-black px-2.5 py-1 rounded border ${tagColor}`}>
-                                                          {emoji} Page {pageNum} Beat
-                                                     </span>
-                                                     {pageNum === 1 && (
-                                                          <span className="text-[8.5px] font-mono font-semibold text-emerald-400 animate-pulse">{t('setup.auto49', 'INCITING')}</span>
-                                                     )}
-                                                     {pageNum === 3 && (
-                                                          <span className="text-[8.5px] font-mono font-semibold text-amber-400 animate-pulse">{t('setup.auto50', 'DECISION POINT')}</span>
-                                                     )}
-                                                     {pageNum === 9 && (
-                                                          <span className="text-[8.5px] font-mono font-semibold text-red-405 animate-pulse">{t('setup.auto51', 'CLIMAX CONFLICT')}</span>
-                                                     )}
-                                                     {pageNum === 10 && (
-                                                          <span className="text-[8.5px] font-mono font-semibold text-purple-400 animate-pulse">{t('setup.auto52', 'FINALE RESOLVE')}</span>
-                                                     )}
-                                                </div>
-                                                
-                                                <button
-                                                     type="button"
-                                                     onClick={() => handleGeneratePageGoal(pageNum)}
-                                                     disabled={generatingPageGoal !== null}
-                                                     className="text-[9.5px] bg-cyan-955 hover:bg-cyan-900 border border-cyan-800/60 hover:border-cyan-500 text-cyan-305 px-2 py-0.5 rounded font-mono transition-all disabled:opacity-40"
-                                                     title="AI Suggest / Dream details for this specific chapter goal."
-                                                >
-                                                     {generatingPageGoal === pageNum ? "🧠 Thinking..." : "✨ AI Suggest"}
-                                                </button>
-                                           </div>
-
-                                           {/* Title Input field */}
-                                           <div className="flex flex-col gap-1 text-left">
-                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">{t('setup.auto53', 'Beat Title')}</label>
-                                                <input 
-                                                     type="text"
-                                                     value={node.title || ""}
-                                                     onChange={(e) => {
-                                                          const val = e.target.value;
-                                                          const updated = props.storyBlueprint ? [...props.storyBlueprint] : [];
-                                                          const targetIndex = updated.findIndex((b: any) => b.chapterNum === pageNum);
-                                                          if (targetIndex !== -1) {
-                                                               updated[targetIndex] = { ...updated[targetIndex], title: val };
-                                                          } else {
-                                                               updated.push({ chapterNum: pageNum, title: val, goal: "" });
-                                                          }
-                                                          props.onStoryBlueprintChange(updated);
-                                                     }}
-                                                     placeholder="Provide an intriguing Scene focus name..."
-                                                     className="w-full bg-slate-950 border-2 border-black rounded text-xs p-1.5 focus:outline-none focus:border-cyan-500 text-slate-100"
-                                                />
-                                           </div>
-
-                                           {/* Goal Textarea */}
-                                           <div className="flex flex-col gap-1 text-left">
-                                                <label className="text-[9px] uppercase font-mono tracking-widest text-gray-500 font-bold block">{t('setup.auto54', 'Focal Goal & Narrative Guidelines')}</label>
-                                                <textarea 
-                                                     rows={2}
-                                                     value={node.goal || ""}
-                                                     onChange={(e) => {
-                                                          const val = e.target.value;
-                                                          const updated = props.storyBlueprint ? [...props.storyBlueprint] : [];
-                                                          const targetIndex = updated.findIndex((b: any) => b.chapterNum === pageNum);
-                                                          if (targetIndex !== -1) {
-                                                               updated[targetIndex] = { ...updated[targetIndex], goal: val };
-                                                          } else {
-                                                               updated.push({ chapterNum: pageNum, title: `Beat ${pageNum}`, goal: val });
-                                                          }
-                                                          props.onStoryBlueprintChange(updated);
-                                                     }}
-                                                     placeholder="Flesh out specific guidelines, obstacles, or plot milestones for this beat..."
-                                                     className="w-full bg-slate-950 border-2 border-black rounded text-xs p-2 h-16 resize-none focus:outline-none focus:border-cyan-500 text-slate-100 font-sans shadow-inner leading-relaxed"
-                                                />
-                                           </div>
-                                      </div>
-                                 );
-                            })}
-                       </div>
-                  )}
-             </div>
+        {(isCyberpunk || activeTab === 'blueprint') && (
+            <WorkspaceDirector />
         )}
-{(!isCyberpunk && activeTab === 'library') && (
-             <div className={isEditorial 
-                  ? "relative z-10 bg-[#fdfdfc] border border-stone-200 p-6 rounded-xl shadow-sm text-stone-900 text-left select-none font-sans"
-                  : "relative z-10 bg-slate-900 border-4 border-black p-6 rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,1)] text-white text-left select-none"}>
-                  <span className={isEditorial
-                      ? "block font-sans text-[#3c3730] font-black text-2xl uppercase tracking-wider mb-2"
-                      : "block font-mono text-yellow-300 font-extrabold text-2.5xl uppercase tracking-wider mb-2"}
-                      style={isEditorial ? {} : { textShadow: '2px 2px 0px black' }}>
-                      {isEditorial ? "📚 THE NARRATIVE ARCHIVE" : "📚 THE MULTIVERSE STUDIO LIBRARY"}
-                  </span>
-                  <p className={isEditorial
-                      ? "text-xs text-stone-500 font-sans mb-6 max-w-2xl leading-relaxed"
-                      : "text-xs text-slate-400 font-mono mb-6 max-w-2xl leading-relaxed"}>
-                      {isEditorial 
-                           ? "Welcome to your central narrative archive! Below are your saved publications and manuscript chapters. Open any creation to load it instantly into the reading binder. You can also manually register a manuscript layout to compile it under your active author profile."
-                           : "Welcome to your central comic storage vault! Below are your saved dynamic publications and chapters. Open any creation to load it instantly into the immersive 3D book binder reader. You can also self-publish a custom graphic layout to compile it under your active creator identity profile."}
-                  </p>
-
-                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                     
-                     {/* LEFT SECTION: Comic Library List (8 cols) */}
-                     <div className="lg:col-span-8 flex flex-col gap-4">
-                          <span className={isEditorial
-                                ? "text-xs font-sans text-stone-605 tracking-wider uppercase border-b border-stone-200 pb-1.5 font-bold block"
-                                : "text-xs font-mono text-slate-300 tracking-wider uppercase border-b-2 border-dashed border-slate-700 pb-1.5 font-bold block"}>
-                               {isEditorial ? `📚 Saved Manuscripts Catalog (${savedProjects.length})` : `📚 Active Publications Archive (${savedProjects.length})`}
-                          </span>
-
-                          {savedProjects.length === 0 ? (
-                               <div className={isEditorial
-                                    ? "p-12 border border-dashed border-stone-300 rounded bg-stone-50 text-center text-stone-400 font-sans my-4"
-                                    : "p-12 border-4 border-dashed border-slate-800 rounded bg-slate-950/40 text-center text-slate-500 font-mono my-4"}>
-                                    <p className="text-sm font-bold">{isEditorial ? "No manuscript entries found in your author catalog." : "No publications detected in your creator catalog."}</p>
-                                    <p className={isEditorial ? "text-[11px] mt-1.5 text-stone-500" : "text-[11px] mt-1.5 text-yellow-500"}>
-                                         {isEditorial ? "Initiate an adventure, draft chapters, or self-publish on the right to populate your inventory!" : "Initiate an adventure, create comic stories, or self-publish on the right to populate your inventory!"}
-                                    </p>
-                               </div>
-                          ) : (
-                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {savedProjects.map((project) => {
-                                         // Try to find cover image from comic_faces if present
-                                         let coverUrl = 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400&auto=format&fit=crop';
-                                         let pageCount = 0;
-                                         if (project.comic_faces) {
-                                              try {
-                                                   const parsed = JSON.parse(project.comic_faces);
-                                                   if (Array.isArray(parsed)) {
-                                                        pageCount = parsed.length;
-                                                        const cv = parsed.find(f => f.type === 'cover' || f.pageIndex === 0);
-                                                        if (cv && cv.imageUrl) {
-                                                             coverUrl = cv.imageUrl;
-                                                        } else if (parsed[0] && parsed[0].imageUrl) {
-                                                             coverUrl = parsed[0].imageUrl;
-                                                        }
-                                                   }
-                                              } catch (e) {}
-                                         }
-
-                                         return (
-                                              <div 
-                                                   key={project.id}
-                                                   className={isEditorial
-                                                        ? "group flex gap-3.5 bg-white border border-stone-200 p-3.5 rounded-lg hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer relative text-left"
-                                                        : "group flex gap-3.5 bg-slate-950 border-4 border-black p-3.5 rounded-lg hover:border-yellow-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.25)] transition-all cursor-pointer relative text-left"}
-                                                   onClick={() => props.onLoadProject(project)}
-                                              >
-                                                   {/* Cover thumbnail */}
-                                                   <div className={isEditorial
-                                                        ? "w-16 h-24 bg-stone-50 border border-stone-200 rounded overflow-hidden flex-shrink-0 relative"
-                                                        : "w-16 h-24 bg-slate-900 border-2 border-slate-700 rounded overflow-hidden flex-shrink-0 relative"}>
-                                                        <img 
-                                                             src={coverUrl.startsWith('data:') ? coverUrl : coverUrl}
-                                                             alt="Cover" 
-                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                             referrerPolicy="no-referrer"
-                                                        />
-                                                        <div className={isEditorial
-                                                             ? "absolute top-1 left-1 bg-stone-800 text-[8px] font-sans text-stone-50 px-1 py-0.5 rounded"
-                                                             : "absolute top-1 left-1 bg-black/80 text-[8px] font-mono text-white px-1 py-0.2 rounded border border-slate-600/50"}>
-                                                             {project.language || 'en-US'}
-                                                        </div>
-                                                   </div>
-
-                                                   {/* Narrative details */}
-                                                   <div className="flex-1 flex flex-col justify-between min-w-0">
-                                                        <div>
-                                                             <span className={isEditorial
-                                                                  ? "block font-sans font-bold text-sm tracking-wide text-stone-900 group-hover:text-stone-700 truncate transition-colors"
-                                                                  : "block font-mono font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors"}>
-                                                                  {project.title}
-                                                             </span>
-                                                             <span className={isEditorial
-                                                                  ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[9px] font-sans text-stone-600 px-1.5 py-0.5 uppercase tracking-wider font-bold"
-                                                                  : "inline-block mt-1 bg-blue-600/40 border border-blue-500 rounded text-[9px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase tracking-wider font-bold"}>
-                                                                  {project.genre}
-                                                             </span>
-                                                        </div>
-                                                        
-                                                        <div className={isEditorial
-                                                             ? "flex items-center justify-between text-[10px] font-sans mt-3 text-stone-500"
-                                                             : "flex items-center justify-between text-[10px] font-mono mt-3 text-slate-400"}>
-                                                             <span>{isEditorial ? "🖋️" : "📖"} {pageCount} {pageCount === 1 ? (isEditorial ? 'Chapter' : 'Page') : (isEditorial ? 'Chapters' : 'Pages')}</span>
-                                                             <button
-                                                                  type="button"
-                                                                  onClick={(e) => handleDeleteProject(project.id, e)}
-                                                                  className={isEditorial
-                                                                       ? "text-red-700 hover:text-red-800 px-1.5 py-0.5 bg-red-50 rounded border border-red-200 font-bold hover:bg-red-100 transition-colors"
-                                                                       : "text-red-400 hover:text-red-500 px-1.5 py-0.5 bg-red-950/20 rounded border border-red-900/40 font-bold hover:bg-red-900/30 transition-colors"}
-                                                                  title={isEditorial ? "Discard Publication" : "Shred Publication"}
-                                                             >
-                                                                  {isEditorial ? "DISCARD" : "SHRED"}
-                                                             </button>
-                                                        </div>
-                                                   </div>
-                                              </div>
-                                         );
-                                    })}
-                               </div>
-                          )}
-                     </div>
-
-                     {/* RIGHT SECTION: Manual Publish Form (4 cols) */}
-                      <div className={isEditorial
-                           ? "lg:col-span-4 bg-[#fdfdfc] border border-stone-200 p-4 rounded-lg relative text-left shadow-sm"
-                           : "lg:col-span-4 bg-slate-950 border-4 border-black p-4 rounded-lg relative text-left"}>
-                           <span className={isEditorial
-                                ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider mb-2"
-                                : "block font-mono text-orange-400 font-extrabold text-sm uppercase tracking-wider mb-2"}>
-                                {isEditorial ? "✍️ MANUSCRIPT REGISTRY" : "🚀 SELF-PUBLISH COMIC"}
-                           </span>
-                           <p className={isEditorial
-                                ? "text-[10.5px] text-stone-550 font-sans mb-4 leading-normal"
-                                : "text-[10.5px] text-slate-400 font-mono mb-4 leading-normal"}>
-                                {isEditorial 
-                                     ? "Already drafted or designed a manuscript layout? Register it here to catalog your literary accomplishments."
-                                     : "Already generated or sketched a comic layout? Publish it under your profile to host your visual achievements permanently."}
-                           </p>
-
-                           <form onSubmit={handleManualPublish} className="flex flex-col gap-3">
-                                <div className="text-left">
-                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>
-                                          {isEditorial ? "Manuscript Title" : "Comic Book Title"}
-                                     </label>
-                                     <input 
-                                          type="text"
-                                          required
-                                          placeholder={isEditorial ? "e.g. Chronicles of Eldoria: Vol I" : "e.g. Captain Nebula: Deep Space"}
-                                          value={manualComicTitle}
-                                          onChange={(e) => setManualComicTitle(e.target.value)}
-                                          className={isEditorial ? sInput : "w-full bg-gray-950/50 border border-cyan-800 p-1.5 px-2.5 rounded font-mono text-xs text-yellow-305 focus:outline-none focus:border-orange-500"}
-                                     />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 text-left">
-                                     <div>
-                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto55', 'Genre')}</label>
-                                          <select
-                                               value={manualComicGenre}
-                                               onChange={(e) => setManualComicGenre(e.target.value)}
-                                               className={isEditorial ? sSelect : "w-full bg-gray-950/50 border border-cyan-800 p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
-                                          >
-                                               {dynamicCategories.filter(c => c.category_type === 'Genre').map((cat) => (
-                                                    <option key={cat.name} value={cat.name}>{cat.name}</option>
-                                               ))}
-                                          </select>
-                                     </div>
-                                     <div>
-                                          <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto56', 'Language')}</label>
-                                          <select
-                                               value={manualComicLanguage}
-                                               onChange={(e) => setManualComicLanguage(e.target.value)}
-                                               className={isEditorial ? sSelect : "w-full bg-gray-950/50 border border-cyan-800 p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
-                                          >
-                                               {LANGUAGES.map((l) => (
-                                                    <option key={l.code} value={l.code}>{l.name}</option>
-                                               ))}
-                                          </select>
-                                     </div>
-                                 </div>
-
-                                <div className="text-left">
-                                     <label className={isEditorial ? sLabel : "block text-slate-400 font-mono text-[9px] uppercase mb-1"}>{t('setup.auto57', 'Cover Graphic/Image Upload')}</label>
-                                     <div className={isEditorial
-                                          ? "relative border border-dashed border-stone-300 hover:border-stone-400 rounded bg-stone-50 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"
-                                          : "relative border-2 border-dashed border-slate-700 hover:border-orange-500 rounded bg-slate-900/60 p-3 flex flex-col items-center justify-center text-center cursor-pointer min-h-24"}>
-                                          <input 
-                                               type="file" 
-                                               accept="image/*" 
-                                               id="manual-cover-upload"
-                                               className="hidden" 
-                                               onChange={async (e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                         const base64 = await fileToBase64(file);
-                                                         setManualComicCover(base64);
-                                                    }
-                                               }}
-                                          />
-                                          <label htmlFor="manual-cover-upload" className="absolute inset-0 cursor-pointer z-10" />
-
-                                          {manualComicCover ? (
-                                               <div className="flex items-center gap-2">
-                                                    <div className={isEditorial
-                                                         ? "w-10 h-14 border border-stone-200 rounded overflow-hidden flex-shrink-0"
-                                                         : "w-10 h-14 border border-slate-600 rounded overflow-hidden flex-shrink-0"}>
-                                                         <img 
-                                                              src={`data:image/jpeg;base64,${manualComicCover}`} 
-                                                              alt="Cover" 
-                                                              className="w-full h-full object-cover" 
-                                                              referrerPolicy="no-referrer"
-                                                         />
-                                                    </div>
-                                                    <span className={isEditorial ? "text-[10px] font-sans text-emerald-750 font-bold" : "text-[10px] font-mono text-green-400 line-clamp-1"}>{t('setup.auto58', '✓ File Loaded')}</span>
-                                               </div>
-                                          ) : (
-                                               <>
-                                                    <span className={isEditorial ? "text-[10px] font-sans text-stone-400" : "text-[10px] font-mono text-slate-500"}>{t('setup.auto59', 'Click or drag cover file')}</span>
-                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-300 mt-1 uppercase" : "text-[8px] font-mono text-slate-600 mt-1 uppercase"}>{t('setup.auto60', 'JPEG, PNG Max 5MB')}</span>
-                                               </>
-                                          )}
-                                     </div>
-                                </div>
-                                <button 
-                                     type="submit"
-                                     disabled={isPublishingManual}
-                                     className={isEditorial
-                                          ? sPrimaryBtn + " w-full mt-2"
-                                          : "mt-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white border-2 border-black py-2 rounded font-mono text-xs uppercase font-extrabold tracking-widest active:translate-y-0.5 disabled:opacity-40 w-full"}
-                                >
-                                     {isPublishingManual 
-                                           ? (isEditorial ? 'REGISTERING...' : 'PUBLISHING...') 
-                                           : (isEditorial ? '🖋️ REGISTER MANUSCRIPT' : '🔔 SELF-PUBLISH COMIC')}
-                                </button>
-                           </form>
-                      </div>
-
-                 </div>
-
-                 {/* DRAFTS HORIZONTAL ARCHIVE SNAPSHOTS */}
-                 <div className={isEditorial ? "border-t border-stone-200 pt-6 mt-8" : "border-t-4 border-dashed border-slate-800 pt-6 mt-8"}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-1">
-                           <div>
-                                <span className={isEditorial
-                                     ? "block font-sans text-stone-800 font-extrabold text-sm uppercase tracking-wider"
-                                     : "block font-mono text-cyan-400 font-extrabold text-sm uppercase tracking-wider"}>
-                                     {isEditorial 
-                                          ? `💾 UNFINISHED MANUSCRIPT DRAFTS (${savedDrafts.length})` 
-                                          : `💾 UNFINISHED CREATIVE WORKSPACE DRAFTS (${savedDrafts.length})`}
-                                </span>
-                                <p className={isEditorial ? "text-[10px] text-stone-500 font-sans mt-0.5" : "text-[10px] text-slate-400 font-mono mt-0.5"}>
-                                     {isEditorial 
-                                          ? "Restore serialized chapters, custom guides, and Gemini context objectives straight back to your workspace." 
-                                          : "Restore serialized panels, custom guides, and Gemini context objectives straight back to your canvas."}
-                                </p>
-                           </div>
-                           <button
-                                type="button"
-                                disabled={isSavingDraft}
-                                onClick={handleSaveDraft}
-                                className={isEditorial
-                                     ? sPrimaryBtn
-                                     : "bg-gray-900 text-cyan-400 hover:bg-gray-900 text-cyan-400 disabled:opacity-45 text-white border-2 border-black font-mono font-bold text-[10.5px] px-3 py-1.5 rounded shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"}
-                           >
-                                {isSavingDraft 
-                                     ? (isEditorial ? "SAVING SNAPSHOT..." : "SNAPSHOT-SAVING...") 
-                                     : (isEditorial ? "+ CREATE SNAPSHOT" : "+ SNAPSHOT CURRENT WIP")}
-                           </button>
-                      </div>
-
-                      {savedDrafts.length === 0 ? (
-                           <div className={isEditorial
-                                ? "p-8 border border-dashed border-stone-200 rounded bg-stone-50 text-center text-stone-400 font-sans"
-                                : "p-8 border-4 border-dashed border-slate-800 rounded bg-slate-950/20 text-center text-slate-500 font-mono"}>
-                                <p className="text-xs font-bold">{isEditorial ? "No active snapshots or draft outlines found." : "No active snapshots or WIP sketches found."}</p>
-                                <p className="text-[10px] mt-1">
-                                     {isEditorial 
-                                          ? "Save your story character profiles and outline progress to load them here dynamically." 
-                                          : "Save your story character personas and comic progress to load them here dynamic and intact!"}
-                                </p>
-                           </div>
-                      ) : (
-                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                {savedDrafts.map((draft) => {
-                                     let draftPageCount = 0;
-                                     if (draft.comicFaces) {
-                                          try {
-                                               const parsed = typeof draft.comicFaces === 'string' ? JSON.parse(draft.comicFaces) : draft.comicFaces;
-                                               if (Array.isArray(parsed)) draftPageCount = parsed.length;
-                                          } catch (e) {}
-                                     }
-                                     return (
-                                          <div 
-                                               key={draft.id}
-                                               className={isEditorial
-                                                    ? "group flex gap-3.5 bg-white border border-stone-200 p-3.5 rounded-lg hover:border-stone-400 transition-all cursor-pointer relative text-left"
-                                                    : "group flex gap-3.5 bg-slate-955/90 border-4 border-slate-800 p-3.5 rounded-lg hover:border-cyan-400 hover:shadow-[0_0_12px_rgba(6,182,212,0.15)] transition-all cursor-pointer relative text-left"}
-                                               onClick={() => props.onLoadDraft?.(draft)}
-                                          >
-                                               {/* Mini draft layout identity */}
-                                               <div className={isEditorial
-                                                    ? "w-12 h-16 bg-stone-50 border border-stone-200 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0"
-                                                    : "w-12 h-16 bg-slate-900 border-2 border-slate-700 rounded-md flex flex-col justify-center items-center text-center p-1 flex-shrink-0"}>
-                                                    <span className="text-xl">💾</span>
-                                                    <span className={isEditorial ? "text-[8px] font-sans text-stone-500 tracking-wider font-bold" : "text-[8px] font-mono text-cyan-400 tracking-wider font-bold"}>
-                                                         SNAPSHOT
-                                                    </span>
-                                               </div>
-
-                                               {/* Details */}
-                                               <div className="flex-1 flex flex-col justify-between min-w-0">
-                                                    <div>
-                                                         <span className={isEditorial
-                                                              ? "block font-sans font-bold text-xs text-stone-900 group-hover:text-stone-700 truncate transition-colors"
-                                                              : "block font-mono font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors"}>
-                                                              {draft.title}
-                                                         </span>
-                                                         <span className={isEditorial
-                                                              ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[8px] font-sans text-stone-605 px-1.5 py-0.5 uppercase font-bold"
-                                                              : "inline-block mt-1 bg-cyan-950 border border-cyan-800 rounded text-[8px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase font-bold"}>
-                                                              {draft.genre || 'Classic Horror'}
-                                                         </span>
-                                                    </div>
-
-                                                    <div className={isEditorial
-                                                         ? "flex items-center justify-between text-[9px] font-sans mt-2 text-stone-500"
-                                                         : "flex items-center justify-between text-[9px] font-mono mt-2 text-slate-400"}>
-                                                         <span>{isEditorial ? "🖋️ Chapters:" : "🧬 Pages:"} {draftPageCount}</span>
-                                                         <button
-                                                              type="button"
-                                                              onClick={(e) => handleDeleteDraft(draft.id, e)}
-                                                              className={isEditorial
-                                                                   ? "text-red-750 hover:text-red-800 font-bold hover:bg-stone-105 px-1.5 py-0.5 rounded transition-all"
-                                                                   : "text-red-400 hover:text-red-500 font-bold hover:bg-slate-900/60 px-1.5 py-0.5 rounded transition-all"}
-                                                         >
-                                                              {isEditorial ? "DISCARD" : "SHRED"}
-                                                         </button>
-                                                    </div>
-                                               </div>
-                                          </div>
-                                     );
-                                })}
-                           </div>
-                      )}
-                 </div>
-            </div>
-        )}
-
         {(activeTab === 'vault') && (
              <div className={isEditorial 
                   ? "relative z-10 bg-[#fdfdfc] border border-stone-200 p-6 rounded-xl shadow-sm text-stone-900 text-left select-none font-sans"
@@ -4453,5 +3278,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
 
         </>
+        </WorkspaceContext.Provider>
     );
 }

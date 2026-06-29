@@ -2591,50 +2591,90 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
-    // --- SUBSCRIPTION PLANS (FIRESTORE) ---
+    // --- SUBSCRIPTION PLANS (POSTGRES / MEMORY DB FALLBACK) ---
     app.get('/api/public/plans', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            return res.json(memoryDb.subscription_plans || []);
+        }
+        const pool = getDbPool();
         try {
-            const snapshot = await getFirestore().collection('subscription_plans').get();
-            const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id SERIAL PRIMARY KEY, name VARCHAR(255), description TEXT, price_subscription DECIMAL(10,2), price_one_time DECIMAL(10,2), features JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            const result = await pool.query('SELECT * FROM subscription_plans ORDER BY created_at ASC');
+            const plans = result.rows.map(r => ({
+                id: r.id.toString(),
+                name: r.name,
+                description: r.description,
+                priceSubscription: parseFloat(r.price_subscription),
+                priceOneTime: parseFloat(r.price_one_time),
+                features: r.features || []
+            }));
             return res.json(plans);
         } catch (e: any) {
-            console.error("Failed to load public plans from Firestore", e);
+            console.error("Failed to load public plans from Postgres", e);
             return res.json([]);
         }
     });
 
     app.get('/api/admin/plans', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            return res.json(memoryDb.subscription_plans || []);
+        }
+        const pool = getDbPool();
         try {
-            const snapshot = await getFirestore().collection('subscription_plans').get();
-            const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id SERIAL PRIMARY KEY, name VARCHAR(255), description TEXT, price_subscription DECIMAL(10,2), price_one_time DECIMAL(10,2), features JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            const result = await pool.query('SELECT * FROM subscription_plans ORDER BY created_at ASC');
+            const plans = result.rows.map(r => ({
+                id: r.id.toString(),
+                name: r.name,
+                description: r.description,
+                priceSubscription: parseFloat(r.price_subscription),
+                priceOneTime: parseFloat(r.price_one_time),
+                features: r.features || []
+            }));
             return res.json(plans);
         } catch (e: any) {
-            console.error("Failed to load admin plans from Firestore", e);
+            console.error("Failed to load admin plans from Postgres", e);
             return res.json([]);
         }
     });
 
     app.post('/api/admin/plans', async (req, res): Promise<any> => {
-        try {
-            const { name, description, priceSubscription, priceOneTime, features } = req.body;
-            const newPlan = {
+        const { name, description, priceSubscription, priceOneTime, features } = req.body;
+        if (!isDatabaseConnected()) {
+            memoryDb.subscription_plans = memoryDb.subscription_plans || [];
+            const newId = String(Date.now());
+            memoryDb.subscription_plans.push({
+                id: newId,
                 name,
                 description: description || '',
                 priceSubscription: Number(priceSubscription) || 0,
                 priceOneTime: Number(priceOneTime) || 0,
                 features: features || [],
-                createdAt: FieldValue.serverTimestamp()
-            };
-            const docRef = await getFirestore().collection('subscription_plans').add(newPlan);
-            return res.json({ success: true, id: docRef.id });
+                createdAt: new Date().toISOString()
+            });
+            return res.json({ success: true, id: newId });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id SERIAL PRIMARY KEY, name VARCHAR(255), description TEXT, price_subscription DECIMAL(10,2), price_one_time DECIMAL(10,2), features JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+            const result = await pool.query(
+                'INSERT INTO subscription_plans (name, description, price_subscription, price_one_time, features) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [name, description || '', Number(priceSubscription) || 0, Number(priceOneTime) || 0, JSON.stringify(features || [])]
+            );
+            return res.json({ success: true, id: result.rows[0].id.toString() });
         } catch (e: any) {
             return res.status(500).json({ error: e.message });
         }
     });
     
     app.delete('/api/admin/plans/:id', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            memoryDb.subscription_plans = (memoryDb.subscription_plans || []).filter((p:any) => p.id !== req.params.id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
         try {
-            await getFirestore().collection('subscription_plans').doc(req.params.id).delete();
+            await pool.query('DELETE FROM subscription_plans WHERE id = $1', [req.params.id]);
             return res.json({ success: true });
         } catch (e: any) {
             return res.status(500).json({ error: e.message });
@@ -3398,13 +3438,55 @@ app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
         const pool = getDbPool();
         if (pool) {
             try {
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS webhook_logs (
+                        id SERIAL PRIMARY KEY,
+                        source VARCHAR(255),
+                        event_type VARCHAR(255),
+                        payload TEXT,
+                        error_message TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
                 const logsReq = await pool.query("SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 100");
                 return res.json(logsReq.rows);
             } catch(e) {
                 return res.json([]);
             }
         }
-        return res.json([]);
+        return res.json(memoryDb.webhook_logs || []);
+    });
+
+    app.get('/api/admin/system/bypasses', requireAdmin, async (req, res): Promise<any> => {
+        // Expose critical operational bypasses currently active in the system
+        const bypasses = [];
+        
+        // Check for Auth Bypass
+        try {
+            const adminEmails = process.env.SUPER_ADMIN_EMAILS ? process.env.SUPER_ADMIN_EMAILS.split(',') : [];
+            if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && adminEmails.length > 0) {
+                bypasses.push({
+                    type: "Authentication Fallback",
+                    status: "Active",
+                    description: "Firebase Admin is not initialized. Using standard email headers for local development admin authentication.",
+                    severity: "Warning",
+                    affected_components: ["requireAdmin middleware"]
+                });
+            }
+        } catch(e) {}
+
+        // Check for DB Bypass
+        if (!isDatabaseConnected()) {
+            bypasses.push({
+                type: "Database Fallback",
+                status: "Active",
+                description: "Postgres database is not connected. The application is running entirely on volatile in-memory storage (memoryDb).",
+                severity: "Critical",
+                affected_components: ["All Stateful Endpoints", "Stripe Data", "User Accounts"]
+            });
+        }
+
+        return res.json(bypasses);
     });
 
     // Global Characters API

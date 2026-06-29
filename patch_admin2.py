@@ -1,39 +1,71 @@
 with open('AdminApp.tsx', 'r') as f:
     content = f.read()
 
-# 1. Add bypasses state
-state_target = "const [systemLogs, setSystemLogs] = useState<any[]>([]);"
-state_replacement = """const [systemLogs, setSystemLogs] = useState<any[]>([]);
-  const [bypasses, setBypasses] = useState<any[]>([]);"""
+# 1. State
+if "const [bypasses, setBypasses] = useState" not in content:
+    content = content.replace(
+        "const [systemLogs, setSystemLogs] = useState<any[]>([]);",
+        "const [systemLogs, setSystemLogs] = useState<any[]>([]);\n  const [bypasses, setBypasses] = useState<any[]>([]);"
+    )
 
-if state_target in content:
-    content = content.replace(state_target, state_replacement)
-else:
-    print("State target not found")
+# 2. Fetch Logic
+if "bypassesRes" not in content:
+    content = content.replace(
+        """        adminFetch("/api/admin/system/users")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ]);""",
+        """        adminFetch("/api/admin/system/users")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+        adminFetch("/api/admin/system/bypasses")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+      ]);"""
+    )
+    content = content.replace(
+        """      setCostAnalytics(costsRes);
+      setAdminUsers(Array.isArray(adminUsersRes) ? adminUsersRes : []);
+      runDiagnostics();""",
+        """      setCostAnalytics(costsRes);
+      setAdminUsers(Array.isArray(adminUsersRes) ? adminUsersRes : []);
+      setBypasses(Array.isArray(arguments[9]) ? arguments[9] : []); // Using arguments since we can't easily destructure in the regex replace without changing Promise.all
+      runDiagnostics();"""
+    )
+    
+    # Actually, a safer way to replace Promise.all array destructuring:
+    content = content.replace(
+        """      const [
+        statsRes,
+        custRes,
+        catRes,
+        flagRes,
+        logsRes,
+        plansRes,
+        settingsRes,
+        costsRes,
+        adminUsersRes,
+      ] = await Promise.all([""",
+        """      const [
+        statsRes,
+        custRes,
+        catRes,
+        flagRes,
+        logsRes,
+        plansRes,
+        settingsRes,
+        costsRes,
+        adminUsersRes,
+        bypassesRes,
+      ] = await Promise.all(["""
+    )
+    
+    content = content.replace(
+        """setBypasses(Array.isArray(arguments[9]) ? arguments[9] : []); // Using arguments since we can't easily destructure in the regex replace without changing Promise.all""",
+        """setBypasses(Array.isArray(bypassesRes) ? bypassesRes : []);"""
+    )
 
-# 2. Add fetch logic in fetchData()
-fetch_target = """        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),"""
-fetch_replacement = """        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),
-        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),"""
-
-if fetch_target in content:
-    content = content.replace(fetch_target, fetch_replacement)
-else:
-    print("Fetch target not found, searching for alternative")
-    # Maybe we need to find where systemLogs is fetched.
-    import re
-    match = re.search(r'fetch\("/api/admin/logs".*?catch\(\(\) => \{\}\),', content)
-    if match:
-        content = content.replace(match.group(0), match.group(0) + '\n        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),')
-    else:
-        # If fetch doesn't exist at all, we inject it in fetchData
-        fetch_base = 'fetch("/api/admin/plans", { headers }).then((res) => res.json()).then(setPlans).catch(() => {}),'
-        if fetch_base in content:
-            content = content.replace(fetch_base, fetch_base + '\n        fetch("/api/admin/logs", { headers }).then((res) => res.json()).then(setSystemLogs).catch(() => {}),\n        fetch("/api/admin/system/bypasses", { headers }).then((res) => res.json()).then(setBypasses).catch(() => {}),')
-        else:
-            print("Fetch base not found either.")
-
-# 3. Add the UI tab rendering before "administrators"
+# 3. UI
 tab_target = '{activeTab === "administrators" && ('
 tab_replacement = """{activeTab === "logs" && (
                 <div className="p-8 space-y-8 bg-slate-50 relative animate-in fade-in duration-200">
@@ -152,8 +184,7 @@ tab_replacement = """{activeTab === "logs" && (
 
 if tab_target in content:
     content = content.replace(tab_target, tab_replacement)
-    with open('AdminApp.tsx', 'w') as f:
-        f.write(content)
-    print("Patched AdminApp.tsx successfully")
-else:
-    print("Tab target not found in AdminApp.tsx")
+
+with open('AdminApp.tsx', 'w') as f:
+    f.write(content)
+print("Patched AdminApp.tsx successfully.")

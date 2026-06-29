@@ -1,75 +1,37 @@
-with open('server.ts', 'r') as f:
-    content = f.read()
+with open("server.ts", "r") as f:
+    code = f.read()
 
-target = """    // SaaS Analytics stats
-    app.get('/api/admin/stats', async (req, res): Promise<any> => {"""
-
-new_routes = """    // --- NEW SAAS DASHBOARD ENDPOINTS ---
-    app.get('/api/admin/categories', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const result = await pool.query(`SELECT * FROM content_categories ORDER BY created_at DESC`);
-                return res.json(result.rows);
-            } catch(e) { }
-        }
-        return res.json([
-            { id: '1', category_type: 'Genre', name: 'Sci-Fi Cyberpunk' },
-            { id: '2', category_type: 'Style', name: 'Cell-Shaded Anime' }
-        ]);
-    });
-
-    app.post('/api/admin/categories', async (req, res): Promise<any> => {
-        const { name, category_type } = req.body;
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`INSERT INTO content_categories (name, category_type) VALUES ($1, $2)`, [name, category_type]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
-
-    app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`DELETE FROM content_categories WHERE id = $1`, [req.params.id]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
-
-    app.get('/api/admin/moderation', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const result = await pool.query(`SELECT * FROM moderation_flags WHERE status = 'pending' ORDER BY created_at DESC`);
-                return res.json(result.rows);
-            } catch(e) { }
-        }
-        return res.json([
-            { id: 'flag-1', severity: 'high', reason: 'Automated NSFW detection triggered on image.', target_id: 'proj-123', target_type: 'published_work' }
-        ]);
-    });
-
-    app.post('/api/admin/moderation/:id/resolve', async (req, res): Promise<any> => {
-        const { action } = req.body; // 'safe' or 'remove'
-        const status = action === 'safe' ? 'resolved_safe' : 'resolved_removed';
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`UPDATE moderation_flags SET status = $1 WHERE id = $2`, [status, req.params.id]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
-
+create_query = """
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS admin_users (
+                            username VARCHAR(255) PRIMARY KEY,
+                            password_hash TEXT NOT NULL,
+                            salt TEXT NOT NULL,
+                            role VARCHAR(50) DEFAULT 'admin',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `);
 """
 
-content = content.replace(target, new_routes + target)
+# Inject before SELECT in GET
+code = code.replace(
+    "const { rows } = await pool.query('SELECT username, role, created_at FROM admin_users');",
+    create_query + "\n                    const { rows } = await pool.query('SELECT username, role, created_at FROM admin_users');"
+)
 
-with open('server.ts', 'w') as f:
-    f.write(content)
+# Inject before SELECT in auth
+code = code.replace(
+    "const { rows } = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);",
+    create_query + "\n                    const { rows } = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);"
+)
 
-print("Server patched with new endpoints!")
+# Inject before INSERT in POST
+code = code.replace(
+    "await pool.query('INSERT INTO admin_users",
+    create_query + "\n                    await pool.query('INSERT INTO admin_users"
+)
+
+with open("server.ts", "w") as f:
+    f.write(code)
+
+print("server.ts patched to create admin_users table dynamically.")

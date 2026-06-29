@@ -21,9 +21,19 @@ interface CommunityGalleryProps {
 export const CommunityGallery: React.FC<CommunityGalleryProps> = ({ isOpen, onClose }) => {
   const [works, setWorks] = useState<PublishedWork[]>([]);
   const [loading, setLoading] = useState(true);
+  const [featuredCategories, setFeaturedCategories] = useState<any[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      // Fetch dynamic categories
+      fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => {
+            setFeaturedCategories(data.filter((c: any) => c.is_featured));
+        })
+        .catch(e => console.error("Failed to load gallery tags", e));
+
       // Mock fetch until real API is hooked up for public works
       setTimeout(() => {
         setWorks([
@@ -70,9 +80,33 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({ isOpen, onCl
           </button>
         </div>
 
-        <p className="text-xl text-gray-400 font-mono mb-12 max-w-3xl">
+        <p className="text-xl text-gray-400 font-mono mb-8 max-w-3xl">
           Discover visions from creators around the globe. Read their stories, listen to their generative audio, and "fork" their creative DNA to build your own universe.
         </p>
+
+        {featuredCategories.length > 0 && (
+            <div className="mb-12 flex flex-wrap gap-3">
+                <button 
+                    onClick={() => setActiveFilter(null)}
+                    className={`px-4 py-2 rounded-full font-bold text-sm transition-all ${!activeFilter ? 'bg-fuchsia-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                >
+                    All Works
+                </button>
+                {featuredCategories.map(cat => (
+                    <button 
+                        key={cat.id}
+                        onClick={() => setActiveFilter(cat.name)}
+                        className={`px-4 py-2 rounded-full font-bold text-sm transition-all border ${
+                            activeFilter === cat.name 
+                            ? 'bg-cyan-900 border-cyan-400 text-cyan-50 shadow-[0_0_10px_rgba(34,211,238,0.5)]' 
+                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-cyan-700 hover:text-cyan-400'
+                        }`}
+                    >
+                        {cat.emoji} {cat.name}
+                    </button>
+                ))}
+            </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-32">

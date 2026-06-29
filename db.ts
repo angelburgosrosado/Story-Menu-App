@@ -1,3 +1,5 @@
+import pg from 'pg';
+const { Pool } = pg;
 import * as admin from 'firebase-admin';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -191,6 +193,31 @@ class FirebaseMockPool {
                  return { rows: [], rowCount: 1 };
             }
 
+            if (sql.match(/INSERT\s+INTO\s+ai_usage_logs/i)) {
+                 const [user_email, operation, model, tokens_in, tokens_out, cost_usd] = params;
+                 await db.collection('ai_usage_logs').add({
+                     user_email, operation, model, tokens_in, tokens_out, cost_usd, created_at: new Date().toISOString()
+                 });
+                 return { rows: [], rowCount: 1 };
+            }
+
+            if (sql.match(/SELECT\s+SUM\(tokens_in\)/i) && sql.match(/ai_usage_logs/i)) {
+                const snapshot = await db.collection('ai_usage_logs').get();
+                let total_in = 0, total_out = 0, total_cost = 0;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    total_in += data.tokens_in || 0;
+                    total_out += data.tokens_out || 0;
+                    total_cost += data.cost_usd || 0;
+                });
+                return { rows: [{ total_in, total_out, total_cost }], rowCount: 1 };
+            }
+
+            if (sql.match(/SELECT\s+user_email.*?FROM\s+ai_usage_logs.*?ORDER\s+BY/i)) {
+                const snapshot = await db.collection('ai_usage_logs').orderBy('created_at', 'desc').limit(100).get();
+                const rows = snapshot.docs.map(d => d.data());
+                return { rows, rowCount: rows.length };
+            }
 
             console.warn(`[FirebaseMockPool] Unhandled SQL query: ${sql}`);
             return { rows: [], rowCount: 0 };
@@ -214,7 +241,20 @@ class FirebaseMockPool {
 }
 
 const mockPoolInstance = new FirebaseMockPool();
+let pgPoolInstance: any = null;
 
 export function getDbPool(force = false): any {
+    if (process.env.DATABASE_URL && !pgPoolInstance) {
+        pgPoolInstance = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: {
+                rejectUnauthorized: false
+            }
+        });
+    }
+    
+    if (pgPoolInstance) {
+        return pgPoolInstance;
+    }
     return mockPoolInstance;
 }

@@ -5,6 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
+    is_global BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -17,6 +18,9 @@ CREATE TABLE IF NOT EXISTS character_vault (
     description TEXT,
     image_url TEXT,                 -- Secure path pointing to Google Cloud Storage or base64 data URL
     spatial_vectors JSONB,          -- For structural Gemini reference prompts
+    generation_prompt TEXT,         -- Detailed prompt for generation stability
+    reference_images JSONB,         -- Array of base64 strings or URLs for compatibility
+    is_global BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -115,4 +119,15 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     features JSONB DEFAULT '[]',
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. WEBHOOK LOGS (System health and external events)
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    provider VARCHAR(50) NOT NULL,
+    event_type VARCHAR(100),
+    payload JSONB,
+    status VARCHAR(50),
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

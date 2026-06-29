@@ -100,12 +100,17 @@ if (typeof __dirname !== 'undefined' && __dirname) {
 async function consumeTokens(email: string, amount: number): Promise<boolean> {
     if (!email) return false;
     
-    const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
-    if (email === 'admin-sandbox@example.com' || adminEmails.includes(email)) return true;
+    // The admin bypass was removed so we can calculate token consumption for all users.
     try {
         const db = getFirestore();
         const snapshot = await db.collection('users').where('email', '==', email).get();
-        if (snapshot.empty) return false;
+        const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
+        const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
+
+        if (snapshot.empty) {
+             if (isAdmin) throw new Error("Admin not in Firestore, fallback to memory");
+             return false;
+        }
         
         const userRef = snapshot.docs[0].ref;
         
@@ -114,7 +119,10 @@ async function consumeTokens(email: string, amount: number): Promise<boolean> {
             if (!userDoc.exists) return false;
             
             const currentTokens = userDoc.data()?.tokens || 0;
-            if (currentTokens >= amount) {
+            const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',').map(e => e.trim()) : [];
+            const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
+
+            if (currentTokens >= amount || isAdmin) {
                 transaction.update(userRef, { tokens: currentTokens - amount });
                 return true;
             }
@@ -124,12 +132,18 @@ async function consumeTokens(email: string, amount: number): Promise<boolean> {
         console.warn("Failed to consume tokens in Firestore:", err.message);
         
         // Memory fallback
+        const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',').map(e => e.trim()) : [];
+        const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
         const matchUser = memoryDb.users.find(u => u.email === email);
         if (matchUser) {
-            if ((matchUser.tokens || 0) >= amount) {
+            if ((matchUser.tokens || 0) >= amount || isAdmin) {
                 matchUser.tokens = (matchUser.tokens || 0) - amount;
                 return true;
             }
+        } else if (isAdmin) {
+             // Let admins generate even if they aren't in memory DB yet
+             memoryDb.users.push({ id: crypto.randomUUID(), email, tokens: -amount, created_at: new Date().toISOString() });
+             return true;
         }
         return false;
     }
@@ -569,20 +583,58 @@ Sitemap: https://storymenu.app/sitemap.xml`
     };
 
     /**
+     * Helper to log AI token consumption and cost.
+     */
+    const logAiUsage = async (email: string, operation: string, modelId: string, tokensIn: number, tokensOut: number) => {
+        try {
+            const costUsd = ((tokensIn / 1000) * (AI_MODELS[modelId as keyof typeof AI_MODELS]?.costUsd || 0.00015)) + 
+                            ((tokensOut / 1000) * (AI_MODELS[modelId as keyof typeof AI_MODELS]?.costUsd || 0.00015));
+            const pool = getDbPool();
+            if (pool) {
+                await pool.query(
+                    'INSERT INTO ai_usage_logs (user_email, operation, model, tokens_in, tokens_out, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [email, operation, modelId, tokensIn, tokensOut, costUsd]
+                );
+            }
+        } catch (e) {
+            console.error("Failed to log AI usage to database:", e);
+        }
+    };
+
+    /**
      * Helper to wrap Gemini calls and format safety blocks.
      */
     const callGeminiSafely = async (ai: GoogleGenAI, aiParams: any, reqEmail?: string, operationName?: string) => {
         try {
+            aiParams.config = aiParams.config || {};
             if (aiParams.safetySettings) {
-                aiParams.config = aiParams.config || {};
                 aiParams.config.safetySettings = aiParams.safetySettings;
                 delete aiParams.safetySettings;
+            }
+
+            // INJECT GLOBAL AI SETTINGS
+            if (process.env.AI_MODEL_TEMPERATURE) {
+                aiParams.config.temperature = parseFloat(process.env.AI_MODEL_TEMPERATURE);
+            }
+            if (process.env.AI_MODEL_TOP_P) {
+                aiParams.config.topP = parseFloat(process.env.AI_MODEL_TOP_P);
+            }
+            if (process.env.AI_MODEL_TOP_K) {
+                aiParams.config.topK = parseInt(process.env.AI_MODEL_TOP_K);
+            }
+            
+            // Override default text model if defined (avoiding image/tts models)
+            if (aiParams.model && !aiParams.model.includes('image') && !aiParams.model.includes('tts') && !aiParams.model.includes('vision')) {
+                if (process.env.AI_MODEL_DEFAULT_TEXT) {
+                    aiParams.model = process.env.AI_MODEL_DEFAULT_TEXT;
+                }
             }
             const response = await ai.models.generateContent(aiParams);
             if (reqEmail && operationName && aiParams.model) {
                 const tokensIn = response.usageMetadata?.promptTokenCount || 0;
                 const tokensOut = response.usageMetadata?.candidatesTokenCount || 0;
                 logAiUsage(reqEmail, operationName, aiParams.model, tokensIn, tokensOut).catch(e => console.error("Log usage err:", e));
+                logAICost(reqEmail, 'gemini', aiParams.model, tokensIn, tokensOut);
             }
             return response;
         } catch (e: any) {
@@ -608,7 +660,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
                         },
                     },
                 },
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
             return res.json({ base64Audio });
         } catch (e: any) {
@@ -786,7 +838,8 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
                     if (status === 'COMPLETE') {
                         imageUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
                         console.log("Leonardo image generation complete!");
-                        break;
+                                logAICost(userEmail, 'leonardo', 'leonardo-diffusion-xl', 1, 0);
+                                break;
                     } else if (status === 'FAILED') {
                         throw new Error("Leonardo API generation job failed.");
                     }
@@ -821,7 +874,7 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
                 model: 'gemini-2.5-flash-image',
                 contents: { text: `STYLE: Masterpiece ${style} character sheet, detailed ink, neutral background. FULL BODY. Character: ${desc}` },
                 config: { imageConfig: { aspectRatio: '1:1' } }
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const part = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
             if (part?.inlineData?.data) {
                 return res.json({ base64: part.inlineData.data, desc });
@@ -880,7 +933,7 @@ Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no mar
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
-                });
+                }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
                 const responseText = response.text?.trim() || "[]";
                 const cleanJson = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
                 try {
@@ -932,7 +985,7 @@ Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no mar
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
                     contents: { text: prompt }
-                });
+                }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
                 const responseText = response.text?.trim() || "{}";
                 const cleanJson = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
                 try {
@@ -966,7 +1019,7 @@ Rules:
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
                 contents: { text: promptField }
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const text = response.text?.trim() || "";
             return res.json({ suggestion: text });
         } catch (e: any) {
@@ -998,7 +1051,7 @@ Your task:
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
                 contents: { text: promptField }
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const text = response.text?.trim() || "";
             return res.json({ enhancedStory: text });
         } catch (e: any) {
@@ -1101,6 +1154,15 @@ Your task:
 
         const safeLangName = langName || 'English';
         let instruction = `Continue the story. ALL OUTPUT TEXT (Captions, Dialogue, Choices) MUST BE IN ${safeLangName.toUpperCase()}. ${coreDriver} ${guardrails}`;
+        
+        // INJECT AI SETTINGS PROMPTS
+        if (process.env.AI_SYSTEM_PROMPT_COMIC) {
+            instruction = `${process.env.AI_SYSTEM_PROMPT_COMIC}\n\n` + instruction;
+        }
+        if (process.env.MODERATION_RULES) {
+            instruction += `\n\nGLOBAL MODERATION RULES: ${process.env.MODERATION_RULES}`;
+        }
+
         if (richMode) {
             instruction += " RICH/NOVEL MODE ENABLED. Prioritize deeper character thoughts, descriptive captions, and meaningful dialogue exchanges over short punchlines.";
         }
@@ -1202,7 +1264,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                         required: ["caption", "scene", "focus_char"]
                     }
                 }
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             let rawText = resObj.text || "{}";
             rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsed = JSON.parse(rawText);
@@ -1231,7 +1293,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
                     { text: prompt || defaultPrompt }
                 ]
-            });
+            }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             
             const text = response.text?.trim() || "";
             return res.json({ analysis: text });
@@ -1307,7 +1369,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                         { inlineData: { mimeType: 'image/jpeg', data: base64Img } },
                         { text: `Analyze this face and provide a highly concise physical description (age, gender, hair style, eye color, jawline, facial hair, skin tone) formatted as a single sentence. Focus only on permanent facial/head features. Do not describe the background or image quality.` }
                     ]
-                });
+                }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
                 return response && response.text ? `[Physical traits for ${characterRole}: ${response.text.trim()}]` : "";
             } catch (e: any) {
                 console.error(`Failed to extract traits for ${characterRole}:`, e.message);
@@ -1605,7 +1667,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                                 finalUrl = pollData.generations_by_pk?.generated_images?.[0]?.url;
                                 if (finalUrl) {
                                     console.log("Leonardo image generation complete!");
-                                    break;
+                                logAICost(userEmail, 'leonardo', 'leonardo-diffusion-xl', 1, 0);
+                                break;
                                 }
                             } else if (status === 'FAILED') {
                                 throw new Error("Leonardo API generation job failed.");
@@ -1690,7 +1753,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         try {
             const ai = getAIClient(req.headers['x-gemini-key'] as string);
             const resObj = await ai.models.generateImages({
-                model: 'imagen-3.0-generate-001',
+                model: 'imagen-4.0-generate-001',
                 prompt: promptText.substring(0, 480), // Imagen prompts usually have a length limit
                 config: { numberOfImages: 1, aspectRatio: '3:4', outputMimeType: 'image/jpeg' }
             });
@@ -2066,6 +2129,21 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             if (isDatabaseConnected()) {
                 const pool = getDbPool();
                 if (pool) {
+                    
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS admin_users (
+                            username VARCHAR(255) PRIMARY KEY,
+                            password_hash TEXT NOT NULL,
+                            salt TEXT NOT NULL,
+                            role VARCHAR(50) DEFAULT 'admin',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `);
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_hash TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS salt TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'admin\'');
+
+
                     const { rows } = await pool.query('SELECT * FROM admin_users WHERE username = $1', [username]);
                     userResult = rows[0];
                 }
@@ -2105,6 +2183,21 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             if (isDatabaseConnected()) {
                 const pool = getDbPool();
                 if (pool) {
+                    
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS admin_users (
+                            username VARCHAR(255) PRIMARY KEY,
+                            password_hash TEXT NOT NULL,
+                            salt TEXT NOT NULL,
+                            role VARCHAR(50) DEFAULT 'admin',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `);
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_hash TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS salt TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'admin\'');
+
+
                     const { rows } = await pool.query('SELECT username, role, created_at FROM admin_users');
                     return res.json(rows);
                 }
@@ -2128,6 +2221,21 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             if (isDatabaseConnected()) {
                 const pool = getDbPool();
                 if (pool) {
+                    
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS admin_users (
+                            username VARCHAR(255) PRIMARY KEY,
+                            password_hash TEXT NOT NULL,
+                            salt TEXT NOT NULL,
+                            role VARCHAR(50) DEFAULT 'admin',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `);
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_hash TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS salt TEXT');
+                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'admin\'');
+
+
                     await pool.query('INSERT INTO admin_users (username, password_hash, salt) VALUES ($1, $2, $3)', [username, hash, salt]);
                 }
             } else {
@@ -2392,6 +2500,27 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
+
+    app.get('/api/admin/cost-analytics', async (req, res): Promise<any> => {
+        try {
+            const pool = getDbPool();
+            if (!pool) return res.status(500).json({ error: 'DB not connected' });
+            
+            const totalCostRes = await pool.query('SELECT SUM(cost_usd_cents) as total FROM ai_cost_analytics');
+            const providerCostRes = await pool.query('SELECT provider, SUM(cost_usd_cents) as total FROM ai_cost_analytics GROUP BY provider');
+            const userCostRes = await pool.query('SELECT user_email, SUM(cost_usd_cents) as total, COUNT(*) as calls FROM ai_cost_analytics GROUP BY user_email ORDER BY total DESC LIMIT 50');
+            
+            return res.json({
+                total_cost_cents: totalCostRes.rows[0].total || 0,
+                by_provider: providerCostRes.rows,
+                by_user: userCostRes.rows
+            });
+        } catch (e: any) {
+            console.error("Cost analytics API error:", e.message);
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
     // --- INTEGRATIONS AND SETTINGS ---
     app.get('/api/admin/settings', async (req, res): Promise<any> => {
         if (!isDatabaseConnected()) {
@@ -2401,7 +2530,8 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         if (!pool) return res.status(500).json({ error: 'DB not connected' });
         try {
             await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (key_name VARCHAR(100) PRIMARY KEY, key_value TEXT NOT NULL, is_secret BOOLEAN DEFAULT false, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-            const result = await pool.query('SELECT key_name as "keyName", key_value as "keyValue", is_secret as "isSecret" FROM app_settings');
+            await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS description TEXT`);
+            const result = await pool.query('SELECT key_name as "keyName", key_value as "keyValue", is_secret as "isSecret", description FROM app_settings');
             return res.json(result.rows);
         } catch (e: any) {
             return res.status(500).json({ error: e.message });
@@ -2409,7 +2539,7 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     app.post('/api/admin/settings', async (req, res): Promise<any> => {
-        const { keyName, keyValue, isSecret } = req.body;
+        const { keyName, keyValue, isSecret, description } = req.body;
         
         // Always persist to process.env and .env for fail-safe sandbox mode
         process.env[keyName.toUpperCase()] = keyValue;
@@ -2486,9 +2616,10 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
 
     app.post('/api/admin/plans', async (req, res): Promise<any> => {
         try {
-            const { name, priceSubscription, priceOneTime, features } = req.body;
+            const { name, description, priceSubscription, priceOneTime, features } = req.body;
             const newPlan = {
                 name,
+                description: description || '',
                 priceSubscription: Number(priceSubscription) || 0,
                 priceOneTime: Number(priceOneTime) || 0,
                 features: features || [],
@@ -2525,11 +2656,11 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     app.post('/api/admin/categories', async (req, res): Promise<any> => {
-        const { name, category_type } = req.body;
+        const { name, category_type, emoji, prompt_instruction, is_featured } = req.body;
         const pool = getDbPool();
         if (pool) {
             try {
-                await pool.query(`INSERT INTO content_categories (name, category_type) VALUES ($1, $2)`, [name, category_type]);
+                await pool.query(`INSERT INTO content_categories (name, category_type, emoji, prompt_instruction, is_featured) VALUES ($1, $2, $3, $4, $5)`, [name, category_type, emoji || null, prompt_instruction || null, is_featured || false]);
             } catch(e) { }
         }
         return res.json({ success: true });
@@ -2539,20 +2670,44 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     app.put('/api/admin/categories/:id', async (req, res): Promise<any> => {
         try {
             const id = req.params.id;
-            const updates = req.body;
-            const db = getFirestore();
-            try {
-                await db.collection('categories').doc(id).update(updates);
-            } catch (err: any) {
-                const idx = memoryDb.categories.findIndex((c:any) => c.id === id);
-                if (idx >= 0) {
-                    memoryDb.categories[idx] = { ...memoryDb.categories[idx], ...updates };
+            const { name, category_type, emoji, prompt_instruction, is_featured, is_active } = req.body;
+            const pool = getDbPool();
+            if (pool) {
+                // Determine fields to update dynamically or just update all
+                const fields = [];
+                const values = [];
+                let i = 1;
+                
+                if (name !== undefined) { fields.push(`name = $${i++}`); values.push(name); }
+                if (category_type !== undefined) { fields.push(`category_type = $${i++}`); values.push(category_type); }
+                if (emoji !== undefined) { fields.push(`emoji = $${i++}`); values.push(emoji); }
+                if (prompt_instruction !== undefined) { fields.push(`prompt_instruction = $${i++}`); values.push(prompt_instruction); }
+                if (is_featured !== undefined) { fields.push(`is_featured = $${i++}`); values.push(is_featured); }
+                if (is_active !== undefined) { fields.push(`is_active = $${i++}`); values.push(is_active); }
+                
+                if (fields.length > 0) {
+                    values.push(id);
+                    await pool.query(`UPDATE content_categories SET ${fields.join(', ')} WHERE id = $${i}`, values);
                 }
             }
             return res.json({ success: true });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }
+    });
+
+    app.get('/api/categories', async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const result = await pool.query(`SELECT * FROM content_categories WHERE is_active = true ORDER BY created_at DESC`);
+                return res.json(result.rows);
+            } catch(e) { }
+        }
+        return res.json([
+            { id: '1', category_type: 'Genre', name: 'Sci-Fi Cyberpunk', emoji: '🚀', prompt_instruction: 'cyberpunk, grimdark, neon glow, intricate mechanical details, moody atmosphere, futuristic dystopian', is_featured: true },
+            { id: '2', category_type: 'Style', name: 'Cell-Shaded Anime', emoji: '🖍️', prompt_instruction: 'anime style, cel-shaded, large expressive eyes, dynamic action lines, colorful hair, japanese animation aesthetic, vibrant', is_featured: false }
+        ]);
     });
 
     app.post('/api/admin/categories/suggest', async (req, res): Promise<any> => {
@@ -2768,7 +2923,7 @@ app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
                 let query = 'SELECT * FROM character_vault';
                 const params: any[] = [];
                 if (userId && isValidUuid(String(userId))) {
-                    query += ' WHERE user_id = $1';
+                    query += " WHERE user_id = $1 OR is_global = true";
                     params.push(userId);
                 }
                 query += ' ORDER BY created_at DESC';
@@ -2784,7 +2939,7 @@ app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
         
         let filtered = memoryDb.character_vault;
         if (userId) {
-            filtered = memoryDb.character_vault.filter(c => c.user_id === userId);
+            filtered = memoryDb.character_vault.filter(c => c.user_id === userId || c.is_global === true);
         }
         return res.json(filtered);
     });
@@ -2986,7 +3141,7 @@ app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
                 let query = 'SELECT * FROM projects';
                 const params: any[] = [];
                 if (userId && isValidUuid(String(userId))) {
-                    query += ' WHERE user_id = $1';
+                    query += " WHERE user_id = $1 OR is_global = true";
                     params.push(userId);
                 }
                 query += ' ORDER BY created_at DESC';
@@ -3162,6 +3317,135 @@ app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
             });
         }
     }
+
+    
+    // --- ADMIN SUPERCHARGE ROUTES ---
+
+    // Token Management API
+    app.put('/api/admin/customers/:email/tokens', requireAdmin, async (req, res): Promise<any> => {
+        const email = req.params.email;
+        const { amount, reason } = req.body;
+        if (!amount || isNaN(Number(amount))) return res.status(400).json({ error: 'Valid amount required' });
+
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                // Check if user exists in Postgres
+                const pgUser = await pool.query('SELECT id, token_balance FROM subscriptions WHERE user_id = (SELECT id FROM users WHERE email = $1)', [email]);
+                if (pgUser.rows.length > 0) {
+                    await pool.query('UPDATE subscriptions SET token_balance = token_balance + $1 WHERE user_id = (SELECT id FROM users WHERE email = $2)', [amount, email]);
+                    return res.json({ success: true, message: `Tokens updated successfully by ${amount}.` });
+                }
+            } catch (e: any) {
+                console.error("PG token update error:", e);
+            }
+        }
+
+        // Fallback to Firestore
+        try {
+            const db = getFirestore();
+            const snapshot = await db.collection('users').where('email', '==', email).get();
+            if (!snapshot.empty) {
+                const userRef = snapshot.docs[0].ref;
+                const current = snapshot.docs[0].data()?.tokens || 0;
+                await userRef.update({ tokens: current + Number(amount) });
+                return res.json({ success: true, message: `Tokens updated in Firestore by ${amount}.` });
+            }
+        } catch (e: any) {
+            console.error("Firestore token update error:", e);
+        }
+
+        return res.status(404).json({ error: 'User not found' });
+    });
+
+    // Content Moderation API - Resolve
+    app.put('/api/admin/moderation/:id/safe', requireAdmin, async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query("UPDATE moderation_flags SET status = 'resolved_safe' WHERE id = $1", [id]);
+                return res.json({ success: true });
+            } catch(e) {}
+        }
+        return res.status(500).json({ error: 'Failed to update flag' });
+    });
+
+    // Content Moderation API - Delete Content
+    app.delete('/api/admin/moderation/:id', requireAdmin, async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const flagReq = await pool.query("SELECT target_type, target_id FROM moderation_flags WHERE id = $1", [id]);
+                if (flagReq.rows.length > 0) {
+                    const { target_type, target_id } = flagReq.rows[0];
+                    if (target_type === 'published_work') {
+                        await pool.query("DELETE FROM published_works WHERE id = $1", [target_id]);
+                    } else if (target_type === 'character_vault') {
+                        await pool.query("DELETE FROM character_vault WHERE id = $1", [target_id]);
+                    }
+                    await pool.query("UPDATE moderation_flags SET status = 'resolved_removed' WHERE id = $1", [id]);
+                    return res.json({ success: true });
+                }
+            } catch(e) {}
+        }
+        return res.status(500).json({ error: 'Failed to delete content' });
+    });
+
+    // Webhook & Error Logs API
+    app.get('/api/admin/logs', requireAdmin, async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const logsReq = await pool.query("SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 100");
+                return res.json(logsReq.rows);
+            } catch(e) {
+                return res.json([]);
+            }
+        }
+        return res.json([]);
+    });
+
+    // Global Characters API
+    app.get('/api/admin/characters/global', requireAdmin, async (req, res): Promise<any> => {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                const result = await pool.query('SELECT * FROM character_vault WHERE is_global = true ORDER BY created_at DESC');
+                return res.json(result.rows);
+            } catch(e: any) {
+                console.error("Global Character GET Error:", e);
+                return res.status(500).json({ error: e.message });
+            }
+        }
+        return res.json(memoryDb.character_vault.filter(c => c.is_global === true));
+    });
+
+    app.post('/api/admin/characters/global', requireAdmin, async (req, res): Promise<any> => {
+        const { character_name, role_type, description, image_url, generation_prompt, reference_images } = req.body;
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                // Insert as global character. Since user_id is NOT NULL, we link it to the admin's user ID or a system user ID.
+                // We'll find the first admin user ID
+                const adminRes = await pool.query("SELECT id FROM users LIMIT 1");
+                const systemUserId = adminRes.rows[0]?.id;
+                
+                if (systemUserId) {
+                    await pool.query(`
+                        INSERT INTO character_vault (user_id, character_name, role_type, description, image_url, generation_prompt, reference_images, is_global)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+                    `, [systemUserId, character_name, role_type, description, image_url]);
+                    return res.json({ success: true });
+                }
+            } catch(e: any) {
+                console.error("Global Character Error:", e);
+            }
+        }
+        return res.status(500).json({ error: 'Failed to create global character' });
+    });
+
 
     // Start listening on port only when all API endpoints and static assets are fully configured
 

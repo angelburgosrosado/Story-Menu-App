@@ -960,6 +960,129 @@ const App: React.FC = () => {
     }
   };
 
+  const launchStory = async () => {
+    // --- API KEY VALIDATION ---
+    const hasKey = await validateApiKey();
+    if (!hasKey) return; // Stop if cancelled or invalid
+    
+    if (!heroRef.current) return;
+    if (selectedGenre === 'Custom' && !customPremise.trim()) {
+        alert("Please enter a custom story premise.");
+        return;
+    }
+    setIsTransitioning(true);
+    
+    // Sync book project with correct database settings (PostgreSQL / Firestore)
+    const titleText = `Multiverse Reborn: ${selectedGenre}`;
+    const isFirebaseUser = activeCreator.id && activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !activeCreator.id.includes('local-creator') && !activeCreator.id.includes('offline');
+    if (isFirebaseUser) {
+        try {
+            const initialFacesCoverKey: ComicFace[] = [{ id: 'cover', type: 'cover', choices: [], isLoading: true, pageIndex: 0 }];
+            const fireProjectId = await saveProjectToFirestore(activeCreator.id, {
+                userId: activeCreator.id,
+                title: titleText,
+                genre: selectedGenre,
+                language: selectedLanguage,
+                comicFaces: JSON.stringify(initialFacesCoverKey)
+            });
+            if (fireProjectId) {
+                console.log("🔥 [Firestore] Synced project entry created:", fireProjectId);
+                setActiveProjectId(fireProjectId);
+                window.dispatchEvent(new Event('refresh-character-vault'));
+            }
+        } catch (fsErr) {
+            console.warn("Firestore saveProject failed, trying pg sync fallback:", fsErr);
+        }
+    } else {
+        // Sync book project to PostgreSQL!
+        try {
+            const projRes = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: activeCreator.id,
+                    title: titleText,
+                    genre: selectedGenre,
+                    language: selectedLanguage
+                })
+            });
+            const projData = await projRes.json();
+            if (projData && projData.id) {
+                 console.log("📂 Synced project entry created:", projData.id);
+                 setActiveProjectId(projData.id); // Save active project ID!
+                 
+                 // Cast linkages
+                 if (heroRef.current) {
+                     await fetch('/api/project-casting', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id, userEmail: currentUser?.email }) // or link specific cast ids
+                     }).catch(() => {});
+                 }
+            }
+        } catch (e) {
+            console.warn("Project sync tracker offline:", e);
+        }
+    }
+
+    let availableTones = TONES;
+    if (selectedGenre === "Teen Drama / Slice of Life" || selectedGenre === "Lighthearted Comedy") {
+        availableTones = TONES.filter(t => t.includes("CASUAL") || t.includes("WHOLESOME") || t.includes("QUIPPY"));
+    } else if (selectedGenre === "Classic Horror") {
+        availableTones = TONES.filter(t => t.includes("INNER-MONOLOGUE") || t.includes("OPERATIC"));
+    }
+    
+    setStoryTone(availableTones[Math.floor(Math.random() * availableTones.length)]);
+
+    const coverFace: ComicFace = { id: 'cover', type: 'cover', choices: [], isLoading: true, pageIndex: 0 };
+    setComicFaces([coverFace]);
+    historyRef.current = [coverFace];
+    generatingPages.current.add(0);
+
+    generateSinglePage('cover', 0, 'cover').finally(() => generatingPages.current.delete(0));
+    
+    setTimeout(async () => {
+        setIsStarted(true);
+        setShowSetup(false);
+        setIsTransitioning(false);
+        await generateBatch(1, INITIAL_PAGES);
+        generateBatch(3, 3);
+    }, 1100);
+  }
+
+const handleHeroUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
+       try { 
+           const base64 = await fileToBase64(file); 
+           const newHero = { base64, desc: "The Main Hero" };
+           setHero(newHero); 
+           localStorage.setItem('offline_hero', JSON.stringify(newHero));
+           await syncCharacterToDb("Main Avatar", "Hero", "The Main Hero", base64);
+       } catch (e) { alert("Hero upload failed"); }
+  }
+
+const handleFriendUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
+       try { 
+           const base64 = await fileToBase64(file); 
+           const newFriend = { base64, desc: "The Sidekick/Rival" };
+           setFriend(newFriend); 
+           localStorage.setItem('offline_friend', JSON.stringify(newFriend));
+           await syncCharacterToDb("Socius", "Co-Star", "The Sidekick/Rival", base64);
+       } catch (e) { alert("Friend upload failed"); }
+  }
+
+const handleVillainUpload = async (file: File) => {
+       if (!validateUpload(file)) return;
+       try { 
+           const base64 = await fileToBase64(file); 
+           const newVillain = { base64, desc: "The Arch Nemesis Villain" };
+           setVillain(newVillain); 
+           localStorage.setItem('offline_villain', JSON.stringify(newVillain));
+           await syncCharacterToDb("Rival Rival", "Villain", "The Arch Nemesis Villain", base64);
+       } catch (e) { alert("Villain upload failed"); }
+  }
+
   return (
     <div className={`app-container relative w-full h-screen overflow-hidden transition-all duration-700 ${isLightMode ? 'bg-amber-50' : 'bg-orange-950'}`}>
       <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700`}>
@@ -1104,7 +1227,57 @@ const App: React.FC = () => {
         {/* Main Content Area */}
         <main className={`flex-1 flex items-center justify-center relative overflow-hidden ${isLightMode ? 'bg-amber-50' : 'bg-black/90'} transition-all duration-700`}>
           {showSetup && (
-            <Setup onClose={handleCloseSetup} isLightMode={isLightMode} />
+            <Setup 
+                show={showSetup}
+                isTransitioning={isTransitioning}
+                hero={hero}
+                friend={friend}
+                villain={villain}
+                selectedGenre={selectedGenre}
+                selectedArtStyle={selectedStyle}
+                onArtStyleChange={setSelectedStyle}
+                selectedLanguage={selectedLanguage}
+                customPremise={customPremise}
+                richMode={richMode}
+                selectedVoice={selectedVoice}
+                soundtrackEnabled={soundtrackEnabled}
+                activeCreator={activeCreator}
+                onCreatorChange={setActiveCreator}
+                onLogOut={handleLogOut}
+                onHeroUpload={handleHeroUpload}
+                onFriendUpload={handleFriendUpload}
+                onVillainUpload={handleVillainUpload}
+                onGenreChange={setSelectedGenre}
+                onLanguageChange={setSelectedLanguage}
+                onPremiseChange={setCustomPremise}
+                onRichModeChange={setRichMode}
+                onVoiceChange={setSelectedVoice}
+                onSoundtrackChange={setSoundtrackEnabled}
+                onLaunch={launchStory}
+                onSelectHero={setHero}
+                onSelectFriend={setFriend}
+                onSelectVillain={setVillain}
+                onLoadProject={handleLoadProject}
+                onLoadDraft={handleLoadDraft}
+                comicFaces={comicFaces}
+                creativeDirectives={creativeDirectives}
+                onCreativeDirectivesChange={setCreativeDirectives}
+                heroVisuals={heroVisuals}
+                onHeroVisualsChange={setHeroVisuals}
+                friendVisuals={friendVisuals}
+                onFriendVisualsChange={setFriendVisuals}
+                villainVisuals={villainVisuals}
+                onVillainVisualsChange={setVillainVisuals}
+                villainDna={villainDna}
+                onVillainDnaChange={setVillainDna}
+                nemesisDNA={nemesisDNA}
+                onNemesisDnaChange={setNemesisDNA}
+                soundPrompt={soundPrompt}
+                onSoundPromptChange={setSoundPrompt}
+                storyTone={storyTone}
+                storyBlueprint={storyBlueprint}
+                onStoryBlueprintChange={setStoryBlueprint}
+            />
           )}
 
           {!showSetup && isStarted && (
@@ -1127,10 +1300,10 @@ const App: React.FC = () => {
                 // Handle story choices here
                 console.log(`Choice made on page ${pageIndex}: ${choice}`);
                 // Find the current beat and apply the choice
-                const currentPage = comicFaces.find(f => f.pageIndex === pageNum);
+                const currentPage = comicFaces.find(f => f.pageIndex === pageIndex);
                 if (currentPage && currentPage.choices?.includes(choice)) {
                   // Generate the next page based on the choice
-                  generateBatch(pageNum + 1, 1);
+                  generateBatch(pageIndex + 1, 1);
                 } else {
                   console.warn("Invalid choice or page not found.");
                 }
@@ -1140,7 +1313,7 @@ const App: React.FC = () => {
               onReset={onReset}       // Assuming these are passed down from parent or global
               onUpdateText={(pageIndex, field, text) => {
                 // Update text in comicFaces state
-                setComicFaces(prev => prev.map(f => f.pageIndex === pageNum ? { ...f, [field]: text } : f));
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, [field]: text } : f));
               }}
             />
           )}

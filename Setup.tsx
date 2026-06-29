@@ -107,6 +107,23 @@ export const Setup: React.FC<SetupProps> = (props) => {
     }>({ status: 'Connecting', mode: '' });
     const [cloudRunConfig, setCloudRunConfig] = useState<any>({ isCloudRun: false, service: '', revision: '', configuration: '', project: '', port: '', region: '' });
     const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
+    const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
+    
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const res = await fetch('/api/categories');
+                if (res.ok) {
+                    const data = await res.json();
+                    setDynamicCategories(data);
+                }
+            } catch (e) {
+                console.error("Failed to load dynamic taxonomy", e);
+            }
+        };
+        loadCategories();
+    }, []);
+
     const [creatorEmailInput, setCreatorEmailInput] = useState(props.activeCreator.email);
     const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
 
@@ -639,7 +656,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
     // Sync Art Style Lock when Genre changes
     useEffect(() => {
         if (props.selectedGenre && props.villain) {
-            const newArtStyle = artStyleLockByGenre[props.selectedGenre] || artStyleLockByGenre['Custom'];
+            const dynamicCat = dynamicCategories.find(c => c.category_type === 'Genre' && c.name === props.selectedGenre);
+            const newArtStyle = dynamicCat?.prompt_instruction || "clean illustration, modern aesthetic, highly detailed, professional art";
             if (props.nemesisDNA?.rendering_directives?.art_style_lock !== newArtStyle) {
                 const updated = {
                     ...props.nemesisDNA,
@@ -2493,7 +2511,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                             <div>
                                 <p className={sLabel}>{isEditorial ? "Narrative Direction (Genre)" : "Select Story Path (Genre)"}</p>
                                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                                    {GENRES.map((g) => {
+                                    {dynamicCategories.filter(c => c.category_type === 'Genre').map((cat) => {
+                                        const g = cat.name;
                                         const isSelected = props.selectedGenre === g;
                                         return (
                                             <button 
@@ -2509,7 +2528,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                         : 'bg-slate-900 text-gray-300 border-2 border-slate-700 hover:bg-slate-750 hover:text-white hover:border-gray-500 hover:-translate-y-px shadow-sm')
                                                 }`}
                                             >
-                                                <span className="text-base select-none">{genreIcons[g] || "📖"}</span>
+                                                <span className="text-base select-none">{cat.emoji || "📖"}</span>
                                                 <span className={`text-xs tracking-wide uppercase truncate ${isEditorial ? 'font-sans font-medium' : 'font-mono'}`}>{g}</span>
                                             </button>
                                         );
@@ -3316,8 +3335,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           onChange={(e) => setPersonaStudioStyle(e.target.value)}
                                           className="w-full bg-gray-950/50 border border-cyan-800 text-white text-xs p-2.5 rounded focus:outline-none focus:border-purple-500 font-sans font-semibold"
                                      >
-                                          {GENRES.map((g) => (
-                                                <option key={g} value={g}>{genreIcons[g] || "🎨"} {g}</option>
+                                          {dynamicCategories.filter(c => c.category_type === 'Genre').map((cat) => (
+                                                <option key={cat.name} value={cat.name}>{cat.emoji || "🎨"} {cat.name}</option>
                                            ))}
                                      </select>
                                 </div>
@@ -4076,8 +4095,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                onChange={(e) => setManualComicGenre(e.target.value)}
                                                className={isEditorial ? sSelect : "w-full bg-gray-950/50 border border-cyan-800 p-1 px-1.5 rounded font-mono text-[10px] text-white focus:outline-none"}
                                           >
-                                               {GENRES.map((g) => (
-                                                    <option key={g} value={g}>{g}</option>
+                                               {dynamicCategories.filter(c => c.category_type === 'Genre').map((cat) => (
+                                                    <option key={cat.name} value={cat.name}>{cat.name}</option>
                                                ))}
                                           </select>
                                      </div>

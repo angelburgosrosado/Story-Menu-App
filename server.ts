@@ -870,7 +870,7 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
             const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash-image',
-                contents: { text: `STYLE: Masterpiece ${style} character sheet, detailed ink, neutral background. FULL BODY. Character: ${desc}` },
+                contents: `STYLE: Masterpiece ${style} character sheet, detailed ink, neutral background. FULL BODY. Character: ${desc}`,
                 config: { imageConfig: { aspectRatio: '1:1' } }
             }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const part = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
@@ -930,7 +930,7 @@ Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no mar
                 const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
-                    contents: { text: prompt }
+                    contents: prompt
                 }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
                 const responseText = response.text?.trim() || "[]";
                 const cleanJson = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
@@ -982,7 +982,7 @@ Ensure the output is valid, solid JSON, and contains ONLY the JSON block, no mar
                 const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                     model: 'gemini-2.5-flash',
-                    contents: { text: prompt }
+                    contents: prompt
                 }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
                 const responseText = response.text?.trim() || "{}";
                 const cleanJson = responseText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
@@ -1016,7 +1016,7 @@ Rules:
             const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
-                contents: { text: promptField }
+                contents: promptField
             }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const text = response.text?.trim() || "";
             return res.json({ suggestion: text });
@@ -1048,7 +1048,7 @@ Your task:
             const response = await callGeminiSafely(ai, {
                 safetySettings: applyModeration(req, req.body ? JSON.stringify(req.body) : ""),
                 model: 'gemini-2.5-flash',
-                contents: { text: promptField }
+                contents: promptField
             }, req.body?.userEmail || req.body?.email || 'unknown', req.path);
             const text = response.text?.trim() || "";
             return res.json({ enhancedStory: text });
@@ -1604,9 +1604,15 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     }
                 };
 
-                await processCharacterRef(heroRef);
-                await processCharacterRef(friendRef);
-                await processCharacterRef(villainRef);
+                if (beat?.focus_char?.toLowerCase() === 'hero' && heroRef) {
+                    await processCharacterRef(heroRef);
+                } else if ((beat?.focus_char?.toLowerCase() === 'friend' || beat?.focus_char?.toLowerCase() === 'co-star') && friendRef) {
+                    await processCharacterRef(friendRef);
+                } else if (beat?.focus_char?.toLowerCase() === 'villain' && villainRef) {
+                    await processCharacterRef(villainRef);
+                } else if (heroRef) {
+                    await processCharacterRef(heroRef);
+                }
 
                 // Enhance prompt to fight photograph bias and enforce camera angle
                 const styleEnforcer = "(((COMIC BOOK ART STYLE, 2D ILLUSTRATION, FICTIONAL UNIVERSE))) heavily stylized, vibrant colors, dynamic shading. NOT a photograph. NOT realistic. (close-up portrait:1.2), clearly visible face, facing the camera, unmasked, highly detailed facial features.";

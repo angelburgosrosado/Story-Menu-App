@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 interface AIAssistButtonProps {
-    onSuggest: (suggestion: string) => void;
-    context: string;
-    fieldLabel: string;
-    className?: string;
+    mode: 'editorial' | 'comic';
+    targetField: string;
+    currentValue: string;
+    onSuggestion: (suggestion: string) => void;
 }
 
-export const AIAssistButton: React.FC<AIAssistButtonProps> = ({ onSuggest, context, fieldLabel, className = '' }) => {
+export const AIAssistButton: React.FC<AIAssistButtonProps> = ({ mode, targetField, currentValue, onSuggestion }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSuggest = async () => {
@@ -16,15 +16,21 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({ onSuggest, conte
         try {
             const response = await fetch('/api/gemini/suggest', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-gemini-key': localStorage.getItem('GEMINI_API_KEY') || ''
+                },
                 body: JSON.stringify({ 
-                    prompt: `Generate a creative suggestion for the field "${fieldLabel}" in a comic generation tool. Context: ${context || 'General character or story details'}. Keep it concise and imaginative.`
+                    fieldName: targetField,
+                    currentValue,
+                    genre: mode === 'editorial' ? 'Editorial' : 'Comic Book',
+                    userEmail: localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined
                 })
             });
 
             if (response.ok) {
                 const data = await response.json();
-                onSuggest(data.suggestion || data.text || '');
+                onSuggestion(data.suggestion || data.text || '');
             } else {
                 console.error('Failed to get AI suggestion');
             }
@@ -40,12 +46,11 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({ onSuggest, conte
             type="button"
             onClick={handleSuggest}
             disabled={isLoading}
-            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all 
-                ${isLoading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 shadow-sm border border-indigo-200'}
-                ${className}`}
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-md transition-all 
+                ${isLoading ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-800 text-yellow-400 hover:bg-slate-700 shadow-sm border border-slate-700'}`}
             title="Generate suggestion with AI"
         >
-            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
             <span>{isLoading ? 'Thinking...' : 'AI Assist'}</span>
         </button>
     );

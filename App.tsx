@@ -19,6 +19,7 @@ import { CheckoutModal } from './CheckoutModal';
 import { ModeSelectionScreen } from './ModeSelectionScreen';
 import { recordPageGenerated } from './storage';
 import { saveCharacterToFirestore, saveProjectToFirestore } from './storageFirestore';
+import { fileToBase64 } from './imageUtils';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import { Sparkles, BookOpen, User, CheckCircle, Zap, Shield, Play, Layers, Cpu, Database, Volume2, ArrowRight, Eye, Palette, Flame, Radio, Clock, CloudLightning, Download, RotateCcw } from 'lucide-react';
 import i18n from './i18n';
@@ -519,7 +520,7 @@ const App: React.FC = () => {
       const res = await fetch('/api/gemini/speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
-        body: JSON.stringify({ text, voiceName, userEmail: currentUser?.email })
+        body: JSON.stringify({ text, voiceName, userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined) })
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -563,66 +564,6 @@ const App: React.FC = () => {
     ) {
       setShowApiKeyDialog(true);
     }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const rawBase64 = (reader.result as string).split(',')[1];
-        // Fallback directly to raw base64 for SVGs or HEIC
-        if (file.type.includes('svg') || file.type.includes('heic') || file.type.includes('heif')) {
-          resolve(rawBase64);
-          return;
-        }
-
-        const img = new Image();
-
-        // Fallback timeout in case img.onload never fires
-        const fallbackTimeout = setTimeout(() => {
-          resolve(rawBase64);
-        }, 1000);
-
-        img.onload = () => {
-          clearTimeout(fallbackTimeout);
-          try {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800;
-            const MAX_HEIGHT = 800;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            resolve(dataUrl.split(',')[1]);
-          } catch (e) {
-            resolve(rawBase64);
-          }
-        };
-        img.onerror = () => {
-          clearTimeout(fallbackTimeout);
-          resolve(rawBase64);
-        };
-        img.src = reader.result as string;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   };
 
   const generateBeat = async (history: ComicFace[], isRightPage: boolean, pageNum: number, isDecisionPage: boolean): Promise<Beat> => {
@@ -678,7 +619,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
         body: JSON.stringify({
-          userEmail: currentUser?.email,
+          userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined),
           history: relevantHistory,
           hero: heroRef.current,
           friendInstruction,
@@ -740,7 +681,7 @@ const App: React.FC = () => {
       const response = await fetch('/api/gemini/persona', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
-        body: JSON.stringify({ desc, selectedGenre, userEmail: currentUser?.email })
+        body: JSON.stringify({ desc, selectedGenre, userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined) })
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -804,7 +745,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
         body: JSON.stringify({
-          userEmail: currentUser?.email,
+          userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined),
           beat, // Keep beat for context if needed by backend
           type,
           styleEra,
@@ -1029,7 +970,7 @@ const App: React.FC = () => {
                      await fetch('/api/project-casting', {
                          method: 'POST',
                          headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id, userEmail: currentUser?.email }) // or link specific cast ids
+                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id, userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined) }) // or link specific cast ids
                      }).catch(() => {});
                  }
             }
@@ -1074,6 +1015,19 @@ const App: React.FC = () => {
         if (face.imageUrl) doc.addImage(face.imageUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
     });
     doc.save('Infinite-Heroes-Issue.pdf');
+  };
+
+  const validateUpload = (file: File): boolean => {
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/jpg'];
+      if (!validTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.heic') && !file.name.toLowerCase().endsWith('.heif')) {
+          alert("Invalid file format. Please upload JPG, PNG, WEBP, HEIC or GIF.");
+          return false;
+      }
+      if (file.size > 20 * 1024 * 1024) { // Increased to 20MB to allow raw camera HEIC pictures
+          alert("File is too large. Please upload an image under 20MB.");
+          return false;
+      }
+      return true;
   };
 
 const handleHeroUpload = async (file: File) => {

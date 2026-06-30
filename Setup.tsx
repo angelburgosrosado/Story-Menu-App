@@ -6,9 +6,9 @@
 import { WorkspaceContext } from './WorkspaceContext';
 import { WorkspaceSidebar } from './WorkspaceSidebar';
 import { WorkspaceLibrary } from './WorkspaceLibrary';
-import { WorkspaceCasting } from './WorkspaceCasting';
 import { WorkspaceDirector } from './WorkspaceDirector';
 import React, { useState, useEffect } from 'react';
+import { AIAssistButton } from './AIAssistButton';
 import { GENRES, LANGUAGES, Persona, VOICES, CharacterIdentitySchema, ChapterGoal, ART_STYLES, WARDROBE_PRESETS } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +23,7 @@ import {
     saveDraftToFirestore,
     deleteDraftFromFirestore
 } from './storageFirestore';
+import { fileToBase64 } from './imageUtils';
 
 interface SetupProps {
     show: boolean;
@@ -89,17 +90,7 @@ interface SetupProps {
 }
 
 
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-             const base64String = reader.result?.toString().split(',')[1] || '';
-             resolve(base64String);
-        };
-        reader.onerror = (error) => reject(error);
-    });
-};
+
 
 export const Setup: React.FC<SetupProps> = (props) => {
     const { t } = useTranslation();
@@ -229,15 +220,15 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [vaultEthnicity, setVaultEthnicity] = useState('');
 
     
-    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const base64Str = (event.target?.result as string).split(',')[1];
-            if (base64Str) setVaultReferenceImage(base64Str);
-        };
-        reader.readAsDataURL(file);
+        try {
+            const base64Str = await fileToBase64(file);
+            setVaultReferenceImage(base64Str);
+        } catch (e) {
+            console.error("Failed to process image:", e);
+        }
     };
 
 
@@ -296,16 +287,21 @@ export const Setup: React.FC<SetupProps> = (props) => {
     };
 
     const handleSaveToVault = async () => {
-        if (!vaultGeneratedImage) return;
+        if (!vaultGeneratedImage && !vaultReferenceImage) return;
         
         setVaultStatusMsg("Saving to Vault...");
         const isFirebaseUser = props.activeCreator.id && props.activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !props.activeCreator.id.includes('local-creator') && !props.activeCreator.id.includes('offline');
+        
+        let finalImageUrl = vaultGeneratedImage;
+        if (!finalImageUrl && vaultReferenceImage) {
+             finalImageUrl = vaultReferenceImage.startsWith('data:') ? vaultReferenceImage : `data:image/jpeg;base64,${vaultReferenceImage}`;
+        }
         
         const newChar = {
             id: 'char_' + Date.now(),
             name: vaultCharName,
             description: vaultCharDesc,
-            imageUrl: vaultGeneratedImage,
+            imageUrl: finalImageUrl,
             role: 'Vaulted',
             powers: 'Unknown'
         };
@@ -1749,9 +1745,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                 {/* COMMERCIAL STATUS & INTRODUCTION BANNER */}
                 <div className={sPanel}>
-                    <div className="md:col-span-12 text-center font-sans">
+                    <div className="md:col-span-12 text-left font-sans">
                         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 ${isEditorial ? 'border-stone-200 pb-4 mb-4' : 'border-slate-800 pb-4 mb-4'}`}>
-                            <div className="flex-1 text-center">
+                            <div className="flex-1 text-left">
                                 <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-mono font-black text-xl text-yellow-400 tracking-wider uppercase inline-block"}>
                                      {t('setup.dashboard.cloudActive')}
                                 </h3>
@@ -1852,7 +1848,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <label htmlFor="hero-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                 <span className="sr-only">{t('setup.auto7', 'Upload Hero')}</span>
                                            </label>
-                                           <img src={`data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                           <img src={props.hero.base64.startsWith('data:') || props.hero.base64.startsWith('http') ? props.hero.base64 : `data:image/jpeg;base64,${props.hero.base64}`} alt="Hero Roster" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
                                            <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-blue-600 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[-2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
@@ -1897,18 +1893,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-blue-400'}`}>
                                                      {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
                                                 </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('heroVisuals', props.heroVisuals); }}
-                                                     disabled={suggestingFields['heroVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['heroVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
+                                                <AIAssistButton 
+                                                        mode={isEditorial ? 'editorial' : 'comic'} 
+                                                        targetField="heroVisuals" 
+                                                        currentValue={props.heroVisuals}
+                                                        onSuggestion={(val) => props.onHeroVisualsChange(val)} 
+                                                    />
                                            </div>
                                            <textarea 
                                                 rows={2}
@@ -1938,7 +1928,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <label htmlFor="friend-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                 <span className="sr-only">{t('setup.auto9', 'Upload Co-Star')}</span>
                                            </label>
-                                           <img src={`data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                           <img src={props.friend.base64.startsWith('data:') || props.friend.base64.startsWith('http') ? props.friend.base64 : `data:image/jpeg;base64,${props.friend.base64}`} alt="Co-Star Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
                                            <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-gray-900 text-purple-400 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[2deg] z-20 font-bold shadow-[1px_1px_0px_#000]"}>
@@ -1982,18 +1972,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-purple-400'}`}>
                                                      {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
                                                 </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('friendVisuals', props.friendVisuals); }}
-                                                     disabled={suggestingFields['friendVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['friendVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
+                                                <AIAssistButton 
+                                                        mode={isEditorial ? 'editorial' : 'comic'} 
+                                                        targetField="friendVisuals" 
+                                                        currentValue={props.friendVisuals}
+                                                        onSuggestion={(val) => props.onFriendVisualsChange(val)} 
+                                                    />
                                            </div>
                                            <textarea 
                                                 rows={2}
@@ -2023,7 +2007,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                            <label htmlFor="villain-upload-input" className="absolute inset-0 cursor-pointer z-30">
                                                 <span className="sr-only">{t('setup.auto11', 'Upload Villain')}</span>
                                            </label>
-                                           <img src={`data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                           <img src={props.villain.base64.startsWith('data:') || props.villain.base64.startsWith('http') ? props.villain.base64 : `data:image/jpeg;base64,${props.villain.base64}`} alt="Villain Preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                                            
                                            <div className={isEditorial ? "absolute top-1.5 left-1.5 bg-[#4c443c] text-stone-100 font-sans text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded shadow-sm z-20" : "absolute top-1.5 left-1.5 bg-gray-900 text-red-400 text-white border border-black font-mono text-[10px] uppercase px-1.5 py-0.5 rotate-[-1deg] z-20 font-bold shadow-[1px_1px_0px_#000] animate-pulse"}>
@@ -2068,18 +2052,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <span className={`text-[9px] font-mono font-bold tracking-wide block text-left ${isEditorial ? 'text-stone-600' : 'text-red-400'}`}>
                                                      {isEditorial ? "✒️ VISUAL DESIGN:" : "🎨 ATTIRE & HAIR:"}
                                                 </span>
-                                                <button
-                                                     type="button"
-                                                     onClick={(e) => { e.preventDefault(); handleSuggestField('villainVisuals', props.villainVisuals); }}
-                                                     disabled={suggestingFields['villainVisuals']}
-                                                     className={`text-[8px] rounded px-1.5 py-0.5 font-bold uppercase transition-all disabled:opacity-40 ${
-                                                          isEditorial
-                                                               ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
-                                                               : 'bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-500/40'
-                                                     }`}
-                                                >
-                                                     {suggestingFields['villainVisuals'] ? '✨...' : '✨ SUGGEST'}
-                                                </button>
+                                                <AIAssistButton 
+                                                        mode={isEditorial ? 'editorial' : 'comic'} 
+                                                        targetField="villainVisuals" 
+                                                        currentValue={props.villainVisuals}
+                                                        onSuggestion={(val) => props.onVillainVisualsChange(val)} 
+                                                    />
                                            </div>
                                            <textarea 
                                                 rows={2}
@@ -2098,97 +2076,65 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                         </div>
 
-                        {/* CHARACTER VAULT SAVED ITEMS MODULE */}
-                        {savedCharacters.length > 0 && (
-                            <div className={`mt-5 pt-4 border-t-2 ${isEditorial ? 'border-stone-200' : 'border-slate-700'}`}>
-                                <div className="flex justify-between items-center mb-2.5">
-                                     <span className={isEditorial ? "font-sans text-xs uppercase text-stone-700 font-black tracking-wider" : "font-mono text-xs uppercase text-yellow-300 font-bold tracking-wider"}>
-                                          {isEditorial ? "🗃️ Character Index (Stored Profiles)" : "🗃️ Character Vault (Saved in pg DB)"}
-                                     </span>
-                                     <span className={`text-[10px] font-mono ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
-                                          {savedCharacters.length} active profiles
-                                     </span>
-                                </div>
-                                <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar pr-1">
-                                     {savedCharacters.map((char) => (
-                                          <div 
-                                               key={char.id} 
-                                               className={`flex-shrink-0 w-36 rounded-lg p-2 flex flex-col justify-between group/vault relative text-left ${
-                                                    isEditorial 
-                                                         ? 'bg-stone-205 border border-stone-300' 
-                                                         : 'bg-gray-950/50 border border-cyan-800'
-                                               }`}
-                                          >
-                                               <div className={`relative h-20 w-full mb-1 rounded overflow-hidden ${isEditorial ? 'bg-stone-200' : 'bg-slate-950'}`}>
-                                                    {char.image_url ? (
-                                                         <img 
-                                                              src={char.image_url.startsWith('data:') ? char.image_url : `data:image/jpeg;base64,${char.image_url}`} 
-                                                              alt={char.character_name} 
-                                                              className="w-full h-full object-cover select-none" 
-                                                         />
-                                                    ) : (
-                                                         <div className={`w-full h-full flex items-center justify-center text-xs font-mono ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>
-                                                              [No Avatar]
-                                                         </div>
-                                                    )}
-                                                    <button 
-                                                         onClick={(e) => { e.stopPropagation(); handleDeleteFromVault(char.id); }}
-                                                         className="absolute top-1 right-1 bg-black/75 hover:bg-gray-900 text-red-400 rounded p-1 text-white border border-black opacity-0 group-hover/vault:opacity-100 transition-opacity duration-200"
-                                                         title="Retire Character"
-                                                    >
-                                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                         </svg>
-                                                    </button>
-                                               </div>
-                                               <div>
-                                                    <p className={`text-xs uppercase truncate leading-tight select-none ${isEditorial ? 'font-sans font-black text-stone-850' : 'font-mono font-bold text-gray-200'}`}>
-                                                         {char.character_name}
-                                                    </p>
-                                                    <span className={`text-[9px] font-mono uppercase px-1 py-0.2 rounded border inline-block mt-0.5 select-none ${
-                                                         isEditorial
-                                                              ? char.role_type === 'Hero' ? 'bg-stone-200 text-stone-700 border-stone-300' :
-                                                                char.role_type === 'Co-Star' ? 'bg-stone-200 text-stone-700 border-stone-300' :
-                                                                'bg-stone-300 text-stone-800 border-stone-400'
-                                                              : char.role_type === 'Hero' ? 'bg-blue-900/40 text-blue-300 border-blue-800 border-black' :
-                                                                char.role_type === 'Co-Star' ? 'bg-purple-900/40 text-purple-300 border-purple-800 border-black' :
-                                                                'bg-red-900/40 text-red-300 border-red-800 border-black'
-                                                    }`}>
-                                                         {isEditorial 
-                                                              ? char.role_type === 'Hero' ? 'Protagonist' : char.role_type === 'Co-Star' ? 'Supporting' : 'Antagonist'
-                                                              : char.role_type
-                                                         }
-                                                    </span>
-                                               </div>
-                                               
-                                               <div className="mt-2 grid grid-cols-1 gap-1">
-                                                    <button 
-                                                         onClick={() => {
-                                                              const persona = { base64: char.image_url || '', desc: char.description || '' };
-                                                              if (char.role_type === 'Hero') props.onSelectHero(persona);
-                                                              else if (char.role_type === 'Co-Star') props.onSelectFriend(persona);
-                                                              else if (char.role_type === 'Villain') props.onSelectVillain(persona);
-                                                         }}
-                                                         className={`text-[10px] py-0.5 uppercase tracking-wide rounded border transition-colors ${
-                                                              isEditorial
-                                                                   ? 'bg-stone-200 hover:bg-[#3c3730] text-stone-700 hover:text-white border-stone-300 font-sans font-bold'
-                                                    : 'bg-zinc-805 hover:bg-gray-900 text-yellow-400 font-mono text-gray-300 hover:text-black border-black'
-                                                         }`}
-                                                    >
-                                                         {isEditorial ? "ASSIGN ROLE" : "CAST ROLE"}
-                                                    </button>
-                                               </div>
-                                          </div>
-                                     ))}
-                                </div>
-                            </div>
-                        )}
+                        
+                      {/* CHARACTER VAULT SAVED ITEMS MODULE */}
+                      <div className={`mt-8 pt-6 border-t-2 ${isEditorial ? 'border-stone-200' : 'border-slate-800'}`}>
+                          <div className="flex justify-between items-center mb-4">
+                               <span className={isEditorial ? "font-sans text-sm uppercase text-stone-700 font-black tracking-wider flex items-center gap-2" : "font-sans text-sm uppercase text-indigo-400 font-bold tracking-wider flex items-center gap-2"}>
+                                    <span className="text-xl">🗃️</span> {isEditorial ? "Character Index (Stored Profiles)" : "Character Vault (Saved Profiles)"}
+                               </span>
+                               <span className={isEditorial ? "text-xs font-sans text-stone-500 bg-stone-100 px-2 py-1 rounded" : "text-xs font-sans text-slate-400 bg-slate-900 px-2 py-1 rounded"}>
+                                    {savedCharacters.length} / 50 Slots Used
+                               </span>
+                          </div>
+                          
+                          {savedCharacters.length === 0 ? (
+                              <div className={`w-full py-12 rounded-xl flex flex-col items-center justify-center gap-3 font-sans text-sm ${isEditorial ? 'bg-stone-50 text-stone-500 border-2 border-dashed border-stone-200' : 'bg-slate-900/30 text-slate-500 border-2 border-dashed border-slate-800'}`}>
+                                  <span className="text-3xl grayscale opacity-50">🎭</span>
+                                  <p>Your Character Vault is empty.</p>
+                                  <p className="text-xs opacity-70">Upload a character image in the slots above to automatically save them to your Vault.</p>
+                              </div>
+                          ) : (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                   {savedCharacters.map(char => (
+                                        <div key={char.id} className={`group relative p-2 rounded-xl transition-all cursor-pointer flex flex-col ${isEditorial ? 'bg-white border border-stone-200 hover:border-stone-400 hover:shadow-md' : 'bg-slate-900/80 border border-slate-700 hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/10'}`}>
+                                             <div className="aspect-[3/4] w-full bg-slate-950 rounded-lg overflow-hidden mb-2 relative">
+                                                  <img src={(char.imageUrl || char.image_url) ? ((char.imageUrl || char.image_url).startsWith('http') || (char.imageUrl || char.image_url).startsWith('data:') ? (char.imageUrl || char.image_url) : `data:image/jpeg;base64,${char.imageUrl || char.image_url}`) : 'https://via.placeholder.com/150'} alt={char.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                             </div>
+                                             <div className="px-1 flex flex-col flex-1">
+                                                 <span className={`font-sans font-bold text-xs truncate block ${isEditorial ? 'text-stone-800' : 'text-slate-200'}`}>{char.name}</span>
+                                                 <span className={`text-[10px] truncate block mb-2 ${isEditorial ? 'text-stone-500' : 'text-slate-400'}`}>{char.role_type || 'Unassigned'}</span>
+                                                 
+                                                 <div className="mt-auto grid grid-cols-1 gap-1">
+                                                      <button 
+                                                           onClick={() => {
+                                                                const persona = { base64: char.imageUrl || char.image_url || '', desc: char.description || '' };
+                                                                if (char.role_type === 'Hero' || !char.role_type) props.onSelectHero(persona);
+                                                                else if (char.role_type === 'Co-Star' || char.role_type === 'Friend') props.onSelectFriend(persona);
+                                                                else if (char.role_type === 'Villain') props.onSelectVillain(persona);
+                                                           }}
+                                                           className={`text-[10px] py-1 uppercase tracking-wide rounded border transition-colors ${
+                                                                isEditorial
+                                                                     ? 'bg-stone-100 hover:bg-stone-800 text-stone-700 hover:text-white border-stone-300 font-sans font-bold'
+                                                                     : 'bg-indigo-900/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border-indigo-700/50 font-sans font-bold'
+                                                           }`}
+                                                      >
+                                                           {isEditorial ? "ASSIGN ROLE" : "CAST ROLE"}
+                                                      </button>
+                                                 </div>
+                                             </div>
+                                        </div>
+                                   ))}
+                              </div>
+                          )}
+                      </div>
+
 
                         {/* CHARACTER VISUAL COHESION CONTROLS (HAIR & OUTIFT STYLING) */}
                         <div className={`mt-4 p-5 rounded-lg text-left ${
                              isEditorial 
                                   ? 'bg-stone-100/90 border border-stone-300 shadow-sm' 
-                                  : 'bg-slate-900 border border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                                  : 'bg-slate-900/60 border border-indigo-500/30 shadow-sm'
                         }`}>
                              <div className="flex items-center gap-2 mb-2">
                                   <span className="text-xl">{isEditorial ? '✒️' : '💈'}</span>
@@ -2214,7 +2160,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                   <div className={`md:col-span-3 mt-4 p-4 rounded ${
                                        isEditorial 
                                             ? 'border border-stone-300 bg-stone-50' 
-                                            : 'border-2 border-red-500/30 bg-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.8)]'
+                                            : 'border-2 border-red-500/30 bg-slate-950 shadow-md'
                                   }`}>
                                         <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-3 gap-2 ${isEditorial ? 'border-stone-200' : 'border-red-500/20'}`}>
                                              <div className="flex flex-col text-left">
@@ -2710,7 +2656,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                disabled={suggestingFields['creativeDirectives']}
                                                className={isEditorial
                                                    ? 'text-[9px] bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-300 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-semibold uppercase font-sans'
-                                                   : 'text-[9px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-200 border border-cyan-500/40 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-bold uppercase hover:text-white'}
+                                                   : 'text-[9px] bg-cyan-950/60 hover:bg-cyan-900 text-cyan-200 border border-indigo-500/50/40 rounded px-2 py-0.5 tracking-wide transition-all disabled:opacity-40 font-bold uppercase hover:text-white'}
                                           >
                                                {suggestingFields['creativeDirectives']
                                                    ? (isEditorial ? '✨ Thinking…' : '⚡ AI THINKING...')
@@ -2852,7 +2798,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                          }}
                                                          className={`text-[8.5px] font-sans tracking-wide px-1.5 py-0.5 rounded transition-colors uppercase font-bold ${isEditorial
                                                              ? 'bg-white hover:bg-stone-100 text-stone-600 border border-stone-200 hover:border-stone-400'
-                                                             : 'bg-slate-950 hover:bg-slate-800 text-gray-300 border border-slate-800 hover:border-cyan-500/50'}`}
+                                                             : 'bg-slate-950 hover:bg-slate-800 text-gray-300 border border-slate-800 hover:border-indigo-500/50/50'}`}
                                                     >
                                                          + {tagObj.label}
                                                     </button>
@@ -3114,9 +3060,6 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 </div>
             </div>
         )}
-        {(isCyberpunk || activeTab === 'persona') && (
-            <WorkspaceCasting />
-        )}
         {(isCyberpunk || activeTab === 'blueprint') && (
             <WorkspaceDirector />
         )}
@@ -3235,20 +3178,20 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                               <p className="font-bold animate-pulse font-mono text-xs">Summoning Leonardo.ai...</p>
                                           </div>
                                       ) : vaultReferenceImage ? (
-                                          <img src={`data:image/jpeg;base64,${vaultReferenceImage}`} alt="Uploaded Preview" className="w-full h-full object-cover opacity-30 grayscale blur-sm" />
+                                          <img src={`data:image/jpeg;base64,${vaultReferenceImage}`} alt="Uploaded Preview" className="w-full h-full object-cover" />
                                       ) : (
                                           <div className="text-center px-6 text-slate-600 font-mono text-xs">
                                               <div className="text-4xl mb-4 opacity-50">👤</div>
-                                              <p>Your generated avatar will appear here.</p>
+                                              <p>Your generated or uploaded avatar will appear here.</p>
                                           </div>
                                       )}
                                   </div>
                                   
                                   <div className="mt-6">
                                       <button 
-                                          disabled={!vaultGeneratedImage || isVaultGenerating} 
+                                          disabled={(!vaultGeneratedImage && !vaultReferenceImage) || isVaultGenerating} 
                                           onClick={handleSaveToVault}
-                                          className={`w-full py-4 rounded-xl font-bold transition-all uppercase tracking-wider ${!vaultGeneratedImage || isVaultGenerating ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`}
+                                          className={`w-full py-4 rounded-xl font-bold transition-all uppercase tracking-wider ${(!vaultGeneratedImage && !vaultReferenceImage) || isVaultGenerating ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[4px_4px_0px_rgba(0,0,0,1)]'}`}
                                       >
                                           💾 Save to Vault
                                       </button>
@@ -3269,9 +3212,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     </div>
                                 ) : (
                                     savedCharacters.map(char => (
-                                          <div key={char.id} className="group relative bg-slate-900 border-2 border-slate-800 p-2 rounded-xl hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all cursor-pointer">
+                                          <div key={char.id} className="group relative bg-slate-900 border-2 border-slate-800 p-2 rounded-xl hover:border-emerald-500 hover:shadow-sm transition-all cursor-pointer">
                                               <div className="aspect-[3/4] w-full bg-black rounded-lg overflow-hidden mb-3 relative">
-                                                  <img src={char.imageUrl || 'https://via.placeholder.com/150'} alt={char.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                  <img src={(char.imageUrl || char.image_url) ? ((char.imageUrl || char.image_url).startsWith('http') || (char.imageUrl || char.image_url).startsWith('data:') ? (char.imageUrl || char.image_url) : `data:image/jpeg;base64,${char.imageUrl || char.image_url}`) : 'https://via.placeholder.com/150'} alt={char.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                               </div>
                                               <span className="font-mono font-bold text-xs text-white truncate block text-center mb-1">{char.name}</span>
                                               {char.role === 'Vaulted' && (

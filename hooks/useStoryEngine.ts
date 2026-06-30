@@ -19,7 +19,10 @@ export const generateImageBase = async (
     try {
         const response = await fetch('/api/gemini/image', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-gemini-key': localStorage.getItem('GEMINI_API_KEY') || ''
+            },
             body: JSON.stringify({
                 beat,
                 type,
@@ -65,7 +68,10 @@ export const generateTextBeatBase = async (
     try {
         const response = await fetch('/api/gemini/beat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-gemini-key': localStorage.getItem('GEMINI_API_KEY') || ''
+            },
             body: JSON.stringify(promptOptions)
         });
 
@@ -91,7 +97,10 @@ export const generateSpeechBase = async (text: string, voiceName: string): Promi
     try {
         const res = await fetch('/api/gemini/speech', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-gemini-key': localStorage.getItem('GEMINI_API_KEY') || ''
+            },
             body: JSON.stringify({ text, voiceName })
         });
         if (!res.ok) {
@@ -110,7 +119,10 @@ export const enhanceKidStoryBase = async (rawText: string): Promise<string> => {
     try {
         const res = await fetch('/api/gemini/enhance-kid-story', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-gemini-key': localStorage.getItem('GEMINI_API_KEY') || ''
+            },
             body: JSON.stringify({ rawText })
         });
         if (!res.ok) {

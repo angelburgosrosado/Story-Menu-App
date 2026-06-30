@@ -470,7 +470,7 @@ export const AdminApp: React.FC = () => {
         >
           <X size={24} />
         </button>
-        <div className="w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+        <div className="w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-2xl relative z-10 border border-slate-700">
           <h2 className="text-3xl font-black mb-8 text-center tracking-tight text-white flex items-center justify-center gap-3">
             <Shield className="text-blue-500" /> Secure Login
           </h2>
@@ -510,20 +510,6 @@ export const AdminApp: React.FC = () => {
             </button>
           </form>
 
-          <div className="relative mb-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-slate-800 text-slate-500 font-mono text-xs uppercase">
-                Or use Identity Provider
-              </span>
-            </div>
-          </div>
-
-          <div className="opacity-90 hover:opacity-100 transition-opacity">
-            <AuthScreen onUserChange={() => {}} />
-          </div>
         </div>
       </div>
     );
@@ -1252,6 +1238,22 @@ export const AdminApp: React.FC = () => {
                           <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1">AI Generation Prompt Base</label>
                             <textarea value={newGlobalChar.generationPrompt} onChange={e => setNewGlobalChar({...newGlobalChar, generationPrompt: e.target.value})} className="w-full bg-slate-50 border border-slate-200 p-2 rounded text-sm text-slate-800 font-mono" rows={3} />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 mb-1">Reference Images (Base64 Array)</label>
+                            <input type="file" multiple accept="image/*" onChange={async (e) => {
+                                const files = Array.from(e.target.files || []);
+                                const processFile = (file: File) => new Promise<string>((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => resolve(ev.target?.result as string);
+                                    reader.readAsDataURL(file);
+                                });
+                                const base64s = await Promise.all(files.map(processFile));
+                                setNewGlobalChar(prev => ({ ...prev, referenceImages: [...prev.referenceImages, ...base64s] }));
+                            }} className="w-full bg-slate-50 border border-slate-200 p-2 rounded text-sm text-slate-800" />
+                            {newGlobalChar.referenceImages.length > 0 && (
+                                <p className="text-xs text-slate-500 mt-1">{newGlobalChar.referenceImages.length} images selected</p>
+                            )}
                           </div>
                           <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition-colors text-sm">
                             Add Character

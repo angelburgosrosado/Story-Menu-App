@@ -12,7 +12,12 @@ import { KidStoryDashboard } from './KidStoryDashboard';
 const getActiveSkin = (): 'comic' | 'kid-story' => {
     try {
         const saved = localStorage.getItem('story_menu_skin');
-        if (saved === 'comic' || saved === 'kid-story') return saved;
+        if (saved === 'comic') return 'comic';
+        // Force overriding 'kid-story' back to 'comic' for this session so the user isn't stuck
+        if (saved === 'kid-story') {
+            localStorage.setItem('story_menu_skin', 'comic');
+            return 'comic';
+        }
         return 'comic';
     } catch {
         return 'comic';

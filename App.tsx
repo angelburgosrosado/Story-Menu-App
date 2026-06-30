@@ -71,6 +71,12 @@ const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number } | null>(null);
   const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Force reset on mount to ensure Fast Refresh doesn't preserve a dirty 'true' state from earlier tests
+    setHasSelectedMode(false);
+  }, []);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [landingPreviewTab, setLandingPreviewTab] = useState<'blueprint' | 'visuals' | 'sound'>('blueprint');
   const [landingAuthOpen, setLandingAuthOpen] = useState(false);
@@ -257,6 +263,12 @@ const App: React.FC = () => {
     setIsStarted(true);
     setShowSetup(false);
     setIsTransitioning(false);
+  };
+
+  const handleReset = () => {
+    setComicFaces([]);
+    setIsStarted(false);
+    setShowSetup(true);
   };
 
   const handleLoadDraft = (draft: any) => {
@@ -1051,6 +1063,19 @@ const App: React.FC = () => {
     }, 1100);
   }
 
+  const downloadPDF = () => {
+    const PAGE_WIDTH = 480;
+    const PAGE_HEIGHT = 720;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [PAGE_WIDTH, PAGE_HEIGHT] });
+    const pagesToPrint = comicFaces.filter(face => face.imageUrl && !face.isLoading).sort((a, b) => (a.pageIndex || 0) - (b.pageIndex || 0));
+
+    pagesToPrint.forEach((face, index) => {
+        if (index > 0) doc.addPage([PAGE_WIDTH, PAGE_HEIGHT], 'portrait');
+        if (face.imageUrl) doc.addImage(face.imageUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+    });
+    doc.save('Infinite-Heroes-Issue.pdf');
+  };
+
 const handleHeroUpload = async (file: File) => {
        if (!validateUpload(file)) return;
        try { 
@@ -1087,6 +1112,9 @@ const handleVillainUpload = async (file: File) => {
   if (!hasSelectedMode) {
     return (
       <ModeSelectionScreen onSelect={(mode) => { 
+        // Save the chosen mode globally so MainLayout switches the UI!
+        localStorage.setItem('story_menu_skin', mode);
+        window.dispatchEvent(new Event('storage'));
         setHasSelectedMode(true); 
       }} />
     );
@@ -1220,10 +1248,10 @@ const handleVillainUpload = async (file: File) => {
               <button onClick={() => generateBatch(1, 5)} className={`w-full py-3 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/30 ${isLightMode ? 'bg-orange-500 hover:bg-orange-400 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
                 Generate Next 5 Pages <Zap size={16} />
               </button>
-              <button onClick={() => onDownload()} className={`mt-3 w-full py-3 rounded-xl font-bold transition-all shadow-lg ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
+              <button onClick={() => downloadPDF()} className={`mt-3 w-full py-3 rounded-xl font-bold transition-all shadow-lg ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
                 Download Book <Download size={16} />
               </button>
-              <button onClick={() => onReset()} className={`mt-3 w-full py-3 rounded-xl font-bold transition-all shadow-lg ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
+              <button onClick={() => handleReset()} className={`mt-3 w-full py-3 rounded-xl font-bold transition-all shadow-lg ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
                 Reset Book <RotateCcw size={16} />
               </button>
             </div>
@@ -1316,8 +1344,8 @@ const handleVillainUpload = async (file: File) => {
                 }
               }}
               onOpenBook={() => setIsStarted(true)}
-              onDownload={onDownload} // Assuming these are passed down from parent or global
-              onReset={onReset}       // Assuming these are passed down from parent or global
+              onDownload={downloadPDF} // Assuming these are passed down from parent or global
+              onReset={handleReset}
               onUpdateText={(pageIndex, field, text) => {
                 // Update text in comicFaces state
                 setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, [field]: text } : f));

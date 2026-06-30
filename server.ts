@@ -1422,7 +1422,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             try {
                 let llamagenResult: string | null = null;
                 try {
-                    const comicPkg = require('comic');
+                    const comicPkg = await import('comic');
                     const generator = new comicPkg.ComicGenerator({ apiKey });
                     const comicResponse = await generator.create({
                         panels: [{ prompt: promptText, characterReference: heroRef?.base64 }],
@@ -1742,7 +1742,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 const errText = await response.text();
                 throw new Error(`Leonardo API returned code: ${response.status}. Details: ${errText}`);
             } catch (err: any) {
-                console.error("Leonardo.ai API error:", err.message, err.stack); require("fs").appendFileSync("error.log", "LEO_ERR:" + err.message + "\n" + err.stack + "\n");
+                console.error("Leonardo.ai API error:", err.message, err.stack);
                 return res.status(500).json({ error: `Leonardo failed: ${err.message}` });
             }
         }

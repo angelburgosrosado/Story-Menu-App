@@ -29,8 +29,11 @@ interface AccountProps {
 const getActiveSkin = (): 'comic' | 'writers-journal' | 'kid-story' => {
   try {
     const saved = localStorage.getItem('story_menu_skin');
-    if (saved === 'editorial' || saved === 'short-story') return 'writers-journal';
-    if (saved === 'comic' || saved === 'writers-journal' || saved === 'kid-story') return saved;
+    if (saved === 'comic') return 'comic';
+    if (saved === 'kid-story') {
+      localStorage.setItem('story_menu_skin', 'comic');
+      return 'comic';
+    }
     return 'comic';
   } catch {
     return 'comic';

@@ -112,18 +112,26 @@ export const Setup: React.FC<SetupProps> = (props) => {
     }>({ status: 'Connecting', mode: '' });
     const [cloudRunConfig, setCloudRunConfig] = useState<any>({ isCloudRun: false, service: '', revision: '', configuration: '', project: '', port: '', region: '' });
     const [savedCharacters, setSavedCharacters] = useState<any[]>([]);
-    const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
+        const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
+    const [adminSettings, setAdminSettings] = useState<any[]>([]);
     
     useEffect(() => {
-        const loadCategories = async () => {
+                const loadCategories = async () => {
             try {
-                const res = await fetch('/api/categories');
-                if (res.ok) {
-                    const data = await res.json();
+                const [catRes, setRes] = await Promise.all([
+                    fetch('/api/categories'),
+                    fetch('/api/admin/settings')
+                ]);
+                if (catRes.ok) {
+                    const data = await catRes.json();
                     setDynamicCategories(data);
                 }
+                if (setRes.ok) {
+                    const sData = await setRes.json();
+                    setAdminSettings(sData);
+                }
             } catch (e) {
-                console.error("Failed to load dynamic taxonomy", e);
+                console.error("Failed to load backend configurations", e);
             }
         };
         loadCategories();
@@ -135,8 +143,14 @@ export const Setup: React.FC<SetupProps> = (props) => {
     // Tab control & Studio Projects Library state
     const [appSkin, setAppSkinState] = useState<'comic' | 'writers-journal' | 'kid-story'>(() => {
         try {
-            return (localStorage.getItem('story_menu_skin') as any) || 'comic';
-        } catch (e) {
+            const saved = localStorage.getItem('story_menu_skin');
+            if (saved === 'comic') return 'comic';
+            if (saved === 'kid-story') {
+                localStorage.setItem('story_menu_skin', 'comic');
+                return 'comic';
+            }
+            return 'comic';
+        } catch {
             return 'comic';
         }
     });
@@ -337,19 +351,19 @@ export const Setup: React.FC<SetupProps> = (props) => {
     // Skin computed values
     const sOuterContainer = isEditorial 
         ? "max-w-[1100px] w-full bg-[#fbfbfa] text-stone-900 border border-stone-200/80 shadow-2xl p-6 md:p-10 relative rounded-2xl font-sans"
-        : isKidStory ? "max-w-[1100px] w-full bg-blue-100 text-black border-4 border-blue-400 p-6 rounded-3xl" : "max-w-[1100px] w-full bg-gray-950 text-cyan-50 cyber-border shadow-[0_0_40px_rgba(34,211,238,0.15)] p-6 md:p-8 relative overflow-hidden rounded-xl font-sans";
+        : isKidStory ? "max-w-[1100px] w-full bg-blue-100 text-black border-4 border-blue-400 p-6 rounded-3xl" : "mx-auto max-w-[1100px] w-full bg-slate-950 text-slate-50 border border-slate-800 shadow-xl p-6 md:p-8 relative overflow-hidden rounded-2xl font-sans";
 
     const sCard = isEditorial
         ? "bg-white border border-stone-200 shadow-sm p-6 rounded-xl relative flex flex-col justify-between"
-        : isKidStory ? "bg-white border-2 border-blue-300 p-4 rounded-2xl" : "bg-gray-900 border border-cyan-900/50 p-5 rounded-lg shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] text-cyan-100 relative glass-panel";
+        : isKidStory ? "bg-white border-2 border-blue-300 p-4 rounded-2xl" : "bg-slate-900 border border-slate-700/60 p-5 rounded-xl shadow-lg text-slate-100 relative";
 
     const sPanel = isEditorial
         ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-stone-100 border border-stone-200 p-6 rounded-xl shadow-sm text-stone-800"
-        : isKidStory ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white border-2 border-blue-200 p-6 rounded-2xl" : "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-gray-950/80 border border-cyan-800/40 p-6 rounded-lg text-cyan-200 backdrop-blur-md";
+        : isKidStory ? "mb-6 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white border-2 border-blue-200 p-6 rounded-2xl" : "mb-8 relative z-10 grid grid-cols-1 md:grid-cols-12 gap-8 bg-slate-950 border border-slate-800/60 p-8 rounded-2xl text-slate-200";
 
     const sHeaderBadge = isEditorial
         ? "absolute -top-3.5 left-6 bg-stone-800 text-stone-50 border border-stone-850 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
-        : isKidStory ? "absolute -top-4 left-6 bg-gray-900 text-yellow-400 text-black font-sans text-lg px-4 py-1 rounded-full border-2 border-orange-400 font-bold z-10" : "absolute -top-3 left-6 bg-gray-900 text-cyan-400 font-mono text-xs uppercase px-3 py-1 border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] font-bold z-10 tracking-widest rounded-sm";
+        : isKidStory ? "absolute -top-4 left-6 bg-gray-900 text-yellow-400 text-black font-sans text-lg px-4 py-1 rounded-full border-2 border-orange-400 font-bold z-10" : "absolute -top-3 left-6 bg-slate-800 text-slate-200 font-sans text-[11px] uppercase px-3 py-1 border border-slate-700 shadow-sm font-bold z-10 tracking-widest rounded-md";
 
     const sHeaderBadgeRed = isEditorial
         ? "absolute -top-3.5 left-6 bg-amber-700 text-stone-50 border border-amber-805 font-sans text-[11px] uppercase px-3 py-1 font-semibold rounded shadow-sm z-10 tracking-widest leading-relaxed"
@@ -369,11 +383,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const sInput = isEditorial
         ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans"
-        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-gray-950/50 border border-cyan-800 text-cyan-100 text-xs p-2.5 rounded focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)] transition-all font-mono";
+        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm p-3 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-sans";
 
     const sSelect = isEditorial
         ? "w-full bg-white border border-stone-200 text-stone-900 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-stone-600 shadow-sm transition-all focus:border-stone-400 font-sans font-semibold"
-        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-gray-950/50 border border-cyan-800 text-cyan-100 text-xs p-2.5 rounded focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(34,211,238,0.3)] transition-all font-mono";
+        : isKidStory ? "w-full bg-white border-2 border-blue-200 text-black text-sm p-3 rounded-xl focus:border-blue-400" : "w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm p-3 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-sans";
 
     const sLabel = isEditorial
         ? "font-sans text-[11px] uppercase text-stone-500 font-bold tracking-wider block mb-1.5"
@@ -381,7 +395,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     const sPrimaryBtn = isEditorial
         ? "bg-stone-900 hover:bg-stone-805 text-stone-50 font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer"
-        : isKidStory ? "bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 btn-shimmer disabled:opacity-50 text-white font-mono uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded border border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.4)] hover:shadow-[0_0_25px_rgba(34,211,238,0.6)] transition-all cursor-pointer";
+        : isKidStory ? "bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3 rounded-full" : "flex items-center gap-1.5 disabled:opacity-50 bg-indigo-600 hover:bg-indigo-500 text-white font-sans uppercase tracking-widest text-xs font-bold px-5 py-2.5 rounded-lg shadow-md transition-all cursor-pointer active:scale-95 border border-indigo-500/50";
 
     const sRedBtn = isEditorial
         ? "bg-red-700 hover:bg-red-800 text-white font-sans uppercase tracking-widest text-[11px] font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer border border-red-800"
@@ -1735,13 +1749,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
                 {/* COMMERCIAL STATUS & INTRODUCTION BANNER */}
                 <div className={sPanel}>
-                    <div className="md:col-span-12 text-left font-sans">
+                    <div className="md:col-span-12 text-center font-sans">
                         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 ${isEditorial ? 'border-stone-200 pb-4 mb-4' : 'border-slate-800 pb-4 mb-4'}`}>
-                            <div>
-                                <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-mono font-black text-xl text-yellow-400 tracking-wider uppercase"}>
+                            <div className="flex-1 text-center">
+                                <h3 className={isEditorial ? "font-sans font-black text-base text-stone-800 tracking-wider uppercase" : "font-mono font-black text-xl text-yellow-400 tracking-wider uppercase inline-block"}>
                                      {t('setup.dashboard.cloudActive')}
                                 </h3>
-                                <p className={isEditorial ? "text-stone-500 font-sans text-xs mt-1" : "text-slate-400 font-mono text-xs mt-1"}>
+                                <p className={isEditorial ? "text-stone-500 font-sans text-xs mt-1" : "text-slate-400 font-mono text-xs mt-1 max-w-2xl mx-auto"}>
                                      {t('setup.dashboard.cloudDesc')}
                                 </p>
                             </div>
@@ -1820,7 +1834,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                               {isEditorial 
                                    ? t('setup.cast.descEditorial')
                                    : t('setup.cast.descComic')}
-                              <br/><span className="opacity-70 mt-1 block">Supported formats: JPG, PNG, WEBP, GIF (Max 5MB)</span>
+                              <br/><span className="opacity-70 mt-1 block">Supported formats: JPG, PNG, WEBP, GIF, HEIC (Max 5MB)</span>
                          </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -1831,7 +1845,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.hero ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.hero ? 'border-blue-500 hover:shadow-[0_0_24px_rgba(59,130,246,0.5)]' : 'border-blue-700/80 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)] hover:border-blue-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="hero-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onHeroUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*,.heic" id="hero-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onHeroUpload(e.target.files[0]); } e.target.value = ''; }} />
                                  
                                  {props.hero ? (
                                       <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[220px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
@@ -1917,7 +1931,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.friend ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.friend ? 'border-purple-500 hover:shadow-[0_0_24px_rgba(168,85,247,0.5)]' : 'border-purple-800 hover:shadow-[0_0_24px_rgba(168,85,247,0.3)] hover:border-purple-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="friend-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onFriendUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*,.heic" id="friend-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onFriendUpload(e.target.files[0]); } e.target.value = ''; }} />
                                  
                                  {props.friend ? (
                                       <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
@@ -2002,7 +2016,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                       ? `border bg-stone-100/90 ${props.villain ? 'border-stone-500 shadow-md' : 'border-stone-300 hover:border-stone-400'}`
                                       : `border-4 bg-slate-950 ${props.villain ? 'border-red-500 hover:shadow-[0_0_24px_rgba(239,68,68,0.5)]' : 'border-red-800 hover:shadow-[0_0_24px_rgba(239,68,68,0.3)] hover:border-red-500'}`
                             }`}>
-                                 <input type="file" accept="image/*" id="villain-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onVillainUpload(e.target.files[0]); } e.target.value = ''; }} />
+                                 <input type="file" accept="image/*,.heic" id="villain-upload-input" className="hidden" onChange={(e) => { if (e.target.files?.[0]) { props.onVillainUpload(e.target.files[0]); } e.target.value = ''; }} />
                                  
                                  {props.villain ? (
                                       <div className={`relative w-full h-36 mt-3 rounded-lg overflow-hidden group/main min-h-[144px] flex-shrink-0 ${isEditorial ? 'border border-stone-300' : 'border-2 border-black'}`}>
@@ -3189,7 +3203,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                           
                                           <div>
                                               <label className="block text-slate-400 mb-2 font-bold">5. Digital Avatar Photo (Optional)</label>
-                                              <input type="file" accept="image/*" onChange={handleAvatarUpload} className="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-2 text-white focus:outline-none focus:border-purple-500 text-[10px]" />
+                                              <input type="file" accept="image/*,.heic" onChange={handleAvatarUpload} className="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-2 text-white focus:outline-none focus:border-purple-500 text-[10px]" />
                                               {vaultReferenceImage && <p className="text-[10px] text-green-400 mt-1">✓ Image selected for Leonardo processing</p>}
                                           </div>
                                           

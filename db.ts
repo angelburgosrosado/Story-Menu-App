@@ -219,6 +219,62 @@ class FirebaseMockPool {
                 return { rows, rowCount: rows.length };
             }
 
+            if (sql.match(/SELECT\s+\*\s+FROM\s+content_categories/i)) {
+                const snapshot = await db.collection('content_categories').get();
+                let rows = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                rows.sort((a: any, b: any) => {
+                    const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    return tB - tA;
+                });
+                if (sql.match(/is_active\s*=\s*true/i)) {
+                    rows = rows.filter((r: any) => r.is_active !== false);
+                }
+                return { rows, rowCount: rows.length };
+            }
+
+            if (sql.match(/INSERT\s+INTO\s+content_categories/i)) {
+                const name = params[0];
+                const category_type = params[1];
+                const emoji = params[2];
+                const prompt_instruction = params[3];
+                const is_featured = params[4] || false;
+                const docId = db.collection('content_categories').doc().id;
+                const data = {
+                    id: docId,
+                    name,
+                    category_type,
+                    emoji,
+                    prompt_instruction,
+                    is_featured,
+                    is_active: true,
+                    created_at: new Date().toISOString()
+                };
+                await db.collection('content_categories').doc(docId).set(data);
+                return { rows: [data], rowCount: 1 };
+            }
+
+            if (sql.match(/DELETE\s+FROM\s+content_categories\s+WHERE\s+id\s+=\s+\$1/i)) {
+                const id = params[0];
+                await db.collection('content_categories').doc(id).delete();
+                return { rows: [], rowCount: 1 };
+            }
+
+            if (sql.match(/UPDATE\s+content_categories\s+SET/i)) {
+                const id = params[params.length - 1];
+                const updateData: any = {};
+                const fieldsMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+                if (fieldsMatch) {
+                    const fieldsStr = fieldsMatch[1];
+                    const fieldAssignments = fieldsStr.split(',').map(f => f.trim().split('=')[0].trim());
+                    fieldAssignments.forEach((field, index) => {
+                        updateData[field] = params[index];
+                    });
+                }
+                await db.collection('content_categories').doc(id).update(updateData);
+                return { rows: [], rowCount: 1 };
+            }
+
             console.warn(`[FirebaseMockPool] Unhandled SQL query: ${sql}`);
             return { rows: [], rowCount: 0 };
 

@@ -15,6 +15,7 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
+import { GENRES, STYLE_KEYWORDS, ART_STYLES } from './types';
 import Stripe from 'stripe';
 
 import admin from 'firebase-admin';
@@ -222,12 +223,57 @@ if (process.env.DATABASE_URL) {
     }
 }
 
+// Mapped list of all standard Genres & Visual Art Styles
+const DEFAULT_CATEGORIES = [
+    // 1. Genres
+    ...GENRES.map((name) => {
+        const id = `genre-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        const emoji = ({
+            "Classic Horror": "💀",
+            "Superhero Action": "⚡",
+            "Dark Sci-Fi": "🚀",
+            "High Fantasy": "🏰",
+            "Neon Noir Detective": "🕵️",
+            "Wasteland Apocalypse": "☣️",
+            "Lighthearted Comedy": "🎭",
+            "Teen Drama / Slice of Life": "🎒",
+            "Anime Story": "🌸",
+            "Historical Archeology Tales": "🏺",
+            "Custom": "✨"
+        } as Record<string, string>)[name] || "📖";
+        return {
+            id,
+            category_type: 'Genre',
+            name,
+            emoji,
+            prompt_instruction: STYLE_KEYWORDS[name] || 'clean illustration, modern aesthetic',
+            is_featured: ['Superhero Action', 'Classic Horror', 'Dark Sci-Fi', 'Anime Story'].includes(name),
+            is_active: true,
+            created_at: new Date().toISOString()
+        };
+    }),
+    // 2. Art Styles
+    ...ART_STYLES.map((style) => {
+        return {
+            id: `style-${style.id}`,
+            category_type: 'Style',
+            name: style.name,
+            emoji: '🎨',
+            prompt_instruction: style.promptTemplate,
+            is_featured: ['vibrant-comic', 'studio-ghibli'].includes(style.id),
+            is_active: true,
+            created_at: new Date().toISOString()
+        };
+    })
+];
+
 // Simple In-memory database fallback to ensure app stays 100% functional without DB configuration
 const memoryDb = {
     users: [] as any[],
     character_vault: [] as any[],
     projects: [] as any[],
     project_casting: [] as any[],
+    content_categories: [...DEFAULT_CATEGORIES],
     app_settings: [
         { key_name: 'stripe_publishable_key', key_value: process.env.STRIPE_PUBLISHABLE_KEY || '', is_secret: false },
         { key_name: 'stripe_secret_key', key_value: process.env.STRIPE_SECRET_KEY || '', is_secret: true },
@@ -260,6 +306,30 @@ const isConnectionError = (err: any) => {
            msg.includes('timeout') || 
            msg.includes('socket');
 };
+
+async function seedDefaultCategoriesIfEmpty(): Promise<void> {
+    if (!isDatabaseConnected()) return;
+    const pool = getDbPool();
+    if (!pool) return;
+    try {
+        const countRes = await pool.query('SELECT COUNT(*) as count FROM content_categories');
+        const count = parseInt(countRes.rows[0].count, 10);
+        if (count === 0) {
+            console.log("🌱 Database content_categories table is empty. Auto-seeding 23 default categories...");
+            for (const cat of DEFAULT_CATEGORIES) {
+                await pool.query(
+                    `INSERT INTO content_categories (name, category_type, emoji, prompt_instruction, is_featured, is_active)
+                     VALUES ($1, $2, $3, $4, $5, $6)
+                     ON CONFLICT DO NOTHING`,
+                    [cat.name, cat.category_type, cat.emoji, cat.prompt_instruction, cat.is_featured, cat.is_active]
+                );
+            }
+            console.log("✅ Successfully seeded content_categories.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to auto-seed content_categories:", e.message);
+    }
+}
 
 async function ensureUserExists(pool: any, userId: string) {
     if (!userId) return;
@@ -411,7 +481,9 @@ Sitemap: https://storymenu.app/sitemap.xml`
 
     // Try starting & initializing PostgreSQL structure asynchronously so it does not block server startup
     console.info(`📡 Current server-side process.env.DATABASE_URL (masked): ${process.env.DATABASE_URL ? maskConnectionUri(process.env.DATABASE_URL) : 'None'}`);
-    initializeDatabaseSchema().catch((e) => {
+    initializeDatabaseSchema().then(() => {
+        return seedDefaultCategoriesIfEmpty();
+    }).catch((e) => {
         console.warn("Could not auto-initialize DB tables on reboot:", e);
     });
 
@@ -475,6 +547,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
             
             // Re-attempt initial schema checks or pool verification
             await initializeDatabaseSchema();
+            await seedDefaultCategoriesIfEmpty();
             
             const connected = isDatabaseConnected();
             return res.json({
@@ -2685,21 +2758,38 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     app.get('/api/admin/categories', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            return res.json(memoryDb.content_categories || DEFAULT_CATEGORIES);
+        }
         const pool = getDbPool();
         if (pool) {
             try {
                 const result = await pool.query(`SELECT * FROM content_categories ORDER BY created_at DESC`);
-                return res.json(result.rows);
+                if (result.rows && result.rows.length > 0) {
+                    return res.json(result.rows);
+                }
             } catch(e) { }
         }
-        return res.json([
-            { id: '1', category_type: 'Genre', name: 'Sci-Fi Cyberpunk' },
-            { id: '2', category_type: 'Style', name: 'Cell-Shaded Anime' }
-        ]);
+        return res.json(DEFAULT_CATEGORIES);
     });
 
     app.post('/api/admin/categories', async (req, res): Promise<any> => {
         const { name, category_type, emoji, prompt_instruction, is_featured } = req.body;
+        if (!isDatabaseConnected()) {
+            const newItem = {
+                id: crypto.randomUUID(),
+                name,
+                category_type,
+                emoji: emoji || '📖',
+                prompt_instruction: prompt_instruction || 'clean illustration, modern aesthetic',
+                is_featured: is_featured || false,
+                is_active: true,
+                created_at: new Date().toISOString()
+            };
+            memoryDb.content_categories = memoryDb.content_categories || [];
+            memoryDb.content_categories.push(newItem);
+            return res.json({ success: true });
+        }
         const pool = getDbPool();
         if (pool) {
             try {
@@ -2714,6 +2804,21 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         try {
             const id = req.params.id;
             const { name, category_type, emoji, prompt_instruction, is_featured, is_active } = req.body;
+            
+            if (!isDatabaseConnected()) {
+                memoryDb.content_categories = memoryDb.content_categories || [];
+                const cat = memoryDb.content_categories.find((c: any) => c.id === id);
+                if (cat) {
+                    if (name !== undefined) cat.name = name;
+                    if (category_type !== undefined) cat.category_type = category_type;
+                    if (emoji !== undefined) cat.emoji = emoji;
+                    if (prompt_instruction !== undefined) cat.prompt_instruction = prompt_instruction;
+                    if (is_featured !== undefined) cat.is_featured = is_featured;
+                    if (is_active !== undefined) cat.is_active = is_active;
+                }
+                return res.json({ success: true });
+            }
+
             const pool = getDbPool();
             if (pool) {
                 // Determine fields to update dynamically or just update all
@@ -2740,17 +2845,19 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     app.get('/api/categories', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) {
+            return res.json((memoryDb.content_categories || DEFAULT_CATEGORIES).filter((c: any) => c.is_active !== false));
+        }
         const pool = getDbPool();
         if (pool) {
             try {
                 const result = await pool.query(`SELECT * FROM content_categories WHERE is_active = true ORDER BY created_at DESC`);
-                return res.json(result.rows);
+                if (result.rows && result.rows.length > 0) {
+                    return res.json(result.rows);
+                }
             } catch(e) { }
         }
-        return res.json([
-            { id: '1', category_type: 'Genre', name: 'Sci-Fi Cyberpunk', emoji: '🚀', prompt_instruction: 'cyberpunk, grimdark, neon glow, intricate mechanical details, moody atmosphere, futuristic dystopian', is_featured: true },
-            { id: '2', category_type: 'Style', name: 'Cell-Shaded Anime', emoji: '🖍️', prompt_instruction: 'anime style, cel-shaded, large expressive eyes, dynamic action lines, colorful hair, japanese animation aesthetic, vibrant', is_featured: false }
-        ]);
+        return res.json(DEFAULT_CATEGORIES.filter(c => c.is_active !== false));
     });
 
     app.post('/api/admin/categories/suggest', async (req, res): Promise<any> => {
@@ -2768,11 +2875,17 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
             return res.status(500).json({ error: error.message, suggestions: [] });
         }
     });
-app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
+    
+    app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.content_categories = (memoryDb.content_categories || []).filter((c: any) => c.id !== id);
+            return res.json({ success: true });
+        }
         const pool = getDbPool();
         if (pool) {
             try {
-                await pool.query(`DELETE FROM content_categories WHERE id = $1`, [req.params.id]);
+                await pool.query(`DELETE FROM content_categories WHERE id = $1`, [id]);
             } catch(e) { }
         }
         return res.json({ success: true });

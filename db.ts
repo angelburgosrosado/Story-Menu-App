@@ -11,7 +11,7 @@ if (!getApps().length) {
         try {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
             initializeApp({
-                credential: admin.credential.cert(serviceAccount),
+                credential: (admin as any).credential.cert(serviceAccount),
                 projectId: serviceAccount.project_id
             });
         } catch (e) {

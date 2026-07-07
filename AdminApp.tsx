@@ -177,7 +177,7 @@ export const AdminApp: React.FC = () => {
     const files = Array.from(e.target.files);
 
     const processFile = async (f: File): Promise<string> => {
-      let fileToRead = f;
+      let fileToRead: Blob | File = f;
       if (
         f.name.toLowerCase().endsWith(".heic") ||
         f.name.toLowerCase().endsWith(".heif")
@@ -186,7 +186,7 @@ export const AdminApp: React.FC = () => {
           const converted = await heic2any({ blob: f, toType: "image/jpeg" });
           fileToRead = Array.isArray(converted)
             ? converted[0]
-            : (converted as Blob as File);
+            : (converted as Blob);
         } catch (err) {
           console.error("HEIC conversion error", err);
         }
@@ -346,15 +346,9 @@ export const AdminApp: React.FC = () => {
       if (health.integrations?.stripe?.status === "error")
         throw new Error(health.integrations.stripe.message);
 
-      import("./check_balance").then(async (m) => {
-        const testBalance = await m
-          .checkUserBalance("local-creator@infinite.multiverse")
-          .catch(() => null);
-        console.log(
-          "[VERIFICATION] Storage/Firestore OK. Sample balance read:",
-          testBalance,
-        );
-      });
+      console.log(
+        "[VERIFICATION] Storage/Firestore OK.",
+      );
 
       setTimeout(() => {
         alert(
@@ -433,7 +427,7 @@ export const AdminApp: React.FC = () => {
     }
   };
 
-  const handleUpdateSetting = async (key: string, value: string) => {
+  const handleUpdateSetting = async (key: string, value: string, isSecret?: boolean, description?: string) => {
     try {
       await adminFetch("/api/admin/settings", {
         method: "POST",
@@ -441,7 +435,8 @@ export const AdminApp: React.FC = () => {
         body: JSON.stringify({
           keyName: key,
           keyValue: value,
-          isSecret: false,
+          isSecret: isSecret ?? false,
+          description: description ?? '',
         }),
       });
       fetchData();

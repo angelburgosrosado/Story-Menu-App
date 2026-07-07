@@ -308,9 +308,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
         if (isFirebaseUser) {
             await saveCharacterToFirestore(props.activeCreator.id, {
-                ...newChar,
                 userId: props.activeCreator.id,
-                createdAt: Date.now()
+                name: newChar.name,
+                roleType: 'Hero',
+                description: newChar.description,
+                imageUrl: newChar.imageUrl
             });
         } else {
             const list = [...savedCharacters, newChar];

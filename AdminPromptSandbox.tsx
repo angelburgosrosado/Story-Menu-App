@@ -1,8 +1,14 @@
 import heic2any from 'heic2any';
 import React, { useState, useRef, useMemo } from 'react';
 import { Loader2, Play, Image as ImageIcon, CheckCircle, Wand2, UploadCloud, Images, Code2, LayoutTemplate } from 'lucide-react';
-import { Beat, Character } from './types';
+import { Beat } from './types';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES } from './types';
+
+interface Character {
+    name: string;
+    desc: string;
+    base64?: string;
+}
 
 export const AdminPromptSandbox: React.FC = () => {
     const [loadingBeat, setLoadingBeat] = useState(false);

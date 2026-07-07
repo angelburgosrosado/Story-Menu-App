@@ -167,6 +167,7 @@ export interface FirestoreDraft {
   userId: string;
   title: string;
   genre: string;
+  artStyle?: string;
   comicFaces: string; // Serialized ComicFace[]
   storyBlueprint: string; // Serialized ChapterGoal[]
   createdAt?: any;
@@ -183,6 +184,7 @@ export async function saveDraftToFirestore(userId: string, draft: Omit<Firestore
       userId,
       title: draft.title,
       genre: draft.genre,
+      artStyle: draft.artStyle || '',
       comicFaces: draft.comicFaces,
       storyBlueprint: draft.storyBlueprint,
       updatedAt: serverTimestamp(),
@@ -209,6 +211,7 @@ export async function getDraftsFromFirestore(userId: string): Promise<FirestoreD
         userId: data.userId || userId,
         title: data.title || 'Untitled Draft',
         genre: data.genre || 'Action',
+        artStyle: data.artStyle || '',
         comicFaces: data.comicFaces || '[]',
         storyBlueprint: data.storyBlueprint || '[]',
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),

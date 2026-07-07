@@ -138,7 +138,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
         // 2. Confirm the payment with Stripe
         const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
             payment_method: {
-                card: cardEl,
+                card: cardEl as any,
                 billing_details: { email }
             }
         });

@@ -127,7 +127,7 @@ const App: React.FC = () => {
       isOffline: true
     };
     setCurrentUser(u);
-    setActiveCreator({ id: u.id, email: u.email, tier: u.tier });
+    setActiveCreator({ id: u.id, email: u.email, tier: 'Free' });
     localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
     window.dispatchEvent(new Event('refresh-character-vault'));
   };

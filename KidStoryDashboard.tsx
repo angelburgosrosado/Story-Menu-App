@@ -52,7 +52,7 @@ export const KidStoryDashboard: React.FC<{ onNavigate?: (view: any) => void }> =
                 customPremise: storyPrompt,
                 storyTone: 'Whimsical',
             });
-            faces.push({ id: 'cover', type: 'cover', narrative: coverBeat, imageUrl: '', choices: [], pageIndex: 0 });
+            faces.push({ id: 'cover', type: 'cover', narrative: coverBeat, imageUrl: '', choices: [], pageIndex: 0, isLoading: false });
 
             // 2. Generate 3 inner pages of text
             for (let i = 1; i <= 3; i++) {
@@ -63,7 +63,7 @@ export const KidStoryDashboard: React.FC<{ onNavigate?: (view: any) => void }> =
                     customPremise: storyPrompt,
                     storyTone: 'Whimsical',
                 });
-                faces.push({ id: `page-${i}`, type: 'story', narrative: beat, imageUrl: '', choices: [], pageIndex: i });
+                faces.push({ id: `page-${i}`, type: 'story', narrative: beat, imageUrl: '', choices: [], pageIndex: i, isLoading: false });
             }
 
             setDraftBeats(faces);
@@ -98,9 +98,10 @@ export const KidStoryDashboard: React.FC<{ onNavigate?: (view: any) => void }> =
                 const face = finalizedFaces[i];
                 const imageType = face.type === 'cover' ? 'cover' : 'story';
                 const image = await generateImageBase(
-                    face.narrative, 
+                    face.narrative!, 
                     imageType, 
-                    'Childrens Storybook Illustration'
+                    'Childrens Storybook Illustration',
+                    {}
                 );
                 finalizedFaces[i].imageUrl = image;
             }

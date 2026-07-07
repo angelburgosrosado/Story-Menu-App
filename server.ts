@@ -23,7 +23,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 try {
-    admin.initializeApp();
+    admin.initializeApp({});
 } catch (e) {
     console.warn('Firebase Admin init failed. Default credentials not found. Admin auth will fallback to header email check for local dev.');
 }
@@ -267,13 +267,16 @@ const DEFAULT_CATEGORIES = [
     })
 ];
 
-// Simple In-memory database fallback to ensure app stays 100% functional without DB configuration
 const memoryDb = {
     users: [] as any[],
     character_vault: [] as any[],
     projects: [] as any[],
     project_casting: [] as any[],
     content_categories: [...DEFAULT_CATEGORIES],
+    admin_users: [] as any[],
+    admin_sessions: [] as any[],
+    subscription_plans: [] as any[],
+    webhook_logs: [] as any[],
     app_settings: [
         { key_name: 'stripe_publishable_key', key_value: process.env.STRIPE_PUBLISHABLE_KEY || '', is_secret: false },
         { key_name: 'stripe_secret_key', key_value: process.env.STRIPE_SECRET_KEY || '', is_secret: true },
@@ -1495,7 +1498,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             try {
                 let llamagenResult: string | null = null;
                 try {
-                    const comicPkg = await import('comic');
+                    const comicPkg = await import('comic' as any);
                     const generator = new comicPkg.ComicGenerator({ apiKey });
                     const comicResponse = await generator.create({
                         panels: [{ prompt: promptText, characterReference: heroRef?.base64 }],
@@ -1945,7 +1948,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
 
         try {
-            const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+            const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as any });
             const paymentIntent = await stripeClient.paymentIntents.create({
                 amount: amountCents,
                 currency: 'usd',
@@ -1993,7 +1996,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                          return res.status(400).json({ error: 'Stripe paymentIntentId is required.' });
                     }
                     
-                    const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' });
+                    const stripeClient = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as any });
                     const intent = await stripeClient.paymentIntents.retrieve(paymentIntentId);
                     
                     if (intent.status !== 'succeeded') {
@@ -2864,9 +2867,11 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         try {
             const { currentCategories } = req.body;
             const ai = getAIClient();
-            const model = ai.models.get({ model: "gemini-2.5-flash" });
             const prompt = `Analyze these current categories and suggest 5 new relevant tags or genres to expand the catalog. Return ONLY a JSON array of strings. Current: ${JSON.stringify(currentCategories)}`;
-            const response = await model.generateContent(prompt);
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: prompt
+            });
             let text = response.text || "[]";
             text = text.replace(/```json/g, '').replace(/```/g, '').trim();
             const suggestions = JSON.parse(text);
@@ -3354,7 +3359,7 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
             const secretKey = await getSettingValue('stripe_secret_key');
             if (!secretKey) return res.status(400).json({ error: 'Stripe is not configured' });
             
-            const stripe = new Stripe(secretKey, { apiVersion: '2025-02-24.acacia' });
+            const stripe = new Stripe(secretKey, { apiVersion: '2025-02-24.acacia' as any });
             const { tier, price } = req.body;
             
             const session = await stripe.checkout.sessions.create({

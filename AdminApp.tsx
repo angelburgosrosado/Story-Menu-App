@@ -1478,7 +1478,9 @@ export const AdminApp: React.FC = () => {
                                     });
                                   }}
                                 />
-                                <span className="font-medium">{feature}</span>
+                                <span className="font-medium">
+                                  {feature.split("_").slice(1).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                                </span>
                               </label>
                             ))}
                         </div>

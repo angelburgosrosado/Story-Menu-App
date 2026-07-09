@@ -1,4 +1,10 @@
 /**
+ * Screen Name: App Main Shell
+ * Purpose: Global state manager and router for Story.Menu features
+ * Version: 1.2
+ * Phase: Phase 12
+ * Date: 2026-07-08
+ * What changed in this revision: Added Account Settings dashboard integration.
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
@@ -7,6 +13,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from './types';
 import { Setup } from './Setup';
+import { StoryWorkspace } from './StoryWorkspace';
+import { WorkspaceReader } from './WorkspaceReader';
+import { PublicGallery, MOCK_STORIES } from './PublicGallery';
+import { PublicStoryDetail } from './PublicStoryDetail';
+import { PublicCreatorProfile } from './PublicCreatorProfile';
+import { SavedLibrary } from './SavedLibrary';
+import { RemixModal } from './RemixModal';
+import { ModerationDashboard, MOCK_REPORTS } from './ModerationDashboard';
+import { AccountSettings } from './AccountSettings';
+import { AutomationHub } from './AutomationHub';
+import { EducationDashboard } from './EducationDashboard';
+import { ProgressDashboard } from './ProgressDashboard';
+import { ModerationReview } from './ModerationReview';
+import { PricingPlans } from './PricingPlans';
+import { UsageDashboard } from './UsageDashboard';
+import { ReportModal, ReportReason } from './ReportModal';
 import { Book } from './Book';
 import { useApiKey } from './useApiKey';
 import { ApiKeyDialog } from './ApiKeyDialog';
@@ -23,6 +45,7 @@ import { fileToBase64 } from './imageUtils';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
 import { Sparkles, BookOpen, User, CheckCircle, Zap, Shield, Play, Layers, Cpu, Database, Volume2, ArrowRight, Eye, Palette, Flame, Radio, Clock, CloudLightning, Download, RotateCcw } from 'lucide-react';
 import i18n from './i18n';
+import { WorkspaceExport } from './WorkspaceExport';
 
 // --- Constants ---
 const MODEL_V3 = "gemini-3-pro-image-preview";
@@ -70,7 +93,7 @@ const App: React.FC = () => {
 
   // --- Firebase User Account States ---
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number; role?: 'Creator' | 'Teacher' | 'Parent' | 'Student' | 'Admin' } | null>(null);
   const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
 
   useEffect(() => {
@@ -90,6 +113,11 @@ const App: React.FC = () => {
   const [friend, setFriendState] = useState<Persona | null>(null);
   const [villain, setVillainState] = useState<Persona | null>(null);
   const [selectedGenre, setSelectedGenre] = useState(GENRES[0]);
+
+  // --- Trust & Moderation States ---
+  const [reports, setReports] = useState<ReportItem[]>(MOCK_REPORTS);
+  const [reportModalConfig, setReportModalConfig] = useState<{ targetId: string; targetType: 'story' | 'creator' } | null>(null);
+  const [activeReviewReportId, setActiveReviewReportId] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState('storybook');
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].code);
   const [customPremise, setCustomPremise] = useState("");
@@ -117,6 +145,36 @@ const App: React.FC = () => {
   const [comicFaces, setComicFaces] = useState<ComicFace[]>([]);
   const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
+  const [isReadingPreview, setIsReadingPreview] = useState(false);
+  const [projectTitle, setProjectTitle] = useState("Untitled Project");
+
+  // --- Phase 7 & 8: Public Gallery States ---
+  const [appMode, setAppMode] = useState<'studio' | 'gallery'>('studio');
+  const [galleryView, setGalleryView] = useState<'home' | 'story' | 'creator' | 'library' | 'moderation-dashboard' | 'moderation-review' | 'usage' | 'settings' | 'automation' | 'education-dashboard' | 'progress'>('home');
+  const [showPricing, setShowPricing] = useState(false);
+  const [selectedGalleryStoryId, setSelectedGalleryStoryId] = useState<string | null>(null);
+  const [selectedGalleryCreatorId, setSelectedGalleryCreatorId] = useState<string | null>(null);
+
+  const [savedStoryIds, setSavedStoryIds] = useState<string[]>(['story-2']);
+  const [followedCreators, setFollowedCreators] = useState<string[]>(['creator-2']);
+  const [showRemixModal, setShowRemixModal] = useState<boolean>(false);
+  const [remixTargetId, setRemixTargetId] = useState<string | null>(null);
+
+  const handleToggleSave = (storyId: string) => {
+    setSavedStoryIds(prev => prev.includes(storyId) ? prev.filter(id => id !== storyId) : [...prev, storyId]);
+  };
+  const handleToggleFollow = (creatorId: string) => {
+    setFollowedCreators(prev => prev.includes(creatorId) ? prev.filter(id => id !== creatorId) : [...prev, creatorId]);
+  };
+  const handleRemixAction = (storyId: string) => {
+    setRemixTargetId(storyId);
+    setShowRemixModal(true);
+  };
+  const handleConfirmRemix = (storyId: string) => {
+    setShowRemixModal(false);
+    // In a real app, this would duplicate the story state and switch to studio.
+    setAppMode('studio');
+  };
 
   const handleLaunchOfflineSandbox = () => {
     const offlineId = 'offline_creator_' + Math.random().toString(36).substring(2, 9);
@@ -124,12 +182,19 @@ const App: React.FC = () => {
       id: offlineId,
       email: 'local-artist@sandbox.mode',
       displayName: 'Offline Creator',
-      isOffline: true
+      isOffline: true,
+      role: 'Creator' as const
     };
     setCurrentUser(u);
     setActiveCreator({ id: u.id, email: u.email, tier: 'Free' });
     localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
     window.dispatchEvent(new Event('refresh-character-vault'));
+  };
+
+  const handleReportSubmit = (reason: ReportReason, details: string) => {
+    console.log("Report submitted:", reason, details, reportModalConfig);
+    setReportModalConfig(null);
+    alert("Report submitted successfully.");
   };
 
   // --- Phase 2: URL Language Routing (Initial Load) ---
@@ -377,34 +442,47 @@ const App: React.FC = () => {
         // Preload Firestore subscription tier record if present
         const docRef = doc(db, 'users', user.uid);
         getDoc(docRef).then((snap) => {
+          let userData: any = {};
           if (snap.exists()) {
-            const data = snap.data();
-            if (data && data.tier) {
-              u.tier = data.tier;
-              u.subscriptionId = data.subscriptionId;
-              u.paymentMethod = data.paymentMethod;
-              console.info(`🔥 [Subscription Resolved] Loaded ${data.tier} membership status.`);
-            }
+            userData = snap.data();
           }
 
           // Securely fetch tokens from PostgreSQL/Memory backend
           fetch(`/api/user/tokens?email=${encodeURIComponent(u.email)}`)
             .then(res => res.json())
             .then(tokenData => {
+              const fullUser: any = {
+                ...u,
+                tier: userData?.tier || 'Free',
+                subscriptionId: userData?.subscriptionId,
+                paymentMethod: userData?.paymentMethod,
+                tokenBalance: typeof tokenData.tokens === 'number' ? tokenData.tokens : (typeof userData?.tokenBalance === 'number' ? userData.tokenBalance : 0),
+                role: userData?.role || 'Creator'
+              };
+              setCurrentUser(fullUser);
+              setActiveCreator({ id: fullUser.id, email: fullUser.email, tier: fullUser.tier });
+              localStorage.setItem('infinite_heroes_creator', JSON.stringify(fullUser));
+              setIsAuthLoading(false);
+
               if (tokenData.tokens !== undefined) {
-                u.tokenBalance = tokenData.tokens;
-                setCurrentUser({ ...u }); // re-update state to trigger re-renders
                 window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: tokenData.tokens }));
               }
             })
-            .catch(err => console.warn("Failed to fetch secure token balance:", err));
-
-          setCurrentUser(u);
-          setActiveCreator({ id: u.id, email: u.email, tier: u.tier });
-          localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
-          setIsAuthLoading(false);
+            .catch(err => {
+              console.warn("Failed to fetch secure token balance:", err);
+              const fallbackUser: any = {
+                ...u,
+                tier: userData?.tier || 'Free',
+                role: userData?.role || 'Creator'
+              };
+              setCurrentUser(fallbackUser);
+              setActiveCreator({ id: fallbackUser.id, email: fallbackUser.email, tier: fallbackUser.tier });
+              localStorage.setItem('infinite_heroes_creator', JSON.stringify(fallbackUser));
+              setIsAuthLoading(false);
+            });
         }).catch((err) => {
           console.warn("Could not query user doc details:", err);
+          u.role = 'Creator';
           setCurrentUser(u);
           setActiveCreator({ id: u.id, email: u.email, tier: u.tier });
           localStorage.setItem('infinite_heroes_creator', JSON.stringify(u));
@@ -557,7 +635,7 @@ const App: React.FC = () => {
       return;
     }
 
-    if (
+    if(
       msg.includes('Requested entity was not found') ||
       msg.includes('API_KEY_INVALID') ||
       msg.toLowerCase().includes('permission denied')
@@ -1215,7 +1293,9 @@ const handleVillainUpload = async (file: File) => {
 
         {/* Main Content Area */}
         <main className={`flex-1 flex items-center justify-center relative overflow-hidden ${isLightMode ? 'bg-amber-50' : 'bg-black/90'} transition-all duration-700`}>
-          {showSetup && (
+          {appMode === 'studio' ? (
+            <>
+              {showSetup && (
             <Setup 
                 show={showSetup}
                 isTransitioning={isTransitioning}
@@ -1230,6 +1310,7 @@ const handleVillainUpload = async (file: File) => {
                 richMode={richMode}
                 selectedVoice={selectedVoice}
                 soundtrackEnabled={soundtrackEnabled}
+                isPremiumUser={currentUser?.tier === 'Pro Creator'}
                 activeCreator={activeCreator}
                 onCreatorChange={setActiveCreator}
                 onLogOut={handleLogOut}
@@ -1269,70 +1350,257 @@ const handleVillainUpload = async (file: File) => {
             />
           )}
 
-          {!showSetup && isStarted && (
-            <Book
-              comicFaces={comicFaces}
-              currentSheetIndex={currentSheetIndex}
-              isStarted={isStarted}
-              isSetupVisible={showSetup}
+          {!showSetup && isStarted && !isReadingPreview && (
+            <StoryWorkspace
+              projectTitle={projectTitle}
+              projectType="Story Book"
+              selectedGenre={selectedGenre}
+              selectedStyle={selectedStyle}
+              selectedLanguage={selectedLanguage}
+              customPremise={customPremise}
+              storyGoal="To entertain and educate"
               selectedVoice={selectedVoice}
-              generateSpeech={generateSpeech}
-              onSheetClick={(index) => {
-                if (!isTransitioning) {
-                  setIsTransitioning(true);
-                  playPageTurnSFX();
-                  setCurrentSheetIndex(index);
-                  setTimeout(() => setIsTransitioning(false), 1000); // Match CSS transition duration
-                }
-              }}
-              onChoice={(pageIndex, choice) => {
-                // Handle story choices here
-                console.log(`Choice made on page ${pageIndex}: ${choice}`);
-                // Find the current beat and apply the choice
-                const currentPage = comicFaces.find(f => f.pageIndex === pageIndex);
-                if (currentPage && currentPage.choices?.includes(choice)) {
-                  // Generate the next page based on the choice
-                  generateBatch(pageIndex + 1, 1);
-                } else {
-                  console.warn("Invalid choice or page not found.");
-                }
-              }}
-              onOpenBook={() => setIsStarted(true)}
-              onDownload={downloadPDF} // Assuming these are passed down from parent or global
-              onReset={handleReset}
+              soundtrackEnabled={soundtrackEnabled}
+              storyBlueprint={storyBlueprint}
+              generalNotes=""
+              onStoryBlueprintChange={setStoryBlueprint}
+              onStoryGoalChange={() => {}}
+              onGeneralNotesChange={() => {}}
+              comicFaces={comicFaces as any}
+              selectedPageIndex={currentSheetIndex}
+              selectedPanelIndex={0}
+              onSelectPage={setCurrentSheetIndex}
+              onSelectPanel={() => {}}
+              onGenerateBatch={generateBatch}
+              onGenerateSinglePage={() => {}}
+              onApprovePage={() => {}}
+              onDuplicatePanel={() => {}}
               onUpdateText={(pageIndex, field, text) => {
-                // Update text in comicFaces state
                 setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, [field]: text } : f));
               }}
+              onUpdateTranslation={(pageIndex, field, text) => {
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, [field]: text } : f));
+              }}
+              onUpdateTranslationStatus={(pageIndex, status) => {
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, translationStatus: status } : f));
+              }}
+              onUpdateAudioScript={(pageIndex, text) => {
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, audioScript: text } : f));
+              }}
+              onUpdateAudioStatus={(pageIndex, status) => {
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, audioStatus: status } : f));
+              }}
+              recentActivity={[]}
+              onPreviewReader={() => setIsReadingPreview(true)}
+              onDownloadPDF={downloadPDF}
+              onReset={handleReset}
+              currentUser={currentUser as any}
+              onLogOut={handleLogOut}
+              onOpenCheckout={() => setIsCheckoutOpen(true)}
+              totalPages={comicFaces.length}
+            />
+          )}
+
+          {isReadingPreview && (
+            <WorkspaceReader
+              projectTitle={projectTitle}
+              comicFaces={comicFaces as any}
+              selectedLanguage={selectedLanguage}
+              onClose={() => setIsReadingPreview(false)}
+              onEditPage={(pageIndex) => {
+                setIsReadingPreview(false);
+                setCurrentSheetIndex(pageIndex);
+              }}
+              onExport={downloadPDF}
             />
           )}
 
           {!showSetup && !isStarted && (
-            <div className="text-center">
-              <h1 className={`text-5xl font-bold mb-4 ${isLightMode ? 'text-amber-800' : 'text-orange-300'}`}>Infinite Heroes</h1>
-              <p className={`text-xl mb-8 ${isLightMode ? 'text-amber-700/80' : 'text-orange-200/70'}`}>Your AI-powered comic and story creation studio.</p>
-              <button onClick={() => setIsStarted(true)} className={`px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-orange-500 hover:bg-orange-400 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
-                Start Creating <ArrowRight size={20} />
-              </button>
-              {/* Authentication/Checkout triggers */}
-              {!currentUser && (
-                <button onClick={() => setShowAuthModal(true)} className={`ml-4 px-6 py-3 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
-                  Sign In / Sign Up
-                </button>
+            currentUser ? (
+              <PersonalizedDashboard 
+                currentUser={currentUser}
+                onStartProject={() => setIsStarted(true)}
+                onNavigateToGallery={() => setAppMode('gallery')}
+                onNavigateToStory={(id) => { setSelectedGalleryStoryId(id); setGalleryView('story'); setAppMode('gallery'); }}
+                onNavigateToCreator={(id) => { setSelectedGalleryCreatorId(id); setGalleryView('creator'); setAppMode('gallery'); }}
+                onNavigateToAdmin={() => { setGalleryView('moderation-dashboard'); setAppMode('gallery'); }}
+                creditsAvailable={currentUser.tokenBalance || 0}
+                userPlan={currentUser.tier === 'Pro Creator' ? 'Pro Creator' : 'Free'}
+                onNavigateToBilling={() => { setGalleryView('usage'); setAppMode('gallery'); }}
+              />
+            ) : (
+              <div className="text-center">
+                <h1 className={`text-5xl font-bold mb-4 ${isLightMode ? 'text-amber-800' : 'text-orange-300'}`}>Infinite Heroes</h1>
+                <p className={`text-xl mb-8 ${isLightMode ? 'text-amber-700/80' : 'text-orange-200/70'}`}>Your AI-powered comic and story creation studio.</p>
+                <div className="flex items-center justify-center gap-4 flex-wrap">
+                  <button onClick={() => setIsStarted(true)} className={`px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-orange-500 hover:bg-orange-400 text-white' : 'bg-orange-600 hover:bg-orange-500 text-white'}`}>
+                    Start Creating <ArrowRight size={20} className="inline ml-2" />
+                  </button>
+                  <button onClick={() => setAppMode('gallery')} className={`px-8 py-4 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-indigo-500 hover:bg-indigo-400 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}>
+                    Explore Gallery
+                  </button>
+                </div>
+                {/* Authentication/Checkout triggers */}
+                {!currentUser && (
+                  <button onClick={() => setShowAuthModal(true)} className={`ml-4 px-6 py-3 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
+                    Sign In / Sign Up
+                  </button>
+                )}
+                {!currentUser && (
+                  <button onClick={() => setIsCheckoutOpen(true)} className={`ml-4 px-6 py-3 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
+                    Add Tokens
+                  </button>
+                )}
+              </div>
+            )
+          )}
+            </>
+          ) : (
+            <div className="w-full h-full overflow-y-auto relative">
+              {galleryView === 'home' && (
+                <PublicGallery 
+                  onNavigateToStory={(id) => { setSelectedGalleryStoryId(id); setGalleryView('story'); }}
+                  onNavigateToCreator={(id) => { setSelectedGalleryCreatorId(id); setGalleryView('creator'); }}
+                  onReturnToStudio={() => setAppMode('studio')}
+                  onOpenLibrary={() => setGalleryView('library')}
+                  savedStoryIds={savedStoryIds}
+                  onToggleSave={handleToggleSave}
+                />
               )}
-              {!currentUser && (
-                <button onClick={() => setIsCheckoutOpen(true)} className={`ml-4 px-6 py-3 rounded-full font-bold text-lg shadow-lg transition-all ${isLightMode ? 'bg-white border border-amber-200 hover:bg-amber-100 text-amber-600' : 'bg-black/40 border border-orange-500/20 hover:bg-black/60 text-orange-300'}`}>
-                  Add Tokens
-                </button>
+              {galleryView === 'story' && selectedGalleryStoryId && (
+                <PublicStoryDetail 
+                  storyId={selectedGalleryStoryId}
+                  onBack={() => setGalleryView('home')}
+                  onNavigateToCreator={(id) => { setSelectedGalleryCreatorId(id); setGalleryView('creator'); }}
+                  onReadStory={() => { 
+                    setIsReadingPreview(true);
+                    setAppMode('studio'); 
+                  }}
+                  isSaved={savedStoryIds.includes(selectedGalleryStoryId)}
+                  onToggleSave={handleToggleSave}
+                  isFollowing={followedCreators.includes(MOCK_STORIES.find(s => s.id === selectedGalleryStoryId)?.creatorId || '')}
+                  onToggleFollow={handleToggleFollow}
+                  onRemix={handleRemixAction}
+                  onReportStory={(storyId) => setReportModalConfig({ targetId: storyId, targetType: 'story' })}
+                />
+              )}
+              {galleryView === 'creator' && selectedGalleryCreatorId && (
+                <PublicCreatorProfile 
+                  creatorId={selectedGalleryCreatorId}
+                  onBack={() => setGalleryView('home')}
+                  onNavigateToStory={(id) => { setSelectedGalleryStoryId(id); setGalleryView('story'); }}
+                  isFollowing={followedCreators.includes(selectedGalleryCreatorId)}
+                  onToggleFollow={handleToggleFollow}
+                  onReportCreator={(creatorId) => setReportModalConfig({ targetId: creatorId, targetType: 'creator' })}
+                />
+              )}
+              {galleryView === 'library' && (
+                <SavedLibrary 
+                  onBack={() => setGalleryView('home')}
+                  onNavigateToStory={(id) => { setSelectedGalleryStoryId(id); setGalleryView('story'); }}
+                  onNavigateToCreator={(id) => { setSelectedGalleryCreatorId(id); setGalleryView('creator'); }}
+                  savedStoryIds={savedStoryIds}
+                  onRemoveSaved={handleToggleSave}
+                />
+              )}
+              {galleryView === 'moderation-dashboard' && (
+                <ModerationDashboard 
+                  reports={reports}
+                  onBack={() => setGalleryView('home')}
+                  onReviewReport={(id) => {
+                    setActiveReviewReportId(id);
+                    setGalleryView('moderation-review');
+                  }}
+                />
+              )}
+              {galleryView === 'moderation-review' && activeReviewReportId && (
+                <ModerationReview 
+                  report={reports.find(r => r.id === activeReviewReportId)!}
+                  onBack={() => setGalleryView('moderation-dashboard')}
+                  onAction={(id, action) => {
+                    setReports(prev => prev.map(r => r.id === id ? { ...r, status: 'resolved' } : r));
+                    setGalleryView('moderation-dashboard');
+                    setActiveReviewReportId(null);
+                  }}
+                />
+              )}
+              {galleryView === 'settings' && currentUser && (
+                <AccountSettings 
+                  currentUser={currentUser} 
+                  onClose={() => setGalleryView('home')}
+                  onLogout={handleLogOut}
+                  onOpenAutomation={() => { setGalleryView('automation'); setAppMode('gallery'); }}
+                />
+              )}
+              {galleryView === 'automation' && currentUser && (
+                <AutomationHub
+                  currentUser={currentUser}
+                  onClose={() => setGalleryView('home')}
+                />
+              )}
+              {galleryView === 'education-dashboard' && currentUser && (
+                <EducationDashboard
+                  currentUser={currentUser}
+                  onClose={() => setGalleryView('home')}
+                  onOpenAutomation={() => { setGalleryView('automation'); setAppMode('gallery'); }}
+                />
+              )}
+              {galleryView === 'progress' && currentUser && (
+                <ProgressDashboard
+                  currentUser={currentUser}
+                  onClose={() => setGalleryView('home')}
+                />
+              )}
+
+              {/* Remix Modal Overlay */}
+              {showRemixModal && remixTargetId && (
+                <RemixModal 
+                  story={MOCK_STORIES.find(s => s.id === remixTargetId)!}
+                  onClose={() => setShowRemixModal(false)}
+                  onConfirmRemix={handleConfirmRemix}
+                />
               )}
             </div>
           )}
         </main>
       </div>
 
+      <AccountPanel
+        currentUser={currentUser}
+        onUserChange={setCurrentUser}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenCheckout={() => setIsCheckoutOpen(true)}
+        onOpenAdmin={() => { setGalleryView('moderation-dashboard'); setAppMode('gallery'); }}
+        onOpenSettings={() => { setGalleryView('settings'); setAppMode('gallery'); }}
+        onOpenAutomation={() => { setGalleryView('automation'); setAppMode('gallery'); }}
+        onOpenEducation={() => { setGalleryView('education-dashboard'); setAppMode('gallery'); }}
+        onOpenProgress={() => { setGalleryView('progress'); setAppMode('gallery'); }}
+      />
+
       {/* Modals */}
       {showApiKeyDialog && <ApiKeyDialog onClose={() => setShowApiKeyDialog(false)} onContinue={handleApiKeyDialogContinue} isLightMode={isLightMode} />}
-      {isCheckoutOpen && <CheckoutModal tier={checkoutTier} onClose={() => setIsCheckoutOpen(false)} onUpgradeSuccess={handleUpgradeSuccessful} currentUser={currentUser} isLightMode={isLightMode} />}
+      
+      {/* Checkout Modal */}
+      {isCheckoutOpen && (
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          selectedTier={checkoutTier}
+          currentEmail={currentUser?.email || ''}
+          userId={currentUser?.id || ''}
+        />
+      )}
+
+      {/* Report Modal */}
+      {reportModalConfig && (
+        <ReportModal 
+          targetId={reportModalConfig.targetId}
+          targetType={reportModalConfig.targetType}
+          onClose={() => setReportModalConfig(null)}
+          onSubmit={handleReportSubmit}
+        />
+      )}
+      
       {showAuthModal && <AuthScreen onClose={() => setShowAuthModal(false)} isLightMode={isLightMode} />}
 
       {/* Offline Sandbox Mode Trigger */}

@@ -1,4 +1,10 @@
 /**
+ * Screen Name: Account and Authentication
+ * Purpose: Authentication modals and user account dropdown controls
+ * Version: 1.1
+ * Phase: Phase 12
+ * Date: 2026-07-08
+ * What changed in this revision: Added onOpenSettings support to route to Account Settings dashboard.
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auth, signInWithGoogle, signOutUser } from './firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, User as FirebaseUser } from 'firebase/auth';
-import { LogOut, LogIn, User, Mail, Lock, Shield, Sparkles, BookOpen, Trash2, X, PlusCircle, CheckCircle, Feather } from 'lucide-react';
+import { LogOut, LogIn, User, Mail, Lock, Shield, Sparkles, BookOpen, Trash2, X, PlusCircle, CheckCircle, Feather, Settings, Zap, GraduationCap, Activity } from 'lucide-react';
 
 interface AccountProps {
   currentUser: { 
@@ -23,6 +29,10 @@ interface AccountProps {
   onClose?: () => void;
   onOpenCheckout?: (tier: 'Pro' | 'Enterprise') => void;
   onOpenAdmin?: () => void;
+  onOpenSettings?: () => void;
+  onOpenAutomation?: () => void;
+  onOpenEducation?: () => void;
+  onOpenProgress?: () => void;
 }
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx logic). */
@@ -350,7 +360,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
   );
 };
 
-export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> = ({ currentUser, onUserChange, onOpenAuth, onOpenCheckout, onOpenAdmin }) => {
+export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> = ({ currentUser, onUserChange, onOpenAuth, onOpenCheckout, onOpenAdmin, onOpenSettings, onOpenAutomation, onOpenEducation, onOpenProgress }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
@@ -429,6 +439,22 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
   const adminBtn = isEditorial
     ? 'w-full mb-3 bg-teal-700 hover:bg-teal-600 text-white font-semibold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border border-teal-600 shadow-sm transition-all duration-150 cursor-pointer rounded-lg'
     : 'w-full mb-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border-2 border-black shadow-[3px_3px_0px_#000] duration-100 cursor-pointer';
+
+  const settingsBtn = isEditorial
+    ? 'w-full mb-3 bg-white hover:bg-stone-100 text-stone-700 font-semibold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border border-stone-300 shadow-sm transition-all duration-150 cursor-pointer rounded-lg'
+    : 'w-full mb-3 bg-neutral-900 hover:bg-gray-800 text-white font-bold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border-2 border-gray-600 hover:border-white shadow-[3px_3px_0px_rgba(0,0,0,0.8)] duration-100 cursor-pointer';
+
+  const automationBtn = isEditorial
+    ? 'w-full mb-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border border-indigo-200 shadow-sm transition-all duration-150 cursor-pointer rounded-lg'
+    : 'w-full mb-3 bg-fuchsia-900 hover:bg-fuchsia-800 text-white font-bold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border-2 border-fuchsia-600 hover:border-white shadow-[3px_3px_0px_#000] duration-100 cursor-pointer';
+
+  const educationBtn = isEditorial
+    ? 'w-full mb-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border border-emerald-200 shadow-sm transition-all duration-150 cursor-pointer rounded-lg'
+    : 'w-full mb-3 bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border-2 border-emerald-600 hover:border-white shadow-[3px_3px_0px_#000] duration-100 cursor-pointer';
+
+  const progressBtn = isEditorial
+    ? 'w-full mb-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border border-blue-200 shadow-sm transition-all duration-150 cursor-pointer rounded-lg'
+    : 'w-full mb-3 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs py-2 px-3 flex items-center justify-center gap-1.5 border-2 border-blue-600 hover:border-white shadow-[3px_3px_0px_#000] duration-100 cursor-pointer';
 
   const logoutBtn = isEditorial
     ? 'w-full bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs py-2 px-3 flex items-center justify-center gap-2 border border-red-200 transition-all duration-150 cursor-pointer rounded-lg'
@@ -541,6 +567,66 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
                 ? <><Feather size={11} /> {t('account.auto3', 'Upgrade Membership')}</>
                 : <><Sparkles size={11} className="animate-pulse" /> {t('account.auto4', 'UPGRADE MEMBERSHIP')}</>
               }
+            </button>
+          )}
+
+          {onOpenSettings && (
+            <button
+              id="btn-creator-settings-trigger"
+              type="button"
+              onClick={() => {
+                onOpenSettings();
+                setOpen(false);
+              }}
+              className={settingsBtn}
+            >
+              <Settings size={11} className={isEditorial ? 'text-stone-500' : 'text-gray-400'} />
+              {isEditorial ? 'Settings & Preferences' : 'ACCOUNT SETTINGS'}
+            </button>
+          )}
+
+          {onOpenAutomation && (
+            <button
+              id="btn-creator-automation-trigger"
+              type="button"
+              onClick={() => {
+                onOpenAutomation();
+                setOpen(false);
+              }}
+              className={automationBtn}
+            >
+              <Zap size={11} className={isEditorial ? 'text-indigo-500' : 'text-fuchsia-400'} />
+              {isEditorial ? 'Routines & Automations' : 'ROUTINES'}
+            </button>
+          )}
+
+          {onOpenEducation && (
+            <button
+              id="btn-creator-education-trigger"
+              type="button"
+              onClick={() => {
+                onOpenEducation();
+                setOpen(false);
+              }}
+              className={educationBtn}
+            >
+              <GraduationCap size={11} className={isEditorial ? 'text-emerald-500' : 'text-emerald-400'} />
+              {isEditorial ? 'Homeschool & Classroom' : 'EDUCATION'}
+            </button>
+          )}
+
+          {onOpenProgress && (
+            <button
+              id="btn-creator-progress-trigger"
+              type="button"
+              onClick={() => {
+                onOpenProgress();
+                setOpen(false);
+              }}
+              className={progressBtn}
+            >
+              <Activity size={11} className={isEditorial ? 'text-blue-500' : 'text-blue-400'} />
+              {isEditorial ? 'Progress & Analytics' : 'PROGRESS'}
             </button>
           )}
 

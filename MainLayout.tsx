@@ -1,3 +1,11 @@
+/*
+Screen Name: Main Layout App Shell
+Purpose: Authenticated viewport wrapper and marketing routing gate
+Version: v0.2
+Phase: Phase 1
+Date: 2026-07-07
+What changed in this revision: Hidden duplicate website navigation header when currentView is 'studio'. Added file metadata comment header.
+*/
 import React, { useState, useEffect } from 'react';
 import { Home } from './Home';
 import { SignupPage } from './SignupPage';
@@ -7,6 +15,7 @@ import { Helmet } from 'react-helmet-async';
 import { PrivacyPolicy, TermsOfService, CookiePolicy, DMCA } from './LegalPages';
 import { WritersJournalDashboard } from './WritersJournalDashboard';
 import { KidStoryDashboard } from './KidStoryDashboard';
+import { ProgressDashboard } from './ProgressDashboard';
 
 /** Read the active app skin from localStorage (mirrors Setup.tsx / Account.tsx logic). */
 const getActiveSkin = (): 'comic' | 'kid-story' => {
@@ -28,7 +37,7 @@ const getActiveSkin = (): 'comic' | 'kid-story' => {
 // It wraps your existing App (Creator Studio) inside the 'studio' route.
 export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNode }) => {
     const { t, i18n } = useTranslation();
-    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca' | 'signup' | 'login'>('home');
+    const [currentView, setCurrentView] = useState<'home' | 'studio' | 'reader' | 'privacy' | 'terms' | 'cookies' | 'dmca' | 'signup' | 'login' | 'progress'>('home');
     const [selectedStoryId, setSelectedStoryId] = useState<number | null>(null);
     const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(getActiveSkin);
     const [tokenBalance, setTokenBalance] = useState<number | null>(null);
@@ -121,7 +130,7 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                 <html lang={i18n.language || 'en'} />
             </Helmet>
             {/* Global Navigation */}
-            {currentView !== 'home' && skin === 'comic' && (
+            {currentView !== 'home' && currentView !== 'studio' && skin === 'comic' && (
                 <nav className={navClass}>
                     <div
                         className="flex items-center gap-3 cursor-pointer group"
@@ -153,18 +162,34 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             onClick={() => {
                                 handleNavigate('home');
                                 setTimeout(() => {
+                                    document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth' });
+                                }, 100);
+                            }} 
+                            className={linkHover}
+                        >
+                            {t('layout.nav.usecases', '👥 Use Cases')}
+                        </button>
+                        <button 
+                            onClick={() => {
+                                handleNavigate('home');
+                                setTimeout(() => {
+                                    document.getElementById('examples')?.scrollIntoView({ behavior: 'smooth' });
+                                }, 100);
+                            }} 
+                            className={linkHover}
+                        >
+                            {t('layout.nav.examples', '🖼️ Examples')}
+                        </button>
+                        <button 
+                            onClick={() => {
+                                handleNavigate('home');
+                                setTimeout(() => {
                                     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
                                 }, 100);
                             }} 
                             className={linkHover}
                         >
                             {isEditorial ? t('layout.nav.pricingEditorial', '💳 Pricing') : t('layout.nav.pricingComic', '💰 Pricing')}
-                        </button>
-                        <button 
-                            onClick={() => handleNavigate('home')} 
-                            className={`${linkHover} ${currentView === 'home' ? (isEditorial ? 'text-stone-800 font-bold' : 'text-indigo-400 font-bold') : ''}`}
-                        >
-                            {isEditorial ? t('layout.nav.discover', 'Discover') : t('layout.nav.explore', 'Explore')}
                         </button>
                         
                         <span className={navSeparator}></span>
@@ -176,27 +201,29 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                             </div>
                         )}
 
-                        {(!localStorage.getItem('infinite_heroes_creator')) && (
-                            <button 
-                                onClick={() => {
-                                    window.dispatchEvent(new Event('trigger-auth-dialog'));
-                                    handleNavigate('studio');
-                                }}
-                                className={linkHover}
+                        {(!localStorage.getItem('infinite_heroes_creator')) ? (
+                            <>
+                                <button 
+                                    onClick={() => handleNavigate('login')}
+                                    className={`${linkHover} font-bold mr-2`}
+                                >
+                                    {t('layout.nav.signIn', 'Sign In')}
+                                </button>
+                                <button
+                                    onClick={() => handleNavigate('signup')}
+                                    className={primaryCTA}
+                                >
+                                    {t('layout.nav.startFree', 'Start Free')}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => handleNavigate('studio')}
+                                className={primaryCTA}
                             >
-                                {t('layout.nav.signIn', 'Sign In')}
+                                {isEditorial ? t('layout.nav.studioEditorial', '🖋️ Writing Studio') : t('layout.nav.studioComic', 'Studio Hub')}
                             </button>
                         )}
-
-                        <button
-                            onClick={() => {
-                                window.dispatchEvent(new Event('trigger-sandbox-mode'));
-                                handleNavigate('studio');
-                            }}
-                            className={primaryCTA}
-                        >
-                            {isEditorial ? t('layout.nav.studioEditorial', '🖋️ Writing Studio') : t('layout.nav.studioComic', 'Studio Hub')}
-                        </button>
                     </div>
                 </nav>
             )}
@@ -244,8 +271,11 @@ export const MainLayout = ({ StudioComponent }: { StudioComponent: React.ReactNo
                                 {isEditorial ? t('layout.nav.logoEditorial', "Writer's Journal") : t('layout.nav.logoComic', 'Story Menu')}
                             </span>
                         </div>
+                        <p className={`text-sm max-w-sm mb-4 ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
+                            {t('layout.footer.desc', 'Create, publish, and share illustrated stories with text, images, translation, and narration tools. Your projects and published stories are stored securely in the cloud.')}
+                        </p>
                         <p className={`text-sm max-w-sm ${isEditorial ? 'text-stone-500' : 'text-gray-400'}`}>
-                            {t('layout.footer.desc', 'The ultimate interactive AI creator suite. Epic multi-agent narrative arcs, locked character DNA, and real-time soundtracks served on-demand.')}
+                            {t('layout.footer.subdesc', 'Story.Menu helps you plan stories, keep characters consistent, and add narration and soundtracks in one simple workspace.')}
                         </p>
                     </div>
                     <div>

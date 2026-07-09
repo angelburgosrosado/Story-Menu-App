@@ -14,10 +14,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: STRIPE_PUBLISHABLE_KEY
-    value: "pk_live_51L5uEPDWHsIuLZtgGO0cVTV0604E83We6DzM3OzRmgrmt2VDmxPJuCrFcvraLwnJpXAyJ7tbcd5is9fpxYybgc5300iEvawPpF"
-    availability:
-      - BUILD
-      - RUNTIME
+    secret: STRIPE_PUBLISHABLE_KEY
   - variable: GEMINI_API_KEY
     secret: GEMINI_API_KEY
   - variable: STRIPE_SECRET_KEY

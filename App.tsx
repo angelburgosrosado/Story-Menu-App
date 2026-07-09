@@ -1372,9 +1372,28 @@ const handleVillainUpload = async (file: File) => {
               onSelectPage={setCurrentSheetIndex}
               onSelectPanel={() => {}}
               onGenerateBatch={generateBatch}
-              onGenerateSinglePage={() => {}}
-              onApprovePage={() => {}}
-              onDuplicatePanel={() => {}}
+              onGenerateSinglePage={async (type, pageIndex, pageType) => {
+                const face = comicFaces.find(f => f.pageIndex === pageIndex);
+                if (face) {
+                  updateFaceState(face.id, { isLoading: true });
+                  await generateSinglePage(face.id, pageIndex, face.type);
+                }
+              }}
+              onApprovePage={(pageIndex) => {
+                setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, isApproved: !f.isApproved } : f));
+              }}
+              onDuplicatePanel={(pageIndex) => {
+                const face = comicFaces.find(f => f.pageIndex === pageIndex);
+                if (face) {
+                  const newFace = {
+                    ...face,
+                    id: Math.random().toString(36).substr(2, 9),
+                    pageIndex: comicFaces.length,
+                    isApproved: false
+                  };
+                  setComicFaces(prev => [...prev, newFace]);
+                }
+              }}
               onUpdateText={(pageIndex, field, text) => {
                 setComicFaces(prev => prev.map(f => f.pageIndex === pageIndex ? { ...f, [field]: text } : f));
               }}

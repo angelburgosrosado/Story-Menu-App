@@ -1,17 +1,18 @@
 /*
   Screen Name: Workspace Audio & Narration
   Purpose: Dedicated surface for previewing, editing, and managing read-aloud scripts and audio narration.
-  Version: v1.0
-  Phase: Phase 4
-  Date: 2026-07-08
-  What changed in this revision: Initial creation. Modeled after Translation workspace but tailored for Audio.
+  Version: v2.0
+  Phase: Phase 6
+  Date: 2026-07-09
+  What changed in this revision: Added dynamic voices and soundtracks fetched from the backend, pacing/style controls, and linked generation to the mock TTS execution endpoint.
 */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Volume2, Play, Pause, CheckCircle, Clock,
-  ChevronLeft, ChevronRight, Zap, LayoutTemplate, Send, Check, Mic, Music, Wand2
+  ChevronLeft, ChevronRight, Zap, LayoutTemplate, Send, Check, Mic, Music, Wand2, RefreshCw
 } from 'lucide-react';
+import { VoiceRecord, SoundtrackAmbienceItem } from './types';
 
 interface ComicPage {
   id: string;
@@ -26,6 +27,8 @@ interface ComicPage {
   audio?: {
     script?: string;
     status: 'no-audio' | 'draft' | 'needs-review' | 'approved';
+    audioUrl?: string;
+    durationMs?: number;
   };
 }
 
@@ -49,6 +52,42 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
   onNavigateTo,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [voices, setVoices] = useState<VoiceRecord[]>([]);
+  const [soundtracks, setSoundtracks] = useState<SoundtrackAmbienceItem[]>([]);
+  const [selectedVoiceId, setSelectedVoiceId] = useState('voice-narrator-1');
+  const [selectedTrackId, setSelectedTrackId] = useState('track-1');
+  const [pacing, setPacing] = useState<'slow' | 'standard' | 'fast'>('standard');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    fetchVoices();
+    fetchSoundtracks();
+  }, []);
+
+  const fetchVoices = async () => {
+    try {
+      const res = await fetch('/api/narration/voices');
+      if (res.ok) {
+        const data = await res.json();
+        setVoices(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch voices in workspace", e);
+    }
+  };
+
+  const fetchSoundtracks = async () => {
+    try {
+      const res = await fetch('/api/narration/soundtracks');
+      if (res.ok) {
+        const data = await res.json();
+        setSoundtracks(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch soundtracks in workspace", e);
+    }
+  };
 
   // We only narrate story pages that exist
   const builtPages = comicFaces.filter(f => f.imageUrl);
@@ -56,6 +95,91 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
   const activePage = builtPages.find(f => f.pageIndex === selectedPageIndex) || builtPages[0] || null;
 
   const pageLabel = activePage?.type === 'cover' ? 'Cover' : `Page ${activePage?.pageIndex ?? 0}`;
+
+  // Combine original text as a fallback starting point for the read-aloud script
+  const originalText = [activePage?.narrative?.caption, activePage?.narrative?.dialogue].filter(Boolean).join('\n\n');
+
+  const handleGenerateAudioReal = async () => {
+    if (!activePage) return;
+    const textToNarrate = activePage.audio?.script || originalText;
+    if (!textToNarrate) return;
+
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/narration/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: textToNarrate,
+          voiceId: selectedVoiceId,
+          projectId: 'current-workspace-project',
+          parentContentId: activePage.id
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Update page script and status
+        onUpdateAudioScript(activePage.pageIndex, textToNarrate);
+        onUpdateAudioStatus(activePage.pageIndex, 'needs-review');
+        // Cache audio reference
+        if (activePage) {
+          activePage.audio = {
+            ...activePage.audio,
+            script: textToNarrate,
+            status: 'needs-review',
+            audioUrl: data.audioUrl,
+            durationMs: data.durationMs
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Failed to execute TTS generation", e);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'approved': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+      case 'needs-review': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
+      case 'draft': return 'text-sky-400 bg-sky-400/10 border-sky-400/20';
+      default: return 'text-slate-500 bg-slate-800 border-slate-700';
+    }
+  };
+
+  const getStatusLabel = (status?: string) => {
+    switch (status) {
+      case 'approved': return 'Approved for playback';
+      case 'needs-review': return 'Needs review';
+      case 'draft': return 'Draft narration';
+      default: return 'No audio';
+    }
+  };
+
+  const handleStatusChange = (status: 'no-audio' | 'draft' | 'needs-review' | 'approved') => {
+    if (activePage) onUpdateAudioStatus(activePage.pageIndex, status);
+  };
+
+  const togglePlayback = () => {
+    const audioUrl = activePage?.audio?.audioUrl || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    if (isPlaying) {
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+      setIsPlaying(false);
+    } else {
+      const audio = new Audio(audioUrl);
+      audio.play();
+      setCurrentAudio(audio);
+      setIsPlaying(true);
+      audio.onended = () => {
+        setIsPlaying(false);
+      };
+    }
+  };
+
+  const hasGeneratedAudio = activePage?.audio?.status === 'needs-review' || activePage?.audio?.status === 'approved' || activePage?.audio?.audioUrl;
 
   if (!hasPages) {
     return (
@@ -81,72 +205,81 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
     );
   }
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'approved': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      case 'needs-review': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-      case 'draft': return 'text-sky-400 bg-sky-400/10 border-sky-400/20';
-      default: return 'text-slate-500 bg-slate-800 border-slate-700';
-    }
-  };
-
-  const getStatusLabel = (status?: string) => {
-    switch (status) {
-      case 'approved': return 'Approved for playback';
-      case 'needs-review': return 'Needs review';
-      case 'draft': return 'Draft narration';
-      default: return 'No audio';
-    }
-  };
-
-  const handleStatusChange = (status: 'no-audio' | 'draft' | 'needs-review' | 'approved') => {
-    if (activePage) onUpdateAudioStatus(activePage.pageIndex, status);
-  };
-
-  const togglePlayback = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleGenerateAudioMock = () => {
-    if (activePage) onUpdateAudioStatus(activePage.pageIndex, 'needs-review');
-  };
-
-  // Combine original text as a fallback starting point for the read-aloud script
-  const originalText = [activePage?.narrative?.caption, activePage?.narrative?.dialogue].filter(Boolean).join('\n\n');
-
-  const hasGeneratedAudio = activePage?.audio?.status === 'needs-review' || activePage?.audio?.status === 'approved';
-
   return (
     <div className="space-y-5 text-left animate-fadeIn h-full flex flex-col">
       {/* PAGE HEADER */}
-      <div className="flex items-start justify-between gap-4 shrink-0">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shrink-0 bg-slate-900/40 p-4 rounded-2xl border border-slate-800">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold font-mono uppercase tracking-wider">
             <Mic size={13} />
-            <span>Audio & Narration</span>
+            <span>Audio & Narration Canvas</span>
           </div>
-          <h2 className="text-2xl font-black text-slate-100">
-            {projectTitle}
-          </h2>
-          <p className="text-sm text-slate-500">
-            Preview, refine, and approve the read-aloud narration for your scenes.
+          <h2 className="text-xl font-black text-slate-100">{projectTitle}</h2>
+          <p className="text-xs text-slate-400">
+            Configure narrator voice controls, backing soundtrack music, and pacing scripts.
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div>
+            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Narrator voice</label>
+            <select
+              value={selectedVoiceId}
+              onChange={e => setSelectedVoiceId(e.target.value)}
+              className="bg-slate-950 border border-slate-800 p-2 rounded text-xs text-white"
+            >
+              {voices.map(v => (
+                <option key={v.id} value={v.id}>{v.displayName} ({v.accentLabel})</option>
+              ))}
+            </select>
+            {voices.find(v => v.id === selectedVoiceId) && (
+              <span className={`block text-[9px] mt-0.5 font-bold ${
+                voices.find(v => v.id === selectedVoiceId)?.primaryLanguageCode === 'en-US' ? 'text-emerald-400' : 'text-amber-400 animate-pulse'
+              }`}>
+                {voices.find(v => v.id === selectedVoiceId)?.primaryLanguageCode === 'en-US' ? '✓ Language match' : '⚠ Language mismatch'}
+              </span>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Soundtrack</label>
+            <select
+              value={selectedTrackId}
+              onChange={e => setSelectedTrackId(e.target.value)}
+              className="bg-slate-950 border border-slate-800 p-2 rounded text-xs text-white"
+            >
+              {soundtracks.map(s => (
+                <option key={s.id} value={s.id}>{s.title} - {s.mood}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Pacing</label>
+            <select
+              value={pacing}
+              onChange={e => setPacing(e.target.value as any)}
+              className="bg-slate-950 border border-slate-800 p-2 rounded text-xs text-white"
+            >
+              <option value="slow">Slow & Guided</option>
+              <option value="standard">Standard Pacing</option>
+              <option value="fast">Fast & Animated</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
         {/* Left Column: Thumbnail Strip & Player Preview */}
         <div className="w-1/3 flex flex-col space-y-3 shrink-0">
-          {/* Controls */}
+          {/* Page nav controls */}
           <div className="flex items-center justify-between text-[10px] shrink-0">
-            <span className="font-bold text-slate-600 uppercase tracking-wider font-mono">Pages</span>
+            <span className="font-bold text-slate-500 uppercase tracking-wider font-mono">Pages</span>
             <div className="flex gap-1">
               <button
                 onClick={() => {
                   const currentIndex = builtPages.findIndex(p => p.pageIndex === activePage.pageIndex);
                   if (currentIndex > 0) onSelectPage(builtPages[currentIndex - 1].pageIndex);
                 }}
-                className="p-1 rounded-lg bg-slate-800 text-slate-500 hover:text-white transition-all cursor-pointer"
+                className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
               >
                 <ChevronLeft size={12} />
               </button>
@@ -155,14 +288,14 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
                   const currentIndex = builtPages.findIndex(p => p.pageIndex === activePage.pageIndex);
                   if (currentIndex < builtPages.length - 1) onSelectPage(builtPages[currentIndex + 1].pageIndex);
                 }}
-                className="p-1 rounded-lg bg-slate-800 text-slate-500 hover:text-white transition-all cursor-pointer"
+                className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
               >
                 <ChevronRight size={12} />
               </button>
             </div>
           </div>
           
-          {/* Strip */}
+          {/* Thumbnails strip */}
           <div className="flex gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-thin">
             {builtPages.map((page) => {
               const isSelected = page.pageIndex === selectedPageIndex;
@@ -183,7 +316,6 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
                     alt={`Page ${page.pageIndex}`}
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100"
                   />
-                  {/* Status Indicator */}
                   <div className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full border ${statusClass}`} />
                 </button>
               );
@@ -196,11 +328,11 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
               <img
                 src={activePage?.imageUrl}
                 alt={pageLabel}
-                className={`w-full h-full object-contain transition-opacity duration-500 ${isPlaying ? 'opacity-40 scale-105' : 'opacity-100'}`}
+                className={`w-full h-full object-contain transition-opacity duration-550 ${isPlaying ? 'opacity-40 scale-102' : 'opacity-100'}`}
               />
               
               {/* Playback Overlay or Generate Button */}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/45 transition-colors">
                  {hasGeneratedAudio ? (
                    <button 
                      onClick={togglePlayback}
@@ -212,30 +344,30 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
                    </button>
                  ) : (
                    <button 
-                     onClick={handleGenerateAudioMock}
-                     className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center gap-2 shadow-xl transform transition-transform hover:scale-105"
+                     disabled={isGenerating}
+                     onClick={handleGenerateAudioReal}
+                     className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center gap-2 shadow-xl transform transition-transform hover:scale-105 disabled:opacity-50"
                    >
-                     <Wand2 size={16} />
-                     Generate Audio
+                     {isGenerating ? <RefreshCw size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                     {isGenerating ? 'Synthesizing...' : 'Generate Narration'}
                    </button>
                  )}
               </div>
 
-              {/* Mock Waveform Timeline */}
+              {/* Waveform timeline simulator */}
               {hasGeneratedAudio && (
                 <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end px-4 pb-3">
                   <div className="w-full h-1 bg-white/20 rounded-full mb-3 relative cursor-pointer overflow-hidden">
-                    <div className={`absolute left-0 top-0 bottom-0 bg-indigo-500 transition-all ${isPlaying ? 'w-full duration-[10000ms] ease-linear' : 'w-0'}`} />
+                    <div className={`absolute left-0 top-0 bottom-0 bg-indigo-500 transition-all ${isPlaying ? 'w-full duration-[4500ms] ease-linear' : 'w-0'}`} />
                   </div>
                   {isPlaying && (
                     <div className="flex items-end justify-center gap-1 opacity-90 h-6">
                        {[...Array(32)].map((_, i) => (
                          <div 
                            key={i} 
-                           className="w-1 bg-indigo-400 rounded-t-sm" 
+                           className="w-1 bg-indigo-400 rounded-t-sm animate-pulse" 
                            style={{ 
-                             height: `${Math.random() * 100}%`,
-                             animation: `pulse 0.4s ease-in-out infinite alternate ${Math.random()}s`
+                             height: `${20 + Math.random() * 80}%`,
                            }} 
                          />
                        ))}
@@ -247,8 +379,7 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
             {/* Status bar */}
             <div className="p-3 bg-slate-950 border-t border-slate-800 flex justify-between items-center shrink-0">
                <span className="text-xs font-bold text-slate-400">{pageLabel}</span>
-               <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border flex items-center gap-1.5 ${getStatusColor(activePage?.audio?.status)}`}>
-                 {activePage?.audio?.status === 'approved' ? <CheckCircle size={11} /> : <Clock size={11} />}
+               <div className={`px-2.5 py-1 rounded text-[10px] font-bold border flex items-center gap-1 ${getStatusColor(activePage?.audio?.status)}`}>
                  {getStatusLabel(activePage?.audio?.status)}
                </div>
             </div>
@@ -256,8 +387,7 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
         </div>
 
         {/* Right Column: Audio Script Editor */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-y-auto relative">
-          {/* Header */}
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-900/40 rounded-2xl border border-slate-800 overflow-y-auto relative pb-20">
           <div className="grid grid-cols-2 border-b border-slate-800 sticky top-0 bg-slate-900/95 backdrop-blur z-10 shrink-0">
              <div className="p-3 px-5 border-r border-slate-800 flex items-center gap-2 text-xs font-bold text-slate-300">
                Original Dialogue/Caption <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] text-slate-400 ml-auto font-mono">Reference</span>
@@ -267,16 +397,15 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
              </div>
           </div>
 
-          <div className="p-5 space-y-6 flex-1 pb-24">
-            
+          <div className="p-5 space-y-6 flex-1">
             <div className="space-y-2 h-full flex flex-col">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                 <LayoutTemplate size={12} /> Narration Content
               </label>
               <div className="grid grid-cols-2 gap-4 flex-1">
                 {/* Left: Original Context */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap cursor-not-allowed overflow-y-auto">
-                  {originalText || <span className="text-slate-600 italic">No text generated for this page.</span>}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-sm text-slate-350 leading-relaxed whitespace-pre-wrap cursor-not-allowed overflow-y-auto">
+                  {originalText || <span className="text-slate-655 italic">No text generated for this page.</span>}
                 </div>
                 {/* Right: Editable Script */}
                 <div className="relative">
@@ -295,12 +424,12 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
 
             {/* Helper Text */}
             <div className="pt-4 border-t border-slate-800">
-               <div className="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+               <div className="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-1">
                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                    <Volume2 size={12} /> Pronunciation Notes
                  </h4>
                  <p className="text-xs text-slate-400 leading-relaxed">
-                   Use the read-aloud script to spell out difficult words phonetically, or add pauses using punctuation like ellipsis (...) or dashes (-). Modifying the read-aloud script will not change the text printed on the comic page itself.
+                   Use the read-aloud script to spell out difficult words phonetically, or add pauses using punctuation like ellipsis (...) or dashes (-). Modifying the read-aloud script will not change the text printed on the page itself.
                  </p>
                </div>
             </div>
@@ -324,7 +453,6 @@ export const WorkspaceAudio: React.FC<WorkspaceAudioProps> = ({
              </button>
           </div>
         </div>
-
       </div>
     </div>
   );

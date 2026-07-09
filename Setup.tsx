@@ -1,17 +1,17 @@
 /*
 Screen Name: New Project Onboarding Wizard
 Purpose: Helps users configure templates, metadata, goals, visual styles, languages, and narration before launching a story project
-Version: v0.8
-Phase: Phase 1
-Date: 2026-07-08
-What changed in this revision: Replaced all custom slate-955/855/880 Tailwind fallbacks with standard classes (slate-950/800/700) to ensure correct visual styling. Polished labeling and copy to improve scanability and clarity.
+Version: v1.0
+Phase: Phase 3
+Date: 2026-07-09
+What changed in this revision: Integrated dynamic Character and Photo-Persona Selection, custom persona builder, likeness usage modes, safety consent checking, and photo reference preview upload workflows.
 */
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Sparkles, BookOpen, Layers, Globe, Volume2, Zap, Check, 
-  FolderOpen, ArrowRight, ArrowLeft, Trash2, LogOut, FileText, Info, Play, Square, Edit2
+  FolderOpen, ArrowRight, ArrowLeft, Trash2, LogOut, FileText, Info, Play, Square, Edit2, Plus, UserPlus, UploadCloud, Trash, X
 } from 'lucide-react';
 import { 
   getProjectsFromFirestore, 
@@ -20,7 +20,7 @@ import {
   deleteDraftFromFirestore, 
   saveDraftToFirestore
 } from './storageFirestore';
-import { Persona, ChapterGoal, CharacterIdentitySchema } from './types';
+import { Persona, ChapterGoal, CharacterIdentitySchema, StartingFormat, CreatorFlow, StoryGoal, UsageMode, ReferenceImage } from './types';
 import { playPageTurnSFX, playSparkleSFX } from './audio';
 
 interface LaunchConfig {
@@ -38,6 +38,10 @@ interface LaunchConfig {
   narration: boolean;
   voice: string;
   soundtrack: string;
+  // future generation metadata
+  personaId?: string;
+  personaRole?: string;
+  personaUsageMode?: string;
 }
 
 interface SetupProps {
@@ -92,109 +96,8 @@ interface SetupProps {
     onLogOut?: () => void;
 }
 
-// Onboarding wizard templates definition
-const TEMPLATES = [
-    {
-        id: 'classroom',
-        name: 'Classroom History Lesson',
-        desc: 'Teach history standards with character-driven panels.',
-        icon: '🏫',
-        defaultTitle: 'The American Revolution: Siege of Yorktown',
-        defaultDesc: 'A visual journey through General Washington\'s decisive campaign.',
-        audience: 'Teachers',
-        grade: 'Grade 6-8',
-        readingLevel: 'Lexile 700L',
-        goal: 'Explain the tactics, key figures, and timeline of the Siege of Yorktown.',
-        genre: 'Historical Archeology Tales',
-        tone: 'EDUCATIONAL',
-        style: 'Noir Inks',
-        srcLang: 'en',
-        tgtLang: 'es',
-        bilingual: false,
-        soundtrack: 'Magic Fantasy',
-        voice: 'Zephyr'
-    },
-    {
-        id: 'bedtime',
-        name: 'Bilingual Bedtime Story',
-        desc: 'Co-create dual-language books for early readers.',
-        icon: '🧸',
-        defaultTitle: 'The Lost Forest Adventure',
-        defaultDesc: 'A brave puppy explores the woods and learns new words.',
-        audience: 'Parents',
-        grade: 'Grade K-2',
-        readingLevel: 'Lexile 300L',
-        goal: 'Introduce Spanish vocabulary through a heartwarming character quest.',
-        genre: 'Custom',
-        tone: 'WHOLESOME',
-        style: 'Handdrawn Sketch',
-        srcLang: 'en',
-        tgtLang: 'es',
-        bilingual: true,
-        soundtrack: 'Slice of Life',
-        voice: 'Nova'
-    },
-    {
-        id: 'science',
-        name: 'Science Explainer Comic',
-        desc: 'Visual layouts demonstrating nature or technology.',
-        icon: '🧬',
-        defaultTitle: 'Photosynthesis: Energy from Light',
-        defaultDesc: 'Avatars trace the molecular path of oxygen and glucose.',
-        audience: 'Students',
-        grade: 'Grade 3-5',
-        readingLevel: 'Lexile 500L',
-        goal: 'Illustrate how chlorophyll transforms carbon dioxide and water.',
-        genre: 'Custom',
-        tone: 'INQUISITIVE',
-        style: 'Pixar 3D',
-        srcLang: 'en',
-        tgtLang: 'fr',
-        bilingual: false,
-        soundtrack: 'Magic Fantasy',
-        voice: 'Orion'
-    },
-    {
-        id: 'manga',
-        name: 'Creative Manga Chapter',
-        desc: 'Classic graphic novel outlines with vintage aesthetics.',
-        icon: '🌸',
-        defaultTitle: 'Neon Chronicles: Spark of Light',
-        defaultDesc: 'A young hacker uncovers a system conspiracy in the cyber grid.',
-        audience: 'Creators',
-        grade: 'Teens',
-        readingLevel: 'General',
-        goal: 'Draft chapter 1 of a science-fiction graphic novel series.',
-        genre: 'Anime Story',
-        tone: 'SUSPENSEFUL',
-        style: 'Retro Anime',
-        srcLang: 'en',
-        tgtLang: 'ja',
-        bilingual: false,
-        soundtrack: 'Sci-Fi Cyberpunk',
-        voice: 'Orion'
-    },
-    {
-        id: 'custom',
-        name: 'Custom Story Canvas',
-        desc: 'Configure all project parameters from scratch.',
-        icon: '✨',
-        defaultTitle: 'A Brand New Tale',
-        defaultDesc: 'Describe your outline premise here...',
-        audience: 'Creators',
-        grade: 'General',
-        readingLevel: 'General',
-        goal: 'Write a custom graphic novel chapter.',
-        genre: 'Custom',
-        tone: 'EXCITING',
-        style: 'Pixar 3D',
-        srcLang: 'en',
-        tgtLang: 'es',
-        bilingual: false,
-        soundtrack: 'Slice of Life',
-        voice: 'Zephyr'
-    }
-];
+// Hardcoded TEMPLATES deleted in favor of dynamic starting_formats database loading
+
 
 export const Setup: React.FC<SetupProps> = (props) => {
     // Wizard Step state
@@ -213,8 +116,9 @@ export const Setup: React.FC<SetupProps> = (props) => {
     
     // Step 5: Language fields
     const [bilingualMode, setBilingualMode] = useState(false);
-    const [sourceLanguage, setSourceLanguage] = useState('en');
-    const [targetLanguage, setTargetLanguage] = useState('es');
+    const [sourceLanguage, setSourceLanguage] = useState('en-US');
+    const [targetLanguage, setTargetLanguage] = useState('es-MX');
+    const [wizardLanguages, setWizardLanguages] = useState<any[]>([]);
     const [readingMode, setReadingMode] = useState<'single' | 'side-by-side' | 'alternating'>('single');
     const [lockedGlossary, setLockedGlossary] = useState(true);
     const [preserveCharacterNames, setPreserveCharacterNames] = useState(true);
@@ -240,6 +144,64 @@ export const Setup: React.FC<SetupProps> = (props) => {
     const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
     const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
 
+    // Wizard Dynamic Library Data
+    const [formats, setFormats] = useState<StartingFormat[]>([]);
+    const [flows, setFlows] = useState<CreatorFlow[]>([]);
+    const [goals, setGoals] = useState<StoryGoal[]>([]);
+    const [personas, setPersonas] = useState<Persona[]>([]);
+    const [usageModes, setUsageModes] = useState<UsageMode[]>([]);
+    const [isLoadingWizardData, setIsLoadingWizardData] = useState(false);
+
+    // Selected Managed Entities
+    const [selectedFormat, setSelectedFormat] = useState<StartingFormat | null>(null);
+    const [selectedFlow, setSelectedFlow] = useState<CreatorFlow | null>(null);
+    const [selectedPrimaryGoal, setSelectedPrimaryGoal] = useState<StoryGoal | null>(null);
+    const [selectedSecondaryGoal, setSelectedSecondaryGoal] = useState<StoryGoal | null>(null);
+    const [freeformGoalNote, setFreeformGoalNote] = useState('');
+
+    // Step 4 Character System
+    const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+    const [personaRole, setPersonaRole] = useState<string>('Main character');
+    const [isPrimaryPersona, setIsPrimaryPersona] = useState<boolean>(true);
+    const [recurringIntent, setRecurringIntent] = useState<boolean>(true);
+    const [personaStoryNotes, setPersonaStoryNotes] = useState<string>('');
+
+    // Persona Creator Modal/Form states
+    const [showPersonaCreator, setShowPersonaCreator] = useState(false);
+    const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+    const [uploadingRefImage, setUploadingRefImage] = useState(false);
+    const [uploadedRefImage, setUploadedRefImage] = useState<ReferenceImage | null>(null);
+
+    useEffect(() => {
+        const loadWizardData = async () => {
+            setIsLoadingWizardData(true);
+            try {
+                const [formatsRes, flowsRes, goalsRes, personasRes, modesRes, langsRes] = await Promise.all([
+                    fetch('/api/formats').then(res => res.json()),
+                    fetch('/api/flows').then(res => res.json()),
+                    fetch('/api/goals').then(res => res.json()),
+                    fetch('/api/personas').then(res => res.json()),
+                    fetch('/api/usage-modes').then(res => res.json()),
+                    fetch('/api/languages').then(res => res.json())
+                ]);
+                setFormats(formatsRes || []);
+                setFlows(flowsRes || []);
+                setGoals(goalsRes || []);
+                setPersonas(personasRes || []);
+                setUsageModes(modesRes || []);
+                setWizardLanguages(langsRes || []);
+                if (personasRes && personasRes.length > 0) {
+                    setSelectedPersona(personasRes[0]);
+                }
+            } catch (e) {
+                console.error("Failed to load wizard setup data", e);
+            } finally {
+                setIsLoadingWizardData(false);
+            }
+        };
+        loadWizardData();
+    }, []);
+
     // Load library drafts and projects
     const fetchLibrary = async () => {
         if (!props.activeCreator.id) return;
@@ -264,35 +226,32 @@ export const Setup: React.FC<SetupProps> = (props) => {
         }
     }, [props.show, props.activeCreator.id]);
 
-    const handleSelectTemplate = (tpl: typeof TEMPLATES[0]) => {
-        setProjectTitle(tpl.defaultTitle);
-        setProjectDesc(tpl.defaultDesc);
-        setAudienceType(tpl.audience);
-        setAgeGrade(tpl.grade);
-        setReadingLevel(tpl.readingLevel);
-        setStoryGoal(tpl.goal);
-        setWizardGenre(tpl.genre);
-        setWizardTone(tpl.tone);
-        setStylePreset(tpl.style);
-        setSourceLanguage(tpl.srcLang);
-        setTargetLanguage(tpl.tgtLang);
-        setBilingualMode(tpl.bilingual);
-        setReadingMode(tpl.bilingual ? 'side-by-side' : 'single');
-        setSoundtrackTheme(tpl.soundtrack);
-        setVoiceStyle(tpl.voice);
+    const handleSelectFormat = (format: StartingFormat) => {
+        setSelectedFormat(format);
         
-        // Propagate style change immediately
-        if (props.onArtStyleChange) {
-            props.onArtStyleChange(tpl.style);
+        // Setup initial default fields from metadata
+        setProjectTitle(`My ${format.title}`);
+        setAgeGrade(format.age_range || 'General');
+        
+        // Auto toggles for bilingual mode
+        const isBilingual = format.category_tags.includes('Bilingual') || format.category_tags.includes('Languages');
+        setBilingualMode(isBilingual);
+        setReadingMode(isBilingual ? 'side-by-side' : 'single');
+
+        // Automatically set related parameters or auto-select recommended flow if single option exists
+        const matchedFlows = flows.filter(f => f.related_formats.includes(format.slug));
+        if (matchedFlows.length === 1) {
+            setSelectedFlow(matchedFlows[0]);
+        } else {
+            setSelectedFlow(null);
         }
-        props.onGenreChange(tpl.genre);
 
         setActiveStep(2);
         playPageTurnSFX();
     };
 
     const handleNextStep = () => {
-        if (activeStep < 7) {
+        if (activeStep < 8) {
             setActiveStep(prev => prev + 1);
             playPageTurnSFX();
         }
@@ -307,6 +266,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
 
     // Execute Wizard Creation and Boot Studio
     const handleCreateProject = async () => {
+        // Construct the consolidated goal string
+        const primaryText = selectedPrimaryGoal ? selectedPrimaryGoal.title : 'Explore the story world';
+        const secondaryText = selectedSecondaryGoal ? ` • ${selectedSecondaryGoal.title}` : '';
+        const customNoteText = freeformGoalNote ? ` (${freeformGoalNote})` : '';
+        const fullStoryGoal = `${primaryText}${secondaryText}${customNoteText}`;
+
         // Sync states to parent setup props
         props.onGenreChange(wizardGenre);
         props.onLanguageChange(bilingualMode ? `${sourceLanguage}-${targetLanguage}` : sourceLanguage);
@@ -317,7 +282,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         // Fallback default blueprint beats in case server-side Gemini suggest fails
         const defaultBlueprint: ChapterGoal[] = [
             { chapterNum: 1, title: "Inciting Incident", goal: `Introduce characters inside the ${wizardGenre} setting.` },
-            { chapterNum: 2, title: "Initial Pursuit", goal: `Establish the primary objective: ${storyGoal || 'Explore the world'}` },
+            { chapterNum: 2, title: "Initial Pursuit", goal: `Establish the primary objective: ${fullStoryGoal}` },
             { chapterNum: 3, title: "The Crossroads", goal: "Introduce a central obstacle or choice related to the premise." },
             { chapterNum: 4, title: "Confrontation & Growth", goal: "Resolve the story objective, delivering the core learning message." }
         ];
@@ -329,10 +294,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
         props.onLaunch({
             title: projectTitle,
             desc: projectDesc,
-            audience: audienceType,
+            audience: selectedFormat ? selectedFormat.audience_tags.join(', ') : audienceType,
             grade: ageGrade,
             level: readingLevel,
-            goal: storyGoal,
+            goal: fullStoryGoal,
             genre: wizardGenre,
             tone: wizardTone,
             style: stylePreset,
@@ -340,7 +305,10 @@ export const Setup: React.FC<SetupProps> = (props) => {
             bilingual: bilingualMode,
             narration: narrationEnabled,
             voice: voiceStyle,
-            soundtrack: soundtrackTheme
+            soundtrack: soundtrackTheme,
+            personaId: selectedPersona?.id || undefined,
+            personaRole: personaRole || undefined,
+            personaUsageMode: selectedPersona?.usageMode || undefined
         });
     };
 
@@ -416,12 +384,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                         <span className="text-[10px] font-mono font-bold tracking-wider text-slate-500 uppercase mb-4 block">Wizard Progress</span>
                         {[
                             { step: 1, title: 'Pick a starting format', desc: 'Choose starting layout' },
-                            { step: 2, title: 'Who is this for?', desc: 'Title, metadata & audience' },
-                            { step: 3, title: 'Set learning and story goals', desc: 'Genre, goals and tones' },
-                            { step: 4, title: 'Pick illustration style', desc: 'Art style and camera' },
-                            { step: 5, title: 'Choose languages & translation', desc: 'Bilingual options' },
-                            { step: 6, title: 'Choose narrator & soundtrack', desc: 'Voices and music' },
-                            { step: 7, title: 'Review and generate your book', desc: 'Launch book sequence' }
+                            { step: 2, title: 'Choose your creator flow', desc: 'Title, premise & workflow' },
+                            { step: 3, title: 'Set learning & story goals', desc: 'Syllabus, goals and tones' },
+                            { step: 4, title: 'Character & Persona', desc: 'Manage characters & reference photos' },
+                            { step: 5, title: 'Pick illustration style', desc: 'Art style and camera' },
+                            { step: 6, title: 'Choose languages & translation', desc: 'Bilingual options' },
+                            { step: 7, title: 'Choose narrator & soundtrack', desc: 'Voices and music' },
+                            { step: 8, title: 'Review and generate your book', desc: 'Launch book sequence' }
                         ].map((rail) => {
                             const isActive = activeStep === rail.step;
                             const isCompleted = activeStep > rail.step;
@@ -453,7 +422,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     <main className="flex-1 p-8 overflow-y-auto flex flex-col justify-between">
                         <div className="max-w-2xl mx-auto w-full space-y-6">
                             
-                            {/* Step 1: Choose Template */}
+                            {/* Step 1: Choose Format */}
                             {activeStep === 1 && (
                                 <div className="space-y-6 text-left">
                                     <div>
@@ -461,35 +430,80 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         <p className="text-sm text-slate-400">Choose the format that best fits your lesson or story</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-3">
-                                        {TEMPLATES.map((tpl) => (
-                                            <button
-                                                key={tpl.id}
-                                                onClick={() => handleSelectTemplate(tpl)}
-                                                className="w-full p-4 rounded-xl border text-left flex items-center gap-4 transition-all bg-slate-950/20 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-950/40 cursor-pointer"
-                                            >
-                                                <span className="text-3xl p-3 rounded-lg bg-slate-800 border border-slate-700 shrink-0">{tpl.icon}</span>
-                                                <div className="flex-1">
-                                                    <h4 className="font-extrabold text-sm text-slate-200">{tpl.name}</h4>
-                                                    <p className="text-xs text-slate-400 mt-0.5">{tpl.desc}</p>
-                                                    <span className="text-[9px] font-mono text-indigo-400 uppercase mt-1.5 block">Pre-configures: {tpl.audience} • {tpl.style}</span>
+                                    {isLoadingWizardData ? (
+                                        <div className="space-y-3">
+                                            {[1, 2, 3].map((n) => (
+                                                <div key={n} className="w-full h-24 rounded-xl bg-slate-850/50 border border-slate-800 animate-pulse flex items-center p-4 gap-4">
+                                                    <div className="w-12 h-12 rounded bg-slate-805 shrink-0"></div>
+                                                    <div className="flex-1 space-y-2">
+                                                        <div className="h-4 bg-slate-800 rounded w-1/3"></div>
+                                                        <div className="h-3 bg-slate-800 rounded w-3/4"></div>
+                                                    </div>
                                                 </div>
-                                                <ArrowRight size={16} className="text-slate-500" />
-                                            </button>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-3">
+                                            {formats.filter(f => f.visibility_state === 'Active').map((fmt) => (
+                                                <button
+                                                    key={fmt.id}
+                                                    onClick={() => handleSelectFormat(fmt)}
+                                                    className={`w-full p-4 rounded-xl border text-left flex items-start gap-4 transition-all cursor-pointer relative overflow-hidden ${
+                                                        selectedFormat?.id === fmt.id
+                                                        ? 'bg-indigo-600/10 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                                                        : 'bg-slate-950/20 border-slate-800 hover:border-slate-700 hover:bg-slate-950/20'
+                                                    }`}
+                                                >
+                                                    {fmt.featured && (
+                                                        <span className="absolute top-0 right-0 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-bl">
+                                                            RECOMMENDED
+                                                        </span>
+                                                    )}
+                                                    <span className="text-3xl p-3 rounded-lg bg-slate-800 border border-slate-700 shrink-0 mt-1">{fmt.icon || '🏫'}</span>
+                                                    <div className="flex-1 min-w-0 pr-8">
+                                                        <h4 className="font-extrabold text-sm text-slate-200 flex items-center gap-2">
+                                                            {fmt.title}
+                                                            {fmt.age_range && <span className="text-[10px] font-semibold text-slate-500 font-mono">({fmt.age_range})</span>}
+                                                        </h4>
+                                                        <p className="text-xs text-slate-400 mt-0.5">{fmt.short_description}</p>
+                                                        {fmt.recommended_for && (
+                                                            <p className="text-[10px] text-indigo-400 mt-1.5 font-medium"><strong className="text-slate-400">Best for:</strong> {fmt.recommended_for}</p>
+                                                        )}
+                                                        {fmt.sample_output_hint && (
+                                                            <p className="text-[10px] text-emerald-400/95 mt-0.5 font-medium"><strong className="text-slate-400">Sample Output:</strong> {fmt.sample_output_hint}</p>
+                                                        )}
+                                                        {fmt.audience_tags && fmt.audience_tags.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-2.5">
+                                                                {fmt.audience_tags.map(tag => (
+                                                                    <span key={tag} className="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{tag}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <ArrowRight size={16} className="text-slate-500 mt-4 shrink-0" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
-                            {/* Step 2: Project Basics */}
+                            {/* Step 2: Creator Flow & Project Basics */}
                             {activeStep === 2 && (
                                 <div className="space-y-5 text-left">
                                     <div>
-                                        <h3 className="text-xl font-bold tracking-tight text-white">Who is this for?</h3>
-                                        <p className="text-sm text-slate-400">Set the title and define the audience for this story or lesson</p>
+                                        <h3 className="text-xl font-bold tracking-tight text-white">Choose your creator flow</h3>
+                                        <p className="text-sm text-slate-400">Define the project title, premise, and creator template workflow</p>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    {selectedFormat && (
+                                        <div className="p-3 bg-indigo-950/20 border border-indigo-900/40 rounded-xl flex items-center gap-3 text-xs text-indigo-300">
+                                            <Info size={14} className="shrink-0 text-indigo-400" />
+                                            <span>Showing flows optimized for the <strong className="text-indigo-200">{selectedFormat.title}</strong> format.</span>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-5">
                                         {/* Project Title */}
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Project Title</label>
@@ -497,65 +511,94 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 type="text" 
                                                 value={projectTitle}
                                                 onChange={(e) => setProjectTitle(e.target.value)}
-                                                placeholder="e.g. The Brave Astronaut"
-                                                className="w-full rounded-xl bg-slate-955/45 border border-slate-800 text-slate-100 p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                placeholder="e.g. Photosynthesis: Energy from Light"
+                                                className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                             />
-                                            <span className="text-[10px] text-slate-500 mt-1 block">Give your story project a clear, memorable title.</span>
                                         </div>
 
                                         {/* Short Description */}
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Short Description / Premise</label>
                                             <textarea 
-                                                rows={3}
+                                                rows={2}
                                                 value={projectDesc}
                                                 onChange={(e) => setProjectDesc(e.target.value)}
-                                                placeholder="e.g. A tiny seed travels across desert winds to find a patch of fertile soil..."
-                                                className="w-full rounded-xl bg-slate-950/50 border border-slate-800 text-slate-100 p-3.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                placeholder="e.g. A character-driven journey explaining how plants convert light to energy..."
+                                                className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                             />
-                                            <span className="text-[10px] text-slate-500 mt-1 block">Describe the core story premise or characters in 2-3 sentences.</span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {/* Audience Type */}
-                                            <div>
-                                                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-305 font-medium">Target User</label>
-                                                <select
-                                                    value={audienceType}
-                                                    onChange={(e) => setAudienceType(e.target.value)}
-                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                >
-                                                    {['Teachers', 'Parents', 'Students', 'Creators'].map(aud => (
-                                                        <option key={aud} value={aud}>{aud}</option>
-                                                    ))}
-                                                </select>
+                                        {/* Creator Flows Selection */}
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-slate-300">Select Creator Flow</label>
+                                            <div className="grid grid-cols-1 gap-2.5">
+                                                {flows.filter(f => f.visibility_state === 'Active').map((flow) => {
+                                                    const isRecommended = selectedFormat && flow.related_formats.includes(selectedFormat.slug);
+                                                    const isSelected = selectedFlow?.id === flow.id;
+                                                    return (
+                                                        <button
+                                                            key={flow.id}
+                                                            type="button"
+                                                            onClick={() => setSelectedFlow(flow)}
+                                                            className={`w-full p-3.5 rounded-xl border text-left flex items-start gap-3.5 transition-all cursor-pointer relative overflow-hidden ${
+                                                                isSelected
+                                                                ? 'bg-indigo-600/10 border-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
+                                                                : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                                            }`}
+                                                        >
+                                                            {isRecommended && (
+                                                                <span className="absolute top-0 right-0 bg-emerald-600 text-white text-[7px] font-black px-2 py-0.5 rounded-bl uppercase tracking-wider">
+                                                                    Recommended Match
+                                                                </span>
+                                                            )}
+                                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border mt-0.5 text-xs ${
+                                                                isSelected ? 'bg-indigo-600 text-white border-transparent' : 'border-slate-600'
+                                                            }`}>
+                                                                {isSelected && '✓'}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 pr-12">
+                                                                <h5 className="font-extrabold text-xs text-slate-200">{flow.title}</h5>
+                                                                <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{flow.short_description}</p>
+                                                                {flow.best_for && (
+                                                                    <p className="text-[10px] text-slate-500 mt-1"><strong className="text-slate-400">Best for:</strong> {flow.best_for}</p>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
+                                        </div>
 
+                                        {/* Metadata dropdowns */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                             {/* Age or Grade */}
                                             <div>
-                                                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Age / Grade</label>
+                                                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Age / Grade Level</label>
                                                 <select
                                                     value={ageGrade}
                                                     onChange={(e) => setAgeGrade(e.target.value)}
-                                                    className="w-full rounded-xl bg-slate-955 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                 >
-                                                    {['Grade K-2', 'Grade 3-5', 'Grade 6-8', 'Teens', 'General'].map(grade => (
-                                                        <option key={grade} value={grade}>{grade}</option>
-                                                    ))}
+                                                    <option value="Grade K-2">Grade K-2 (Early Elementary)</option>
+                                                    <option value="Grade 3-5">Grade 3-5 (Mid Elementary)</option>
+                                                    <option value="Grade 6-8">Grade 6-8 (Middle School)</option>
+                                                    <option value="Teens">Teens (High School)</option>
+                                                    <option value="General">General / All Audiences</option>
                                                 </select>
                                             </div>
 
                                             {/* Reading Level */}
                                             <div>
-                                                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Reading Level</label>
+                                                <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Reading Level Adaptation</label>
                                                 <select
                                                     value={readingLevel}
                                                     onChange={(e) => setReadingLevel(e.target.value)}
                                                     className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                 >
-                                                    {['Lexile 300L', 'Lexile 500L', 'Lexile 700L', 'General'].map(level => (
-                                                        <option key={level} value={level}>{level}</option>
-                                                    ))}
+                                                    <option value="Lexile 300L">Lexile 300L (Beginning Reader)</option>
+                                                    <option value="Lexile 500L">Lexile 500L (Developing Reader)</option>
+                                                    <option value="Lexile 700L">Lexile 700L (Independent Reader)</option>
+                                                    <option value="General">General (Unassisted Reading)</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -563,36 +606,120 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
-                            {/* Step 3: Story Goal */}
+                            {/* Step 3: Story & Learning Goals */}
                             {activeStep === 3 && (
                                 <div className="space-y-5 text-left">
                                     <div>
                                         <h3 className="text-xl font-bold tracking-tight text-white">Set learning and story goals</h3>
-                                        <p className="text-sm text-slate-400">Define what the reader should learn or experience</p>
+                                        <p className="text-sm text-slate-400">Define what the reader should learn or experience from this project</p>
                                     </div>
 
+                                    {selectedFormat && (
+                                        <div className="p-3 bg-indigo-950/20 border border-indigo-900/40 rounded-xl flex items-center gap-3 text-xs text-indigo-300">
+                                            <Info size={14} className="shrink-0 text-indigo-400" />
+                                            <span>Goals recommended for the <strong className="text-indigo-200">{selectedFormat.title}</strong> format are marked with a star (★).</span>
+                                        </div>
+                                    )}
+
                                     <div className="space-y-4">
-                                        {/* Story Goal */}
+                                        {/* Primary Goal Selector */}
                                         <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Story Goal / Lesson Objective</label>
-                                            <input 
-                                                type="text" 
-                                                value={storyGoal}
-                                                onChange={(e) => setStoryGoal(e.target.value)}
-                                                placeholder="e.g. Introduce gravity concepts, teach sharing, explain historical trade routes"
-                                                className="w-full rounded-xl bg-slate-950/50 border border-slate-800 text-slate-100 p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                            />
-                                            <span className="text-[10px] text-slate-500 mt-1 block">What should readers learn or experience after reading this story?</span>
+                                            <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Primary Goal (Required)</label>
+                                            <select
+                                                value={selectedPrimaryGoal?.id || ''}
+                                                onChange={(e) => {
+                                                    const goal = goals.find(g => g.id === e.target.value);
+                                                    setSelectedPrimaryGoal(goal || null);
+                                                    if (goal) {
+                                                        if (goal.category === 'Science') {
+                                                            setWizardTone('EDUCATIONAL');
+                                                            setWizardGenre('Custom');
+                                                        }
+                                                    }
+                                                }}
+                                                className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            >
+                                                <option value="">-- Choose a required primary goal --</option>
+                                                <optgroup label="Reading Fluency & Comprehension">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category === 'Reading').map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                                <optgroup label="Science & STEM Objectives">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category === 'Science').map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                                <optgroup label="Language, Vocabulary & Sharing">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category !== 'Reading' && g.category !== 'Science').map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                            </select>
+                                            {selectedPrimaryGoal && (
+                                                <span className="text-[10px] text-slate-500 mt-1 block font-medium">{selectedPrimaryGoal.short_description}</span>
+                                            )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Genre */}
+                                        {/* Secondary Goal Selector */}
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Secondary Goal (Optional)</label>
+                                            <select
+                                                value={selectedSecondaryGoal?.id || ''}
+                                                onChange={(e) => {
+                                                    const goal = goals.find(g => g.id === e.target.value);
+                                                    setSelectedSecondaryGoal(goal || null);
+                                                }}
+                                                className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            >
+                                                <option value="">-- None --</option>
+                                                <optgroup label="Reading Fluency & Comprehension">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category === 'Reading' && g.id !== selectedPrimaryGoal?.id).map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                                <optgroup label="Science & STEM Objectives">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category === 'Science' && g.id !== selectedPrimaryGoal?.id).map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                                <optgroup label="Language, Vocabulary & Sharing">
+                                                    {goals.filter(g => g.visibility_state === 'Active' && g.category !== 'Reading' && g.category !== 'Science' && g.id !== selectedPrimaryGoal?.id).map(g => {
+                                                        const isRecommended = selectedFormat && g.related_formats.includes(selectedFormat.slug);
+                                                        return <option key={g.id} value={g.id}>{isRecommended ? '★ ' : ''}{g.title}</option>;
+                                                    })}
+                                                </optgroup>
+                                            </select>
+                                            {selectedSecondaryGoal && (
+                                                <span className="text-[10px] text-slate-500 mt-1 block font-medium">{selectedSecondaryGoal.short_description}</span>
+                                            )}
+                                        </div>
+
+                                        {/* Freeform Goal Note */}
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Custom Goal Notes / Focus Terms (Optional)</label>
+                                            <input 
+                                                type="text" 
+                                                value={freeformGoalNote}
+                                                onChange={(e) => setFreeformGoalNote(e.target.value)}
+                                                placeholder="e.g. Focus on photosynthesis terms, introduce the word 'chlorophyll'"
+                                                className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                            />
+                                        </div>
+
+                                        {/* Genre & Tone dropdowns */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                             <div>
                                                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Syllabus Genre</label>
                                                 <select
                                                     value={wizardGenre}
                                                     onChange={(e) => setWizardGenre(e.target.value)}
-                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                 >
                                                     {['Superhero Action', 'High Fantasy', 'Neon Noir Detective', 'Classic Horror', 'Historical Archeology Tales', 'Custom'].map(g => (
                                                         <option key={g} value={g}>{g}</option>
@@ -600,13 +727,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 </select>
                                             </div>
 
-                                            {/* Tone */}
                                             <div>
                                                 <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-300">Story Tone</label>
                                                 <select
                                                     value={wizardTone}
                                                     onChange={(e) => setWizardTone(e.target.value)}
-                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                 >
                                                     {['EDUCATIONAL', 'WHOLESOME', 'SUSPENSEFUL', 'LIGHTHEARTED', 'EXCITING'].map(t => (
                                                         <option key={t} value={t}>{t}</option>
@@ -618,8 +744,183 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
-                            {/* Step 4: Visual Style */}
+                            {/* Step 4: Character & Persona */}
                             {activeStep === 4 && (
+                                <div className="space-y-6 text-left animate-fadeIn">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="text-xl font-bold tracking-tight text-white font-serif">Character & Persona</h3>
+                                            <p className="text-sm text-slate-400">Configure or select a character to feature in your story</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingPersona({
+                                                    id: '',
+                                                    slug: '',
+                                                    displayName: '',
+                                                    shortDescription: '',
+                                                    longDescription: '',
+                                                    personaType: 'Custom Character',
+                                                    roleDefaults: ['Main character'],
+                                                    ageGroup: 'General',
+                                                    audience_tags: [],
+                                                    language_tags: ['en'],
+                                                    stylePreference: 'General',
+                                                    visualSummary: '',
+                                                    generationSafeDescription: '',
+                                                    usageMode: 'none',
+                                                    recurringCharacter: true,
+                                                    visibilityScope: 'Private',
+                                                    consentStatus: 'Not Granted',
+                                                    moderationStatus: 'Unmoderated',
+                                                    approvedForGeneration: false,
+                                                    sort_order: 99,
+                                                    status: 'Active'
+                                                });
+                                                setUploadedRefImage(null);
+                                                setShowPersonaCreator(true);
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow cursor-pointer animate-pulse"
+                                        >
+                                            <Plus size={14} /> Add Character
+                                        </button>
+                                    </div>
+
+                                    {/* Persona list/cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                        {personas.map((p) => {
+                                            const isSelected = selectedPersona?.id === p.id;
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        setSelectedPersona(p);
+                                                        setPersonaRole((p.roleDefaults && p.roleDefaults[0]) || 'Main character');
+                                                    }}
+                                                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between h-44 relative overflow-hidden ${
+                                                        isSelected
+                                                        ? 'bg-indigo-600/10 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                                                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                                                    }`}
+                                                >
+                                                    <div className="space-y-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 uppercase tracking-wider">
+                                                                {p.personaType}
+                                                            </span>
+                                                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                                                                p.visibilityScope === 'Public' ? 'bg-emerald-950/40 text-emerald-400' : 'bg-slate-900 border border-slate-800 text-slate-500'
+                                                            }`}>
+                                                                {p.visibilityScope}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="font-extrabold text-sm text-slate-200 mt-1">{p.displayName}</h4>
+                                                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{p.shortDescription}</p>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center pt-2 border-t border-slate-900 mt-2">
+                                                        <span className="text-[9.5px] text-slate-500 font-mono">
+                                                            Mode: {p.usageMode}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingPersona({ ...p });
+                                                                if (p.referenceImageId) {
+                                                                    setUploadedRefImage({
+                                                                        id: p.referenceImageId,
+                                                                        fileName: 'uploaded-photo.jpg',
+                                                                        mimeType: 'image/jpeg',
+                                                                        previewUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+                                                                        uploadStatus: 'Completed',
+                                                                        cropStatus: 'Cropped',
+                                                                        moderationStatus: p.moderationStatus === 'Approved' ? 'Approved' : 'Pending',
+                                                                        consentVerified: p.consentStatus === 'Granted',
+                                                                        approvedForGeneration: p.approvedForGeneration
+                                                                    });
+                                                                } else {
+                                                                    setUploadedRefImage(null);
+                                                                }
+                                                                setShowPersonaCreator(true);
+                                                            }}
+                                                            className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1"
+                                                        >
+                                                            <Edit2 size={10} /> Edit Character
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Role Configuration for selected persona */}
+                                    {selectedPersona && (
+                                        <div className="p-5 bg-slate-950 border border-slate-800 rounded-xl space-y-4 animate-fadeIn">
+                                            <div className="flex items-center gap-2">
+                                                <Info size={14} className="text-indigo-400 shrink-0" />
+                                                <h4 className="text-xs font-bold text-slate-200">Configure Story Role for <span className="text-indigo-400">{selectedPersona.displayName}</span></h4>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                                <div>
+                                                    <label className="block text-slate-400 mb-1.5 font-bold uppercase tracking-wide text-[10px]">Story Role Type</label>
+                                                    <select
+                                                        value={personaRole}
+                                                        onChange={(e) => setPersonaRole(e.target.value)}
+                                                        className="w-full bg-slate-900 border border-slate-800 p-2.5 rounded text-white text-xs"
+                                                    >
+                                                        <option value="Main character">Main character</option>
+                                                        <option value="Narrator guide">Narrator guide</option>
+                                                        <option value="Supporting family member">Supporting family member</option>
+                                                        <option value="Teacher/host">Teacher/host</option>
+                                                        <option value="Science explainer">Science explainer</option>
+                                                        <option value="Class mascot">Class mascot</option>
+                                                        <option value="Side character">Side character</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-slate-400 mb-1.5 font-bold uppercase tracking-wide text-[10px]">Casting Priorities</label>
+                                                    <div className="flex items-center gap-4 mt-2">
+                                                        <label className="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isPrimaryPersona}
+                                                                onChange={(e) => setIsPrimaryPersona(e.target.checked)}
+                                                            />
+                                                            Primary Character
+                                                        </label>
+                                                        <label className="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={recurringIntent}
+                                                                onChange={(e) => setRecurringIntent(e.target.checked)}
+                                                            />
+                                                            Recurring Intent
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-span-2">
+                                                    <label className="block text-slate-400 mb-1.5 font-bold uppercase tracking-wide text-[10px]">Story Notes for this Casting</label>
+                                                    <input
+                                                        type="text"
+                                                        value={personaStoryNotes}
+                                                        onChange={(e) => setPersonaStoryNotes(e.target.value)}
+                                                        placeholder="e.g. Plays the sidekick who finds the glowing leaf"
+                                                        className="w-full bg-slate-900 border border-slate-800 p-2.5 rounded text-white text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Step 5: Visual Style */}
+                            {activeStep === 5 && (
                                 <div className="space-y-5 text-left">
                                     <div>
                                         <h3 className="text-xl font-bold tracking-tight text-white">Pick illustration style</h3>
@@ -669,8 +970,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
-                            {/* Step 5: Language Tracks */}
-                            {activeStep === 5 && (
+                            {/* Step 6: Language Tracks */}
+                            {activeStep === 6 && (
                                 <div className="space-y-6 text-left">
                                     <div>
                                         <h3 className="text-xl font-bold tracking-tight text-white">Choose languages & translation</h3>
@@ -709,14 +1010,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <select
                                                     value={sourceLanguage}
                                                     onChange={(e) => setSourceLanguage(e.target.value)}
-                                                    className="w-full rounded-xl bg-slate-950 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                    className="w-full rounded-xl bg-slate-955 border border-slate-808 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                 >
-                                                    <option value="en">English (US)</option>
-                                                    <option value="es">Spanish (Español)</option>
-                                                    <option value="fr">French (Français)</option>
-                                                    <option value="ja">Japanese (日本語)</option>
-                                                    <option value="de">German (Deutsch)</option>
-                                                    <option value="ko">Korean (한국어)</option>
+                                                    {wizardLanguages.map(l => (
+                                                        <option key={l.id} value={l.code}>{l.displayName} ({l.nativeName})</option>
+                                                    ))}
                                                 </select>
                                             </div>
 
@@ -726,14 +1024,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     <select
                                                         value={targetLanguage}
                                                         onChange={(e) => setTargetLanguage(e.target.value)}
-                                                        className="w-full rounded-xl bg-slate-955 border border-slate-800 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                        className="w-full rounded-xl bg-slate-955 border border-slate-808 text-slate-100 p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                                                     >
-                                                        <option value="es">Spanish (Español)</option>
-                                                        <option value="en">English (US)</option>
-                                                        <option value="fr">French (Français)</option>
-                                                        <option value="ja">Japanese (日本語)</option>
-                                                        <option value="de">German (Deutsch)</option>
-                                                        <option value="ko">Korean (한국어)</option>
+                                                        {wizardLanguages.map(l => (
+                                                            <option key={l.id} value={l.code}>{l.displayName} ({l.nativeName})</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                             )}
@@ -860,8 +1155,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
-                            {/* Step 6: Audio */}
-                            {activeStep === 6 && (
+                            {/* Step 7: Audio */}
+                            {activeStep === 7 && (
                                 <div className="space-y-6 text-left">
                                     <div>
                                         <h3 className="text-xl font-bold tracking-tight text-white">Choose narrator & soundtrack</h3>
@@ -1044,8 +1339,8 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 </div>
                             )}
 
-                            {/* Step 7: Review & Create */}
-                            {activeStep === 7 && (
+                            {/* Step 8: Review & Create */}
+                            {activeStep === 8 && (
                                 <div className="space-y-6 text-left">
                                     <div>
                                         <h3 className="text-xl font-bold tracking-tight text-white">Review and generate your book</h3>
@@ -1055,7 +1350,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         
                                         {/* Basics review card */}
-                                        <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-800 space-y-3 relative">
+                                        <div className="p-5 rounded-2xl bg-slate-955/40 border border-slate-800 space-y-3 relative">
                                             <button 
                                                 onClick={() => setActiveStep(2)}
                                                 className="absolute top-4 right-4 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
@@ -1077,20 +1372,40 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                 <Edit2 size={10} /> Change
                                             </button>
                                             <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">2. Goals & Format</span>
-                                            <h4 className="font-extrabold text-xs text-slate-200">Syllabus Objective</h4>
+                                            <h4 className="font-extrabold text-xs text-slate-200 font-serif">Syllabus Objective</h4>
                                             <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{storyGoal || 'General creative story adventure development.'}</p>
                                             <span className="block text-[10px] text-slate-300 font-semibold">{wizardGenre} ({wizardTone.toLowerCase()})</span>
                                         </div>
 
-                                        {/* Visual Preset review card */}
-                                        <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-800 space-y-3 relative">
+                                        {/* Character & Persona review card */}
+                                        <div className="p-5 rounded-2xl bg-slate-955/40 border border-slate-800 space-y-3 relative">
                                             <button 
                                                 onClick={() => setActiveStep(4)}
                                                 className="absolute top-4 right-4 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                                             >
                                                 <Edit2 size={10} /> Change
                                             </button>
-                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">3. Visual Presets</span>
+                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">3. Cast Character</span>
+                                            {selectedPersona ? (
+                                                <div className="space-y-1 text-left">
+                                                    <h4 className="font-extrabold text-sm text-slate-200">{selectedPersona.displayName}</h4>
+                                                    <p className="text-[10px] text-slate-400"><strong className="text-slate-300">Role:</strong> {personaRole}</p>
+                                                    <p className="text-[9px] text-slate-500">Likeness Mode: {selectedPersona.usageMode}</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] text-slate-500">No custom character cast.</p>
+                                            )}
+                                        </div>
+
+                                        {/* Visual Preset review card */}
+                                        <div className="p-5 rounded-2xl bg-slate-955/40 border border-slate-800 space-y-3 relative">
+                                            <button 
+                                                onClick={() => setActiveStep(5)}
+                                                className="absolute top-4 right-4 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Edit2 size={10} /> Change
+                                            </button>
+                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">4. Visual Presets</span>
                                             <div className="flex gap-3 items-center">
                                                 <div className="w-10 h-10 rounded-lg bg-slate-950 overflow-hidden shrink-0 border border-slate-800">
                                                     <img src={styleImages[stylePreset] || '/pixar.png'} className="w-full h-full object-cover" />
@@ -1105,12 +1420,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         {/* Language tracks review card */}
                                         <div className="p-5 rounded-2xl bg-slate-955/40 border border-slate-800 space-y-3 relative">
                                             <button 
-                                                onClick={() => setActiveStep(5)}
+                                                onClick={() => setActiveStep(6)}
                                                 className="absolute top-4 right-4 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                                             >
                                                 <Edit2 size={10} /> Change
                                             </button>
-                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">4. Language Setup</span>
+                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">5. Language Setup</span>
                                             <h4 className="font-extrabold text-xs text-slate-200">
                                                 {bilingualMode ? 'Bilingual Translation Track' : 'Single Language Track'}
                                             </h4>
@@ -1127,13 +1442,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     {/* Audio Narration review row */}
                                     <div className="p-5 rounded-2xl bg-slate-955/40 border border-slate-800 relative flex justify-between items-center">
                                         <button 
-                                            onClick={() => setActiveStep(6)}
+                                            onClick={() => setActiveStep(7)}
                                             className="absolute top-4 right-4 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                                         >
                                             <Edit2 size={10} /> Change
                                         </button>
                                         <div className="text-left space-y-1">
-                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">5. Audio Narration & Soundtrack</span>
+                                            <span className="text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wider block">6. Audio Narration & Soundtrack</span>
                                             <p className="text-xs font-bold text-slate-200">
                                                 {narrationEnabled ? `Voice Narrator: ${voiceStyle} (${voiceTone})` : 'Speech Narration Off'}
                                             </p>
@@ -1163,7 +1478,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                 <ArrowLeft size={14} /> Back
                             </button>
 
-                            {activeStep < 7 ? (
+                            {activeStep < 8 ? (
                                 <button
                                     onClick={handleNextStep}
                                     className="px-6 py-3 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 cursor-pointer ml-auto"
@@ -1182,12 +1497,12 @@ export const Setup: React.FC<SetupProps> = (props) => {
                     </main>
 
                     {/* Right Summary Preview Panel */}
-                    <aside className="w-80 border-l border-slate-800 p-6 flex flex-col justify-between shrink-0 bg-slate-900/40">
+                    <aside className="w-80 border-l border-slate-800 p-6 flex flex-col justify-between shrink-0 bg-slate-900/40 font-sans">
                         <div className="space-y-6">
                             <span className="text-[10px] font-mono font-bold tracking-wider text-slate-500 uppercase block">Live Summary Card</span>
                             
                             {/* Project Mock Preview Card */}
-                            <div className="rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-lg flex flex-col text-left">
+                            <div className="rounded-2xl border border-slate-800 bg-slate-955 overflow-hidden shadow-lg flex flex-col text-left">
                                 <div className="aspect-[4/3] w-full relative overflow-hidden bg-slate-900 border-b border-slate-800">
                                     <img 
                                         src={styleImages[stylePreset] || '/pixar.png'} 
@@ -1203,7 +1518,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     <div>
                                         <span className="text-[9px] font-mono text-purple-400 font-bold uppercase tracking-wider">{audienceType} • {ageGrade}</span>
                                         <h4 className="font-extrabold text-sm text-slate-200 tracking-tight mt-0.5 line-clamp-1">{projectTitle || 'Untitled Story'}</h4>
-                                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{projectDesc || 'A brand new story outline, ready to generate illustrated chapters.'}</p>
+                                        <p className="text-[10px] text-slate-405 mt-1 line-clamp-2 leading-relaxed">{projectDesc || 'A brand new story outline, ready to generate illustrated chapters.'}</p>
                                     </div>
                                     
                                     {/* Live language configuration mapping */}
@@ -1212,6 +1527,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             <p className="line-clamp-1">🎯 Goal: {storyGoal}</p>
                                         )}
                                         <p>📂 Format: {wizardGenre} ({wizardTone.toLowerCase()})</p>
+                                        <p>👤 Cast: {selectedPersona ? `${selectedPersona.displayName} (${personaRole})` : 'No custom character cast'}</p>
                                         <p>🌐 Language: {bilingualMode ? `${sourceLanguage.toUpperCase()} ↔ ${targetLanguage.toUpperCase()} (${readingMode})` : `${sourceLanguage.toUpperCase()}`}</p>
                                         <p>🔧 Translation Settings: {lockedGlossary ? 'Glossary locked' : 'No glossary'}, {preserveCharacterNames ? 'names preserved' : 'no preservation'}</p>
                                         <p>🔊 {narrationEnabled ? `Narrated by ${voiceStyle} (${voiceTone} tone) with ${soundtrackTheme} background music` : 'Muted'}</p>
@@ -1230,6 +1546,197 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 </div>
 
             </div>
+
+            {/* Persona Creator Overlay Dialog */}
+            {showPersonaCreator && editingPersona && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-3xl p-6 text-left space-y-5 text-white">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <UserPlus size={20} className="text-indigo-400" />
+                                <h3 className="font-extrabold text-sm text-slate-200">
+                                    {editingPersona.id ? 'Edit Character & Persona' : 'Create Character & Persona'}
+                                </h3>
+                            </div>
+                            <button className="text-gray-400 hover:text-white" onClick={() => setShowPersonaCreator(false)}><X size={18} /></button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-xs font-sans">
+                            <div className="col-span-2">
+                                <label className="block text-slate-400 mb-1 font-bold">Display Name</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. Professor Pumpernickel"
+                                    className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded text-white text-xs outline-none" 
+                                    value={editingPersona.displayName} 
+                                    onChange={e => setEditingPersona({...editingPersona, displayName: e.target.value})} 
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 mb-1 font-bold">Character Archetype</label>
+                                <select 
+                                    className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded text-white text-xs"
+                                    value={editingPersona.personaType} 
+                                    onChange={e => setEditingPersona({...editingPersona, personaType: e.target.value as any})}
+                                >
+                                    <option value="Me">Me (Self Portrait)</option>
+                                    <option value="Child Reader">Child Reader</option>
+                                    <option value="Story Guide">Story Guide</option>
+                                    <option value="Science Helper">Science Helper</option>
+                                    <option value="Teacher Voice Character">Teacher Voice Character</option>
+                                    <option value="Family Character">Family Character</option>
+                                    <option value="Custom Character">Custom Character</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 mb-1 font-bold">Likeness Usage Mode</label>
+                                <select 
+                                    className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded text-white text-xs"
+                                    value={editingPersona.usageMode} 
+                                    onChange={e => setEditingPersona({...editingPersona, usageMode: e.target.value})}
+                                >
+                                    {usageModes.map(m => (
+                                        <option key={m.slug} value={m.slug}>{m.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Reference Photo Upload area */}
+                            {editingPersona.usageMode !== 'none' && (
+                                <div className="col-span-2 space-y-2 p-4 bg-slate-950 border border-slate-850 rounded-2xl text-left">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reference Photo Likeness</span>
+                                    
+                                    {!uploadedRefImage ? (
+                                        <div className="border border-dashed border-slate-800 rounded-xl p-6 text-center space-y-3">
+                                            <UploadCloud className="mx-auto text-slate-500" size={32} />
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-300">Upload a Reference Photo</p>
+                                                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">Uploaded faces are only used to maintain facial consistency in generated scenes.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={uploadingRefImage}
+                                                onClick={() => {
+                                                    setUploadingRefImage(true);
+                                                    setTimeout(() => {
+                                                        setUploadedRefImage({
+                                                            id: 'img-' + Math.random().toString(36).substr(2, 9),
+                                                            fileName: 'my-avatar.png',
+                                                            mimeType: 'image/png',
+                                                            previewUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+                                                            uploadStatus: 'Completed',
+                                                            cropStatus: 'Cropped',
+                                                            moderationStatus: 'Approved',
+                                                            consentVerified: true,
+                                                            approvedForGeneration: true
+                                                        });
+                                                        setUploadingRefImage(false);
+                                                    }, 1500);
+                                                }}
+                                                className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-650/40 text-indigo-400 border border-indigo-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                                            >
+                                                {uploadingRefImage ? 'Uploading and analyzing face...' : 'Choose File / Simulate Upload'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-4 items-center p-2">
+                                            <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shrink-0">
+                                                <img src={uploadedRefImage.previewUrl} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 space-y-1 text-xs">
+                                                <p className="font-bold text-slate-300">{uploadedRefImage.fileName}</p>
+                                                <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                                                    <span>✓ Moderation Cleared (Face Detected)</span>
+                                                </p>
+                                                <div className="flex gap-3 pt-1 text-[10px]">
+                                                    <button type="button" className="text-slate-400 hover:text-white" onClick={() => setUploadedRefImage(null)}>Remove</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="col-span-2">
+                                <label className="block text-slate-400 mb-1 font-bold">Short Bio / Character Description</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. A friendly child researcher who loves space explainers"
+                                    className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded text-white text-xs outline-none" 
+                                    value={editingPersona.shortDescription} 
+                                    onChange={e => setEditingPersona({...editingPersona, shortDescription: e.target.value})} 
+                                />
+                            </div>
+
+                            <div className="col-span-2">
+                                <label className="block text-slate-400 mb-1 font-bold">Visual Summary (Prompt locked descriptors)</label>
+                                <textarea 
+                                    rows={2}
+                                    placeholder="e.g. Short curly hair, red hoodie, white canvas sneakers"
+                                    className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded text-white text-xs outline-none resize-none" 
+                                    value={editingPersona.visualSummary} 
+                                    onChange={e => setEditingPersona({...editingPersona, visualSummary: e.target.value})} 
+                                />
+                            </div>
+
+                            <div className="col-span-2">
+                                <label className="block text-slate-400 mb-1 font-bold">Safety, Consent & Visibility Scope</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-950 border border-slate-850 rounded-2xl mt-1">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input 
+                                            type="checkbox"
+                                            checked={editingPersona.consentStatus === 'Granted'}
+                                            onChange={e => setEditingPersona({...editingPersona, consentStatus: e.target.checked ? 'Granted' : 'Not Granted'})}
+                                        />
+                                        <span>I consent to using this character likeness</span>
+                                    </label>
+                                    <div>
+                                        <select
+                                            className="bg-slate-900 border border-slate-800 p-1.5 rounded text-white text-xs w-full"
+                                            value={editingPersona.visibilityScope}
+                                            onChange={e => setEditingPersona({...editingPersona, visibilityScope: e.target.value as any})}
+                                        >
+                                            <option value="Private">Private (Just Me)</option>
+                                            <option value="Family-only">Family-only</option>
+                                            <option value="Classroom-only">Classroom-only</option>
+                                            <option value="Public">Public (Shared Library)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4 border-t border-slate-850">
+                            <button className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded text-xs font-bold" onClick={() => setShowPersonaCreator(false)}>Cancel</button>
+                            <button 
+                                className="bg-indigo-650 hover:bg-indigo-600 text-white px-5 py-2 rounded text-xs font-bold"
+                                onClick={async () => {
+                                    const body = {
+                                        ...editingPersona,
+                                        referenceImageId: uploadedRefImage?.id || '',
+                                        referenceImageStatus: uploadedRefImage ? 'Approved' : 'None',
+                                        approvedForGeneration: uploadedRefImage ? uploadedRefImage.approvedForGeneration : true,
+                                        moderationStatus: uploadedRefImage ? 'Approved' : 'Unmoderated'
+                                    };
+                                    const res = await fetch('/api/personas', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(body)
+                                    }).then(r => r.json());
+
+                                    setPersonas([...personas, res]);
+                                    setSelectedPersona(res);
+                                    setShowPersonaCreator(false);
+                                }}
+                            >
+                                Save Character
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Open Saved Project Library Overlay Dialog */}
             {isLibraryOpen && (

@@ -1,3 +1,12 @@
+/**
+ * Screen Name: Database Adapter
+ * Purpose: Connects to PostgreSQL or falls back to Firebase Firestore via a SQL-to-NoSQL mock layer
+ * Version: 1.2.0
+ * Date: 2026-07-09
+ * Phase: Phase 3 - Character and Photo-Persona System Implementation
+ * What changed in this revision: Added SQL-to-Firestore translation mapping for personas, reference_images, role_assignments, and usage_modes tables.
+ */
+
 import pg from 'pg';
 const { Pool } = pg;
 import * as admin from 'firebase-admin';
@@ -273,6 +282,72 @@ class FirebaseMockPool {
                 }
                 await db.collection('content_categories').doc(id).update(updateData);
                 return { rows: [], rowCount: 1 };
+            }
+
+            // Generic SQL-to-Firestore handlers for Starting Formats, Creator Flows, Goals, Personas, Images, Assignments, Modes, Styles, Jobs, Requests, Assets, Templates, Languages, Settings, Units, Glossary, Voices, Narration Units/Jobs, and Soundtracks
+            const collNames = [
+                'starting_formats', 'creator_flows', 'story_goals', 'personas', 'reference_images', 'role_assignments', 'usage_modes',
+                'styles', 'image_generation_jobs', 'panel_generation_requests', 'cover_generation_requests', 'generated_assets', 'prompt_templates',
+                'languages', 'project_language_settings', 'translation_units', 'translation_jobs', 'glossary_entries', 'language_availability_rules', 'translation_workflows',
+                'voices', 'project_narration_settings', 'narration_units', 'narration_jobs', 'audio_assets', 'soundtrack_items', 'narration_workflows', 'voice_availability_rules',
+                'ai_providers', 'ai_models', 'ai_workflows', 'ai_routing_rules', 'ai_fallback_configs', 'ai_plan_tier_maps'
+            ];
+            for (const coll of collNames) {
+                if (sql.match(new RegExp(`SELECT\\s+\\*\\s+FROM\\s+${coll}`, 'i'))) {
+                    const snapshot = await db.collection(coll).get();
+                    let rows = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    rows.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
+                    return { rows, rowCount: rows.length };
+                }
+
+                if (sql.match(new RegExp(`DELETE\\s+FROM\\s+${coll}\\s+WHERE\\s+id\\s+=\\s+\\$1`, 'i'))) {
+                    const id = params[0];
+                    await db.collection(coll).doc(id).delete();
+                    return { rows: [], rowCount: 1 };
+                }
+
+                if (sql.match(new RegExp(`UPDATE\\s+${coll}\\s+SET`, 'i'))) {
+                    const id = params[params.length - 1];
+                    const updateData: any = {};
+                    const fieldsMatch = sql.match(/SET\s+(.*?)\s+WHERE/i);
+                    if (fieldsMatch) {
+                        const fieldsStr = fieldsMatch[1];
+                        const fieldAssignments = fieldsStr.split(',').map(f => f.trim().split('=')[0].trim());
+                        fieldAssignments.forEach((field, index) => {
+                            let val = params[index];
+                            if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+                                try {
+                                    val = JSON.parse(val);
+                                } catch (e) {}
+                            }
+                            updateData[field] = val;
+                        });
+                    }
+                    await db.collection(coll).doc(id).set(updateData, { merge: true });
+                    return { rows: [], rowCount: 1 };
+                }
+            }
+
+            const insertMatch = sql.match(/INSERT\s+INTO\s+(starting_formats|creator_flows|story_goals|personas|reference_images|role_assignments|usage_modes|styles|image_generation_jobs|panel_generation_requests|cover_generation_requests|generated_assets|prompt_templates|languages|project_language_settings|translation_units|translation_jobs|glossary_entries|language_availability_rules|translation_workflows|voices|project_narration_settings|narration_units|narration_jobs|audio_assets|soundtrack_items|narration_workflows|voice_availability_rules|ai_providers|ai_models|ai_workflows|ai_routing_rules|ai_fallback_configs|ai_plan_tier_maps)\s*\((.*?)\)\s*VALUES/i);
+            if (insertMatch) {
+                const collName = insertMatch[1];
+                const fieldsStr = insertMatch[2];
+                const fields = fieldsStr.split(',').map(f => f.trim());
+                const data: any = {};
+                fields.forEach((field, index) => {
+                    let val = params[index];
+                    if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+                        try {
+                            val = JSON.parse(val);
+                        } catch (e) {}
+                    }
+                    data[field] = val;
+                });
+                const docId = data.id || db.collection(collName).doc().id;
+                data.id = docId;
+                if (!data.created_at) data.created_at = new Date().toISOString();
+                await db.collection(collName).doc(docId).set(data, { merge: true });
+                return { rows: [data], rowCount: 1 };
             }
 
             console.warn(`[FirebaseMockPool] Unhandled SQL query: ${sql}`);

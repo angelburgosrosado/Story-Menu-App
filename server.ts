@@ -1,4 +1,16 @@
 /**
+ * Screen Name: Backend Server Controller
+ * Purpose: Central API backend, Gemini LLM integrations, provider-agnostic AI routing, and system orchestrator
+ * Version: 2.0.0
+ * Date: 2026-07-09
+ * Phase: Phase 10 - AI Providers, Models, and Workflow Routing
+ * What changed in this revision:
+ *   - Added resolveAIRoute() — provider-agnostic routing boundary consulted by all AI call sites
+ *   - Expanded DEFAULT_AI_PROVIDERS, DEFAULT_AI_MODELS, DEFAULT_AI_WORKFLOWS, DEFAULT_AI_ROUTING_RULES
+ *   - Added DEFAULT_AI_FALLBACK_CONFIGS seed
+ *   - Added admin CRUD routes for /api/admin/ai-providers, ai-models, ai-workflows, ai-routing-rules
+ *   - Added dry-run resolver endpoint GET /api/admin/ai-routing/resolve
+ * 
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,7 +27,7 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
-import { GENRES, STYLE_KEYWORDS, ART_STYLES } from './types';
+import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
 
 import admin from 'firebase-admin';
@@ -267,12 +279,858 @@ const DEFAULT_CATEGORIES = [
     })
 ];
 
+const DEFAULT_FORMATS = [
+    {
+        id: "format-visual-lesson",
+        slug: "visual-lesson",
+        title: "Visual Lesson",
+        short_description: "Teach concepts using clear step-by-step illustrations.",
+        long_description: "A structured educational layout that breaks down historical, scientific, or practical topics into logical visual panels. Great for students and teachers alike.",
+        audience_tags: ["Teachers", "Students", "Homeschoolers"],
+        category_tags: ["Education", "Science", "History"],
+        recommended_for: "Science explainers, history lessons, and skill tutorials.",
+        sample_output_hint: "4 panels demonstrating a cycle or sequence with instructional captions.",
+        age_range: "Grade 3-8",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: true,
+        sort_order: 1,
+        icon: "🏫"
+    },
+    {
+        id: "format-bilingual-story",
+        slug: "bilingual-story",
+        title: "Bilingual Story",
+        short_description: "Read stories with parallel translations side-by-side.",
+        long_description: "Dual-language reading format. The layout displays text in both the native and target language side-by-side or alternating by page, strengthening comprehension.",
+        audience_tags: ["Parents", "Language Learners", "Homeschoolers"],
+        category_tags: ["Languages", "Early Reading", "Bilingual"],
+        recommended_for: "Early vocabulary development and native language practice.",
+        sample_output_hint: "Parallel storybooks with aligned vocabulary highlight cards.",
+        age_range: "Grade K-5",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: false,
+        featured: true,
+        sort_order: 2,
+        icon: "🧸"
+    },
+    {
+        id: "format-comic",
+        slug: "comic",
+        title: "Comic Book",
+        short_description: "Classic graphic novel layout with expressive dialog bubbles.",
+        long_description: "Traditional panel layout designed for creators drafting comic strips, manga chapters, or character-driven multiverse series.",
+        audience_tags: ["Creators", "Teens", "General"],
+        category_tags: ["Entertainment", "Creative Writing", "Manga"],
+        recommended_for: "Creative storytelling, fanfiction, and action-adventure series.",
+        sample_output_hint: "A multi-page comic book issue with action-heavy turns.",
+        age_range: "Teens & Adults",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: false,
+        show_in_teacher_flows: false,
+        featured: true,
+        sort_order: 3,
+        icon: "🌸"
+    },
+    {
+        id: "format-kid-story",
+        slug: "kid-story",
+        title: "Kid Story",
+        short_description: "Wholesome bedtime reading with large warm illustrations.",
+        long_description: "A warm, visual-first storytelling format with large full-page illustrations and simple, encouraging sentences. Designed for family reading time.",
+        audience_tags: ["Parents", "Early Readers"],
+        category_tags: ["Bedtime", "Early Reading"],
+        recommended_for: "Bedtime stories, character fables, and read-aloud picture books.",
+        sample_output_hint: "Lush full-width cartoon pages with warm narration prompts.",
+        age_range: "Grade K-2",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: false,
+        featured: false,
+        sort_order: 4,
+        icon: "🦖"
+    },
+    {
+        id: "format-science-explainer",
+        slug: "science-explainer",
+        title: "Science Explainer",
+        short_description: "Break down complex scientific principles visually.",
+        long_description: "A process-first layout focused on scientific concepts. Ideal for showing step-by-step chemical reactions, planetary orbits, or biology systems.",
+        audience_tags: ["Students", "Teachers"],
+        category_tags: ["Science", "STEM"],
+        recommended_for: "STEM curriculum, classroom explainers, and curiosity-driven science topics.",
+        sample_output_hint: "Diagram-like sequential panels with clear text definitions.",
+        age_range: "Grade 6-12",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: false,
+        sort_order: 5,
+        icon: "🧬"
+    },
+    {
+        id: "format-history-lesson",
+        slug: "history-lesson",
+        title: "History Lesson",
+        short_description: "Step into historical events via character-driven beats.",
+        long_description: "Explore historical campaigns, figures, and eras through chronological narrative panels. Teaches history standards interactively.",
+        audience_tags: ["Teachers", "Students", "Homeschoolers"],
+        category_tags: ["History", "Social Studies"],
+        recommended_for: "Biographies, tactical campaigns, and ancient civilizations.",
+        sample_output_hint: "Chronological narrative beats with vintage sepia-style illustrations.",
+        age_range: "Grade 5-10",
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: false,
+        sort_order: 6,
+        icon: "🏺"
+    }
+];
+
+const DEFAULT_FLOWS = [
+    {
+        id: "flow-comic-series",
+        slug: "comic-series",
+        title: "Comic Series Flow",
+        short_description: "Sequential storytelling focusing on character action and script outline.",
+        best_for: "Action, sci-fi, manga, and long-term character arcs.",
+        output_hint: "Standard multi-panel page grids with word balloons.",
+        related_formats: ["comic"],
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        featured: true,
+        sort_order: 1
+    },
+    {
+        id: "flow-visual-lesson",
+        slug: "visual-lesson",
+        title: "Visual Lesson Flow",
+        short_description: "Educational flow featuring clear definitions, labels, and structured chapters.",
+        best_for: "Classrooms, homeschool syllabi, and study guides.",
+        output_hint: "Numbered stages with learning checkpoint prompts.",
+        related_formats: ["visual-lesson", "history-lesson"],
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        featured: true,
+        sort_order: 2
+    },
+    {
+        id: "flow-bilingual-reader",
+        slug: "bilingual-reader",
+        title: "Bilingual Reader Flow",
+        short_description: "Dual-track reading designed to build confidence in a secondary language.",
+        best_for: "Bilingual children, ESL students, and vocabulary builders.",
+        output_hint: "Side-by-side translated bubble pairs or alternating pages.",
+        related_formats: ["bilingual-story"],
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        featured: true,
+        sort_order: 3
+    },
+    {
+        id: "flow-read-aloud",
+        slug: "read-aloud",
+        title: "Read-Aloud Story Flow",
+        short_description: "Optimized for voiceover narration and rich ambient soundscapes.",
+        best_for: "Bedtime stories, preschool reading, and audiobooks.",
+        output_hint: "Audio-synchronized story text overlay.",
+        related_formats: ["kid-story", "bilingual-story"],
+        visibility_state: "Active",
+        show_in_onboarding: true,
+        featured: false,
+        sort_order: 4
+    },
+    {
+        id: "flow-concept-tester",
+        slug: "concept-tester",
+        title: "Quick Concept Test Flow",
+        short_description: "Single-scene storyboard to test prompts, characters, or style ideas.",
+        best_for: "Admin testing, prompt sandboxes, and style prototyping.",
+        output_hint: "A fast, single-panel preview run.",
+        related_formats: ["comic", "visual-lesson"],
+        visibility_state: "Internal",
+        show_in_onboarding: false,
+        featured: false,
+        sort_order: 5
+    }
+];
+
+const DEFAULT_GOALS = [
+    {
+        id: "goal-fluency",
+        slug: "improve-reading-fluency",
+        title: "Improve reading fluency",
+        short_description: "Strengthen word recognition and reading speed through rhythmic beats.",
+        category: "Reading",
+        tags: ["fluency", "speed"],
+        related_formats: ["bilingual-story", "kid-story"],
+        related_creator_flows: ["bilingual-reader", "read-aloud"],
+        importance: "Primary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: true,
+        sort_order: 1
+    },
+    {
+        id: "goal-comprehension",
+        slug: "strengthen-reading-comprehension",
+        title: "Strengthen reading comprehension",
+        short_description: "Track plot details and character motives through visual context.",
+        category: "Reading",
+        tags: ["comprehension", "plot"],
+        related_formats: ["comic", "history-lesson"],
+        related_creator_flows: ["comic-series", "visual-lesson"],
+        importance: "Primary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: true,
+        sort_order: 2
+    },
+    {
+        id: "goal-confidence",
+        slug: "build-reading-confidence",
+        title: "Build reading confidence",
+        short_description: "Simple sentences matched with clear visual cues for early learners.",
+        category: "Reading",
+        tags: ["confidence", "early-reading"],
+        related_formats: ["kid-story"],
+        related_creator_flows: ["read-aloud"],
+        importance: "Primary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: false,
+        featured: false,
+        sort_order: 3
+    },
+    {
+        id: "goal-science-clear",
+        slug: "explain-science-concept-clearly",
+        title: "Explain a science concept clearly",
+        short_description: "Make complex scientific ideas simple and fun to visualize.",
+        category: "Science",
+        tags: ["science", "concepts"],
+        related_formats: ["science-explainer"],
+        related_creator_flows: ["visual-lesson"],
+        importance: "Primary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: true,
+        sort_order: 4
+    },
+    {
+        id: "goal-science-step",
+        slug: "show-science-process-step-by-step",
+        title: "Show a science process step by step",
+        short_description: "Explain biological or mechanical cycles incrementally.",
+        category: "Science",
+        tags: ["science", "process"],
+        related_formats: ["science-explainer"],
+        related_creator_flows: ["visual-lesson"],
+        importance: "Primary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: true,
+        featured: false,
+        sort_order: 5
+    },
+    {
+        id: "goal-bilingual-vocab",
+        slug: "practice-vocabulary-in-two-languages",
+        title: "Practice vocabulary in two languages",
+        short_description: "Map words between original and translated tracks side-by-side.",
+        category: "Language / Vocabulary",
+        tags: ["bilingual", "vocabulary"],
+        related_formats: ["bilingual-story"],
+        related_creator_flows: ["bilingual-reader"],
+        importance: "Secondary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: false,
+        featured: true,
+        sort_order: 6
+    },
+    {
+        id: "goal-proud",
+        slug: "create-story-reader-feels-proud-of",
+        title: "Create a story the reader feels proud of",
+        short_description: "Create an exciting branching narrative that rewards the reader's choices.",
+        category: "Confidence / Sharing",
+        tags: ["pride", "sharing"],
+        related_formats: ["comic", "kid-story"],
+        related_creator_flows: ["comic-series"],
+        importance: "Secondary",
+        visibility_state: "Active",
+        show_in_wizard: true,
+        show_in_homeschool: true,
+        show_in_teacher_flows: false,
+        featured: false,
+        sort_order: 7
+    }
+];
+
+const DEFAULT_USAGE_MODES = [
+    {
+        id: "mode-realistic",
+        slug: "realistic",
+        label: "Realistic reference",
+        shortDescription: "A photo-like representation matching the reference image closely.",
+        generationBehaviorHint: "Create highly detailed, lifelike renderings of the subject.",
+        safetyNotes: "Requires explicit consent from the subject or guardian. Intended for personal use.",
+        visibleInWizard: true,
+        sortOrder: 1,
+        status: "Active"
+    },
+    {
+        id: "mode-stylized",
+        slug: "stylized",
+        label: "Stylized avatar",
+        shortDescription: "A cute, stylized, or cartoonish translation of the photo.",
+        generationBehaviorHint: "Translate likeness into 3D Pixar, Anime, or Crayon sketch styles.",
+        safetyNotes: "Default safe setting. Perfect for children and family projects.",
+        visibleInWizard: true,
+        sortOrder: 2,
+        status: "Active"
+    },
+    {
+        id: "mode-inspired",
+        slug: "inspired",
+        label: "Inspired by photo",
+        shortDescription: "Loosely inspired by the reference photo (colors, hair shape, overall vibe).",
+        generationBehaviorHint: "Use key features but adapt heavily to the chosen aesthetic.",
+        safetyNotes: "High creative freedom, low privacy risk.",
+        visibleInWizard: true,
+        sortOrder: 3,
+        status: "Active"
+    },
+    {
+        id: "mode-illustrated",
+        slug: "illustrated",
+        label: "Recurring illustrated character",
+        shortDescription: "Fully hand-drawn look with zero photo likeness (ideal for custom guides).",
+        generationBehaviorHint: "Ignore photo references. Focus entirely on prompt character description.",
+        safetyNotes: "100% safe. No personal likeness used.",
+        visibleInWizard: true,
+        sortOrder: 4,
+        status: "Active"
+    },
+    {
+        id: "mode-none",
+        slug: "none",
+        label: "No photo reference",
+        shortDescription: "Pure text-to-image prompt creation. No upload required.",
+        generationBehaviorHint: "Build strictly from the visual summary text prompts.",
+        safetyNotes: "No privacy/consent requirements.",
+        visibleInWizard: true,
+        sortOrder: 5,
+        status: "Active"
+    }
+];
+
+const DEFAULT_PERSONAS = [
+    {
+        id: "persona-science-guide",
+        slug: "professor-pumpernickel",
+        displayName: "Professor Pumpernickel",
+        shortDescription: "A quirky, warm-hearted science explainer guide who loves gadgets.",
+        longDescription: "A friendly recurring science tutor who helps kids understand complex biology, space, and math topics.",
+        personaType: "Science Helper",
+        roleDefaults: ["Science explainer", "Narrator guide"],
+        ageGroup: "General",
+        audience_tags: ["STEM", "Education"],
+        language_tags: ["en"],
+        stylePreference: "Handdrawn Sketch",
+        visualSummary: "An elderly scientist with wild white hair, round glasses, a green tweed jacket, and a pocket magnifying glass.",
+        generationSafeDescription: "An elderly character with messy white hair, thin round spectacles, wearing a cozy green tweed blazer.",
+        usageMode: "none",
+        referenceImageStatus: "None",
+        recurringCharacter: true,
+        visibilityScope: "Public",
+        consentStatus: "Granted",
+        moderationStatus: "Approved",
+        approvedForGeneration: true,
+        sort_order: 1,
+        status: "Active"
+    },
+    {
+        id: "persona-default-child",
+        slug: "curious-cody",
+        displayName: "Curious Cody",
+        shortDescription: "An eager young explorer who asks endless questions.",
+        longDescription: "Ideal protagonist for early readers and homeschool educational journeys.",
+        personaType: "Child Reader",
+        roleDefaults: ["Main character"],
+        ageGroup: "Grade K-2",
+        audience_tags: ["Early Reader"],
+        language_tags: ["en"],
+        stylePreference: "Pixar 3D",
+        visualSummary: "A 7-year-old child with curly red hair, freckles, wearing a blue t-shirt with a yellow star and canvas sneakers.",
+        generationSafeDescription: "A young child with red curly hair, light freckles, wearing a plain blue t-shirt.",
+        usageMode: "none",
+        referenceImageStatus: "None",
+        recurringCharacter: true,
+        visibilityScope: "Public",
+        consentStatus: "Granted",
+        moderationStatus: "Approved",
+        approvedForGeneration: true,
+        sort_order: 2,
+        status: "Active"
+    }
+];
+
+const DEFAULT_STYLES = [
+    {
+        id: "style-pixar-3d",
+        slug: "pixar-3d",
+        title: "Pixar 3D Adventure",
+        shortDescription: "Warm glossy 3D renders, perfect for children.",
+        longDescription: "A soft, volumetric 3D style resembling modern animation studio outputs. Highlighted by bright spherical lighting, expressive faces, and high-fidelity textures.",
+        visualMood: "Warm, Adventurous, Glossy",
+        audienceTags: ["Children", "Early Readers"],
+        useCaseTags: ["Bilingual Stories", "Bedtime Stories"],
+        styleFamily: "3D Animation",
+        recommendationTags: ["Warm", "Friendly"],
+        visibleInStudio: true,
+        visibleInHomeschool: true,
+        visibleInTeacherFlow: true,
+        visibilityState: "Active",
+        featured: true,
+        sortOrder: 1,
+        internalTestingOnly: false,
+        artworkReference: "/pixar.png"
+    },
+    {
+        id: "style-retro-anime",
+        slug: "retro-anime",
+        title: "Retro Anime Vectors",
+        shortDescription: "Classic cel-shaded anime illustration styles.",
+        longDescription: "A handdrawn aesthetic from 90s visual novels. Defined by sharp linework, rich flat color fills, and dramatic camera perspectives.",
+        visualMood: "Kinetic, Dynamic, Nostalgic",
+        audienceTags: ["Teens", "Students"],
+        useCaseTags: ["History Lesson Comics", "Action Stories"],
+        styleFamily: "Vector Anime",
+        recommendationTags: ["Cool", "Vibrant"],
+        visibleInStudio: true,
+        visibleInHomeschool: true,
+        visibleInTeacherFlow: true,
+        visibilityState: "Active",
+        featured: false,
+        sortOrder: 2,
+        internalTestingOnly: false,
+        artworkReference: "/anime.png"
+    },
+    {
+        id: "style-noir-inks",
+        slug: "noir-inks",
+        title: "Noir Comic Inks",
+        shortDescription: "Heavy ink washes and dramatic contrast.",
+        longDescription: "Stark chiaroscuro ink sketch art. Perfect for high-stakes mysteries, detective layouts, and educational history modules requiring serious focus.",
+        visualMood: "Mysterious, High-contrast, Gritty",
+        audienceTags: ["General", "Mature"],
+        useCaseTags: ["Detective Stories", "History Lessons"],
+        styleFamily: "Comic Inked Sketch",
+        recommendationTags: ["Serious", "Dramatic"],
+        visibleInStudio: true,
+        visibleInHomeschool: false,
+        visibleInTeacherFlow: true,
+        visibilityState: "Active",
+        featured: false,
+        sortOrder: 3,
+        internalTestingOnly: false,
+        artworkReference: "/noir.png"
+    }
+];
+
+const DEFAULT_PROMPT_TEMPLATES = [
+    {
+        id: "template-panel-standard",
+        slug: "panel-standard",
+        title: "Standard Panel Prompt Layer",
+        workflowType: "Panel",
+        formatMappings: "Comic grids and panel layouts mapping to a single story beat",
+        creatorFlowMappings: "Captions and speech bubbles overlaid on illustration",
+        styleModifiers: "Clean digital outlines, volumetric ambient occlusion",
+        educationalMode: "Add labels or visual descriptions if scientific terms are highlighted",
+        bilingualHandlingHint: "Provide side-by-side translated cues in prompt parameters",
+        personaConsistencyHint: "Inject character visual descriptions and clothing identifiers",
+        status: "Active",
+        visibleInAdmin: true,
+        internalTestingOnly: false
+    },
+    {
+        id: "template-cover-standard",
+        slug: "cover-standard",
+        title: "Standard Book Cover Prompt Layer",
+        workflowType: "Cover",
+        formatMappings: "Title text offset, main character facing the camera",
+        creatorFlowMappings: "Central high-fidelity hero pose with atmospheric background",
+        styleModifiers: "Epic layout with rich depth of field",
+        educationalMode: "Insert subtitle focus banners",
+        bilingualHandlingHint: "Dual-language titles rendered in a clean font",
+        personaConsistencyHint: "Emphasize key character features in high detail",
+        status: "Active",
+        visibleInAdmin: true,
+        internalTestingOnly: false
+    }
+];
+
+const DEFAULT_LANGUAGES = [
+    {
+        id: "lang-en", code: "en-US", slug: "english", displayName: "English", nativeName: "English",
+        direction: "ltr", status: "Active", visibleInStudio: true, visibleInKidStory: true,
+        visibleInComicStudio: true, visibleInTeacherFlow: true, visibleInHomeschool: true,
+        supportsBilingual: true, supportsNarration: true, supportsTranslation: true,
+        internalTestingOnly: false, educationalNotes: "Global primary standard language",
+        sortOrder: 1, featured: true
+    },
+    {
+        id: "lang-es", code: "es-MX", slug: "spanish", displayName: "Spanish", nativeName: "Español",
+        direction: "ltr", status: "Active", visibleInStudio: true, visibleInKidStory: true,
+        visibleInComicStudio: true, visibleInTeacherFlow: true, visibleInHomeschool: true,
+        supportsBilingual: true, supportsNarration: true, supportsTranslation: true,
+        internalTestingOnly: false, educationalNotes: "Primary dual-language and translation track for US classrooms",
+        sortOrder: 2, featured: true
+    },
+    {
+        id: "lang-ja", code: "ja-JP", slug: "japanese", displayName: "Japanese", nativeName: "日本語",
+        direction: "ltr", status: "Active", visibleInStudio: true, visibleInKidStory: false,
+        visibleInComicStudio: true, visibleInTeacherFlow: true, visibleInHomeschool: false,
+        supportsBilingual: true, supportsNarration: true, supportsTranslation: true,
+        internalTestingOnly: false, educationalNotes: "Advanced character-based reading path",
+        sortOrder: 3, featured: false
+    }
+];
+
+const DEFAULT_GLOSSARY = [
+    {
+        id: "glossary-1", slug: "pumpernickel", sourceTerm: "Professor Pumpernickel", preferredTranslation: "Profesor Pumpernickel",
+        sourceLanguageCode: "en-US", targetLanguageCode: "es-MX", termType: "Name", preserveTerm: true,
+        scopeType: "Global", internalTestingOnly: false, status: "Active", sortOrder: 1
+    },
+    {
+        id: "glossary-2", slug: "photosynthesis", sourceTerm: "photosynthesis", preferredTranslation: "fotosíntesis",
+        sourceLanguageCode: "en-US", targetLanguageCode: "es-MX", termType: "Science Term", preserveTerm: true,
+        scopeType: "Global", internalTestingOnly: false, status: "Active", sortOrder: 2
+    }
+];
+
+const DEFAULT_WORKFLOWS = [
+    {
+        id: "workflow-translation-standard", slug: "standard-pipeline", title: "Standard Translation Pipeline",
+        workflowType: "Standard", eligibleSourceLanguages: ["en-US", "es-MX"], eligibleTargetLanguages: ["en-US", "es-MX", "ja-JP"],
+        glossarySupport: true, protectedTermSupport: true, bilingualOutputSupport: true, narrationCompatibility: true,
+        status: "Active", internalTestingOnly: false
+    }
+];
+
+const DEFAULT_VOICES = [
+    {
+        id: "voice-narrator-1", slug: "narrator-gentle-1", displayName: "Gentle Educator (US)",
+        providerId: "elevenlabs-voice-sim", modelId: "eleven_monolingual_v1",
+        languageCodes: ["en-US"], primaryLanguageCode: "en-US", accentLabel: "US Friendly",
+        toneLabel: "Warm & Clear", ageDescriptor: "Adult", narratorSuitability: true,
+        childSafe: true, classroomSafe: true, supportsBilingualWorkflows: false,
+        visibleInStudio: true, visibleInKidStory: true, visibleInComicStudio: true,
+        visibleInTeacherFlow: true, visibleInHomeschool: true, internalTestingOnly: false,
+        status: "Active", featured: true, sortOrder: 1
+    },
+    {
+        id: "voice-narrator-2", slug: "narrator-es-1", displayName: "Narrador Amistoso (MX)",
+        providerId: "elevenlabs-voice-sim", modelId: "eleven_multilingual_v2",
+        languageCodes: ["es-MX"], primaryLanguageCode: "es-MX", accentLabel: "Mexican Neutral",
+        toneLabel: "Energetic & Kind", ageDescriptor: "Adult", narratorSuitability: true,
+        childSafe: true, classroomSafe: true, supportsBilingualWorkflows: true,
+        visibleInStudio: true, visibleInKidStory: true, visibleInComicStudio: true,
+        visibleInTeacherFlow: true, visibleInHomeschool: true, internalTestingOnly: false,
+        status: "Active", featured: true, sortOrder: 2
+    }
+];
+
+const DEFAULT_SOUNDTRACKS = [
+    {
+        id: "track-1", slug: "dreamy-classroom", title: "Dreamy Homeschool Classroom",
+        category: "Soundtrack", mood: "Soft & Inspiring", educationalSuitability: true,
+        familySuitability: true, classroomSuitability: true, languageNeutral: true,
+        status: "Active", internalTestingOnly: false, sortOrder: 1
+    },
+    {
+        id: "track-2", slug: "adventure-explorers", title: "Fun Science Explorers",
+        category: "Soundtrack", mood: "Upbeat & Playful", educationalSuitability: true,
+        familySuitability: true, classroomSuitability: true, languageNeutral: true,
+        status: "Active", internalTestingOnly: false, sortOrder: 2
+    }
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI ENGINE SEED DATA — Providers, Models, Workflows, Routing Rules, Fallbacks
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_AI_PROVIDERS = [
+    {
+        id: "prov-google", slug: "google-ai", displayName: "Google Gemini",
+        providerType: "multimodal", apiKeyEnvVar: "GEMINI_API_KEY",
+        baseUrl: "https://generativelanguage.googleapis.com",
+        capabilities: ["text", "image", "audio", "multimodal"],
+        status: "Active", internalTestingOnly: false, sortOrder: 1,
+        notes: "Primary provider for text, image generation, and TTS narration."
+    },
+    {
+        id: "prov-openai", slug: "openai-api", displayName: "OpenAI GPT",
+        providerType: "text", apiKeyEnvVar: "OPENAI_API_KEY",
+        baseUrl: "https://api.openai.com",
+        capabilities: ["text"],
+        status: "Configured", internalTestingOnly: true, sortOrder: 2,
+        notes: "Secondary text provider. Used as fallback for story outline when Gemini is degraded."
+    },
+    {
+        id: "prov-elevenlabs", slug: "elevenlabs-voice", displayName: "ElevenLabs Speech",
+        providerType: "narration", apiKeyEnvVar: "ELEVENLABS_API_KEY",
+        baseUrl: "https://api.elevenlabs.io",
+        capabilities: ["audio", "narration"],
+        status: "Configured", internalTestingOnly: true, sortOrder: 3,
+        notes: "Premium voice narration provider. High User tier and above."
+    },
+    {
+        id: "prov-leonardo", slug: "leonardo-ai", displayName: "Leonardo.AI",
+        providerType: "image", apiKeyEnvVar: "LEONARDO_API_KEY",
+        baseUrl: "https://cloud.leonardo.ai/api/rest/v1",
+        capabilities: ["image"],
+        status: "Configured", internalTestingOnly: true, sortOrder: 4,
+        notes: "Specialist image provider for comic panels and cover art. High User tier."
+    },
+    {
+        id: "prov-anthropic", slug: "anthropic-claude", displayName: "Anthropic Claude",
+        providerType: "text", apiKeyEnvVar: "ANTHROPIC_API_KEY",
+        baseUrl: "https://api.anthropic.com",
+        capabilities: ["text"],
+        status: "Planned", internalTestingOnly: true, sortOrder: 5,
+        notes: "Planned third text provider for long-form story drafts."
+    }
+];
+
+const DEFAULT_AI_MODELS = [
+    // Google Gemini — Text / Multimodal
+    {
+        id: "model-gemini-flash", providerId: "prov-google", slug: "gemini-2.5-flash",
+        displayName: "Gemini 2.5 Flash", capabilityTypes: ["text", "multimodal"],
+        costTier: "Low", performanceTier: "Standard", maxTokens: 8192,
+        status: "Active", internalTestingOnly: false,
+        notes: "Default model for Free tier text generation and suggestions."
+    },
+    {
+        id: "model-gemini-pro", providerId: "prov-google", slug: "gemini-2.5-pro",
+        displayName: "Gemini 2.5 Pro", capabilityTypes: ["text", "multimodal"],
+        costTier: "Medium", performanceTier: "Premium", maxTokens: 32768,
+        status: "Active", internalTestingOnly: false,
+        notes: "Premium text model for High User tier. Richer story outlines and narrative detail."
+    },
+    // Google Gemini — Image Generation
+    {
+        id: "model-gemini-image", providerId: "prov-google", slug: "gemini-2.5-flash-image",
+        displayName: "Gemini Image Flash", capabilityTypes: ["image", "multimodal"],
+        costTier: "Medium", performanceTier: "Standard", maxTokens: 0,
+        status: "Active", internalTestingOnly: false,
+        notes: "Used for character sheet and persona generation. Supports reference images."
+    },
+    {
+        id: "model-imagen4", providerId: "prov-google", slug: "imagen-4.0-generate-001",
+        displayName: "Imagen 4", capabilityTypes: ["image"],
+        costTier: "High", performanceTier: "Ultra", maxTokens: 0,
+        status: "Active", internalTestingOnly: false,
+        notes: "High-quality scene panel and cover generation for Entry and High User tiers."
+    },
+    // Google Gemini — TTS Narration
+    {
+        id: "model-gemini-tts", providerId: "prov-google", slug: "gemini-3.1-flash-tts-preview",
+        displayName: "Gemini TTS Flash", capabilityTypes: ["audio", "narration"],
+        costTier: "Low", performanceTier: "Standard", maxTokens: 0,
+        status: "Active", internalTestingOnly: false,
+        notes: "Free and Entry tier narration using Gemini built-in TTS voices."
+    },
+    // OpenAI
+    {
+        id: "model-gpt-4o", providerId: "prov-openai", slug: "gpt-4o",
+        displayName: "GPT-4o", capabilityTypes: ["text"],
+        costTier: "High", performanceTier: "Ultra", maxTokens: 128000,
+        status: "Configured", internalTestingOnly: true,
+        notes: "Text fallback provider for outline generation when Gemini quota is exhausted."
+    },
+    // ElevenLabs
+    {
+        id: "model-eleven-mono", providerId: "prov-elevenlabs", slug: "eleven_monolingual_v1",
+        displayName: "ElevenLabs Monolingual v1", capabilityTypes: ["audio", "narration"],
+        costTier: "High", performanceTier: "Ultra", maxTokens: 0,
+        status: "Configured", internalTestingOnly: true,
+        notes: "Premium narration for High User tier. Best for English single-voice stories."
+    },
+    // Leonardo.AI
+    {
+        id: "model-leonardo-comic", providerId: "prov-leonardo", slug: "leonardo-comic-v2",
+        displayName: "Leonardo Comic v2", capabilityTypes: ["image"],
+        costTier: "High", performanceTier: "Ultra", maxTokens: 0,
+        status: "Configured", internalTestingOnly: true,
+        notes: "Specialist comic-style image model. High User tier comic panel generation."
+    }
+];
+
+const DEFAULT_AI_WORKFLOWS = [
+    {
+        id: "flow-text-outline", slug: "text_outline_generation", title: "Story Outline Brainstorm",
+        workflowType: "Outline", capabilityTypes: ["text"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-flash", status: "Active", internalTestingOnly: false,
+        description: "Generates chapter-by-chapter story blueprints and narrative beats."
+    },
+    {
+        id: "flow-text-beat", slug: "beat_content_generation", title: "Scene Beat Writer",
+        workflowType: "BeatContent", capabilityTypes: ["text"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-flash", status: "Active", internalTestingOnly: false,
+        description: "Writes per-panel captions, dialogue, and scene descriptions."
+    },
+    {
+        id: "flow-image-scene", slug: "image_scene_generation", title: "Scene Comic Panel",
+        workflowType: "SceneImage", capabilityTypes: ["image"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-image", status: "Active", internalTestingOnly: false,
+        description: "Generates vertical comic panels from scene descriptions and character references."
+    },
+    {
+        id: "flow-image-cover", slug: "cover_image_generation", title: "Story Cover Art",
+        workflowType: "CoverImage", capabilityTypes: ["image"], defaultProviderId: "prov-google",
+        defaultModelId: "model-imagen4", status: "Active", internalTestingOnly: false,
+        description: "Generates full-page story covers with title treatment and character composition."
+    },
+    {
+        id: "flow-image-character", slug: "character_sheet_generation", title: "Character Sheet Builder",
+        workflowType: "CharacterImage", capabilityTypes: ["image", "multimodal"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-image", status: "Active", internalTestingOnly: false,
+        description: "Generates full-body character sheets from persona descriptions and reference photos."
+    },
+    {
+        id: "flow-narration", slug: "narration_generation", title: "Story Narration",
+        workflowType: "Narration", capabilityTypes: ["audio", "narration"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-tts", status: "Active", internalTestingOnly: false,
+        description: "Converts story text to spoken narration audio per scene or chapter."
+    },
+    {
+        id: "flow-translation", slug: "translation_generation", title: "Story Translation",
+        workflowType: "Translation", capabilityTypes: ["text"], defaultProviderId: "prov-google",
+        defaultModelId: "model-gemini-flash", status: "Active", internalTestingOnly: false,
+        description: "Translates story content panel-by-panel or chapter-by-chapter with glossary support."
+    }
+];
+
+const DEFAULT_AI_ROUTING_RULES: any[] = [
+    // ── Story Outline (text_outline_generation) ─────────────────────────────
+    { id: "rule-free-outline",    workflowSlug: "text_outline_generation",  planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-entry-outline",   workflowSlug: "text_outline_generation",  planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-pro-outline",     workflowSlug: "text_outline_generation",  planTier: "High User",  environment: "production", providerId: "prov-google",    modelId: "model-gemini-pro",  status: "Active", priority: 1 },
+    // ── Beat Content (beat_content_generation) ──────────────────────────────
+    { id: "rule-free-beat",       workflowSlug: "beat_content_generation",  planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-entry-beat",      workflowSlug: "beat_content_generation",  planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-pro-beat",        workflowSlug: "beat_content_generation",  planTier: "High User",  environment: "production", providerId: "prov-google",    modelId: "model-gemini-pro",  status: "Active", priority: 1 },
+    // ── Scene Panel Image (image_scene_generation) ──────────────────────────
+    { id: "rule-free-scene",      workflowSlug: "image_scene_generation",   planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-image", status: "Active", priority: 1 },
+    { id: "rule-entry-scene",     workflowSlug: "image_scene_generation",   planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-imagen4",      status: "Active", priority: 1 },
+    { id: "rule-pro-scene",       workflowSlug: "image_scene_generation",   planTier: "High User",  environment: "production", providerId: "prov-leonardo",  modelId: "model-leonardo-comic", status: "Active", priority: 1 },
+    // ── Cover Art (cover_image_generation) ─────────────────────────────────
+    { id: "rule-free-cover",      workflowSlug: "cover_image_generation",   planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-image", status: "Active", priority: 1 },
+    { id: "rule-entry-cover",     workflowSlug: "cover_image_generation",   planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-imagen4",      status: "Active", priority: 1 },
+    { id: "rule-pro-cover",       workflowSlug: "cover_image_generation",   planTier: "High User",  environment: "production", providerId: "prov-google",    modelId: "model-imagen4",      status: "Active", priority: 1 },
+    // ── Narration (narration_generation) ────────────────────────────────────
+    { id: "rule-free-narr",       workflowSlug: "narration_generation",     planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-tts",   status: "Active", priority: 1 },
+    { id: "rule-entry-narr",      workflowSlug: "narration_generation",     planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-gemini-tts",   status: "Active", priority: 1 },
+    { id: "rule-pro-narr",        workflowSlug: "narration_generation",     planTier: "High User",  environment: "production", providerId: "prov-elevenlabs", modelId: "model-eleven-mono",  status: "Active", priority: 1 },
+    // ── Translation (translation_generation) ────────────────────────────────
+    { id: "rule-free-trans",      workflowSlug: "translation_generation",   planTier: "Free",       environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-entry-trans",     workflowSlug: "translation_generation",   planTier: "Entry",      environment: "production", providerId: "prov-google",    modelId: "model-gemini-flash", status: "Active", priority: 1 },
+    { id: "rule-pro-trans",       workflowSlug: "translation_generation",   planTier: "High User",  environment: "production", providerId: "prov-google",    modelId: "model-gemini-pro",   status: "Active", priority: 1 },
+    // ── Character Sheet (character_sheet_generation) ─────────────────────────
+    { id: "rule-free-char",       workflowSlug: "character_sheet_generation", planTier: "Free",     environment: "production", providerId: "prov-google",    modelId: "model-gemini-image", status: "Active", priority: 1 },
+    { id: "rule-entry-char",      workflowSlug: "character_sheet_generation", planTier: "Entry",    environment: "production", providerId: "prov-google",    modelId: "model-gemini-image", status: "Active", priority: 1 },
+    { id: "rule-pro-char",        workflowSlug: "character_sheet_generation", planTier: "High User",environment: "production", providerId: "prov-google",    modelId: "model-gemini-image", status: "Active", priority: 1 }
+];
+
+const DEFAULT_AI_FALLBACK_CONFIGS: any[] = [
+    {
+        id: "fallback-text-outline", workflowSlug: "text_outline_generation",
+        primaryProviderId: "prov-google", primaryModelId: "model-gemini-pro",
+        fallbackProviderId: "prov-google", fallbackModelId: "model-gemini-flash",
+        triggerConditions: ["quota_exceeded", "rate_limited", "provider_error"],
+        status: "Active"
+    },
+    {
+        id: "fallback-image-scene", workflowSlug: "image_scene_generation",
+        primaryProviderId: "prov-leonardo", primaryModelId: "model-leonardo-comic",
+        fallbackProviderId: "prov-google", fallbackModelId: "model-imagen4",
+        triggerConditions: ["provider_error", "timeout"],
+        status: "Active"
+    },
+    {
+        id: "fallback-narration", workflowSlug: "narration_generation",
+        primaryProviderId: "prov-elevenlabs", primaryModelId: "model-eleven-mono",
+        fallbackProviderId: "prov-google", fallbackModelId: "model-gemini-tts",
+        triggerConditions: ["quota_exceeded", "provider_error"],
+        status: "Active"
+    }
+];
+
 const memoryDb = {
     users: [] as any[],
     character_vault: [] as any[],
     projects: [] as any[],
     project_casting: [] as any[],
     content_categories: [...DEFAULT_CATEGORIES],
+    starting_formats: [...DEFAULT_FORMATS],
+    creator_flows: [...DEFAULT_FLOWS],
+    story_goals: [...DEFAULT_GOALS],
+    personas: [...DEFAULT_PERSONAS] as any[],
+    usage_modes: [...DEFAULT_USAGE_MODES] as any[],
+    reference_images: [] as any[],
+    role_assignments: [] as any[],
+    styles: [...DEFAULT_STYLES] as any[],
+    prompt_templates: [...DEFAULT_PROMPT_TEMPLATES] as any[],
+    image_generation_jobs: [] as any[],
+    panel_generation_requests: [] as any[],
+    cover_generation_requests: [] as any[],
+    generated_assets: [] as any[],
+    languages: [...DEFAULT_LANGUAGES] as any[],
+    glossary_entries: [...DEFAULT_GLOSSARY] as any[],
+    translation_workflows: [...DEFAULT_WORKFLOWS] as any[],
+    project_language_settings: [] as any[],
+    translation_units: [] as any[],
+    translation_jobs: [] as any[],
+    language_availability_rules: [] as any[],
+    voices: [...DEFAULT_VOICES] as any[],
+    soundtrack_items: [...DEFAULT_SOUNDTRACKS] as any[],
+    narration_workflows: [...DEFAULT_NARRATION_WORKFLOWS] as any[],
+    project_narration_settings: [] as any[],
+    narration_units: [] as any[],
+    narration_jobs: [] as any[],
+    audio_assets: [] as any[],
+    voice_availability_rules: [] as any[],
+    ai_providers: [...DEFAULT_AI_PROVIDERS] as any[],
+    ai_models: [...DEFAULT_AI_MODELS] as any[],
+    ai_workflows: [...DEFAULT_AI_WORKFLOWS] as any[],
+    ai_routing_rules: [...DEFAULT_AI_ROUTING_RULES] as any[],
+    ai_fallback_configs: [] as any[],
+    ai_plan_tier_maps: [] as any[],
     admin_users: [] as any[],
     admin_sessions: [] as any[],
     subscription_plans: [] as any[],
@@ -292,9 +1150,101 @@ memoryDb.users.push({
     created_at: new Date()
 });
 
+// Seed fallback configs into memoryDb
+memoryDb.ai_fallback_configs.push(...DEFAULT_AI_FALLBACK_CONFIGS);
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidUuid(val: string): boolean {
     return UUID_REGEX.test(val);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// resolveAIRoute — Provider-Agnostic Routing Boundary
+//
+// All AI calls MUST resolve their provider + model through this function.
+// This is the single choke-point that reads routing rules, applies plan-tier
+// logic, and returns a concrete {providerId, modelId, modelSlug, providerSlug}.
+// ─────────────────────────────────────────────────────────────────────────────
+interface AIRouteResolution {
+    providerId: string;
+    modelId: string;
+    modelSlug: string;
+    providerSlug: string;
+    resolvedBy: 'rule' | 'workflow_default' | 'hardcoded_fallback';
+}
+
+function resolveAIRoute(
+    workflowSlug: string,
+    userTier: string = 'Free',
+    env: string = 'production'
+): AIRouteResolution {
+    const tiers = [userTier, 'Free'];
+    const rules: any[] = memoryDb.ai_routing_rules || [];
+
+    // Find the highest-priority active rule matching workflow + tier + env
+    for (const tier of tiers) {
+        const match = rules
+            .filter(r =>
+                r.workflowSlug === workflowSlug &&
+                r.planTier === tier &&
+                (r.environment === env || r.environment === 'production') &&
+                r.status === 'Active'
+            )
+            .sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99))[0];
+
+        if (match) {
+            const model = (memoryDb.ai_models || []).find((m: any) => m.id === match.modelId);
+            const provider = (memoryDb.ai_providers || []).find((p: any) => p.id === match.providerId);
+            return {
+                providerId: match.providerId,
+                modelId: match.modelId,
+                modelSlug: model?.slug || match.modelId,
+                providerSlug: provider?.slug || match.providerId,
+                resolvedBy: 'rule'
+            };
+        }
+    }
+
+    // Fallback: use the workflow's default model
+    const workflow = (memoryDb.ai_workflows || []).find((w: any) => w.slug === workflowSlug);
+    if (workflow?.defaultModelId) {
+        const model = (memoryDb.ai_models || []).find((m: any) => m.id === workflow.defaultModelId);
+        const provider = (memoryDb.ai_providers || []).find((p: any) => p.id === workflow.defaultProviderId);
+        return {
+            providerId: workflow.defaultProviderId || 'prov-google',
+            modelId: workflow.defaultModelId,
+            modelSlug: model?.slug || 'gemini-2.5-flash',
+            providerSlug: provider?.slug || 'google-ai',
+            resolvedBy: 'workflow_default'
+        };
+    }
+
+    // Last resort: Gemini Flash for text, Gemini Image for image types
+    const isImageWorkflow = workflowSlug.includes('image') || workflowSlug.includes('cover') || workflowSlug.includes('character');
+    const isAudioWorkflow = workflowSlug.includes('narration');
+    return {
+        providerId: 'prov-google',
+        modelId: isAudioWorkflow ? 'model-gemini-tts' : isImageWorkflow ? 'model-gemini-image' : 'model-gemini-flash',
+        modelSlug: isAudioWorkflow ? 'gemini-3.1-flash-tts-preview' : isImageWorkflow ? 'gemini-2.5-flash-image' : 'gemini-2.5-flash',
+        providerSlug: 'google-ai',
+        resolvedBy: 'hardcoded_fallback'
+    };
+}
+
+// Helper: look up a user's plan tier from memoryDb or DB
+async function getUserTier(email: string): Promise<string> {
+    if (!email || email === 'unknown') return 'Free';
+    try {
+        const pool = getDbPool();
+        if (pool) {
+            const res = await pool.query('SELECT tier FROM users WHERE email = $1 LIMIT 1', [email]);
+            return res.rows[0]?.tier || 'Free';
+        }
+        const user = memoryDb.users.find((u: any) => u.email === email);
+        return user?.tier || 'Free';
+    } catch {
+        return 'Free';
+    }
 }
 
 const isConnectionError = (err: any) => {
@@ -309,6 +1259,312 @@ const isConnectionError = (err: any) => {
            msg.includes('timeout') || 
            msg.includes('socket');
 };
+
+async function seedDefaultWizardLibraries(): Promise<void> {
+    await seedDefaultCategoriesIfEmpty();
+    if (!isDatabaseConnected()) return;
+    const pool = getDbPool();
+    if (!pool) return;
+
+    // 1. Seed starting_formats
+    try {
+        const checkFormats = await pool.query('SELECT COUNT(*) as count FROM starting_formats');
+        if (parseInt(checkFormats.rows[0].count, 10) === 0) {
+            console.log("🌱 Database starting_formats is empty. Auto-seeding 6 default formats...");
+            for (const item of DEFAULT_FORMATS) {
+                await pool.query(
+                    `INSERT INTO starting_formats (id, slug, title, short_description, long_description, audience_tags, category_tags, recommended_for, sample_output_hint, age_range, visibility_state, show_in_onboarding, show_in_homeschool, show_in_teacher_flows, featured, sort_order, icon)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                    [
+                        item.id, item.slug, item.title, item.short_description, item.long_description,
+                        JSON.stringify(item.audience_tags), JSON.stringify(item.category_tags),
+                        item.recommended_for, item.sample_output_hint, item.age_range,
+                        item.visibility_state, item.show_in_onboarding, item.show_in_homeschool,
+                        item.show_in_teacher_flows, item.featured, item.sort_order, item.icon
+                    ]
+                );
+            }
+            console.log("✅ Seeded starting_formats.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed starting_formats:", e.message);
+    }
+
+    // 2. Seed creator_flows
+    try {
+        const checkFlows = await pool.query('SELECT COUNT(*) as count FROM creator_flows');
+        if (parseInt(checkFlows.rows[0].count, 10) === 0) {
+            console.log("🌱 Database creator_flows is empty. Auto-seeding 5 default flows...");
+            for (const item of DEFAULT_FLOWS) {
+                await pool.query(
+                    `INSERT INTO creator_flows (id, slug, title, short_description, best_for, output_hint, related_formats, visibility_state, show_in_onboarding, featured, sort_order)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                    [
+                        item.id, item.slug, item.title, item.short_description, item.best_for,
+                        item.output_hint, JSON.stringify(item.related_formats), item.visibility_state,
+                        item.show_in_onboarding, item.featured, item.sort_order
+                    ]
+                );
+            }
+            console.log("✅ Seeded creator_flows.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed creator_flows:", e.message);
+    }
+
+    // 3. Seed story_goals
+    try {
+        const checkGoals = await pool.query('SELECT COUNT(*) as count FROM story_goals');
+        if (parseInt(checkGoals.rows[0].count, 10) === 0) {
+            console.log("🌱 Database story_goals is empty. Auto-seeding 7 default goals...");
+            for (const item of DEFAULT_GOALS) {
+                await pool.query(
+                    `INSERT INTO story_goals (id, slug, title, short_description, category, tags, related_formats, related_creator_flows, importance, visibility_state, show_in_wizard, show_in_homeschool, show_in_teacher_flows, featured, sort_order)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                    [
+                        item.id, item.slug, item.title, item.short_description, item.category,
+                        JSON.stringify(item.tags), JSON.stringify(item.related_formats), JSON.stringify(item.related_creator_flows),
+                        item.importance, item.visibility_state, item.show_in_wizard, item.show_in_homeschool,
+                        item.show_in_teacher_flows, item.featured, item.sort_order
+                    ]
+                );
+            }
+            console.log("✅ Seeded story_goals.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed story_goals:", e.message);
+    }
+
+    // 4. Seed usage_modes
+    try {
+        const checkModes = await pool.query('SELECT COUNT(*) as count FROM usage_modes');
+        if (parseInt(checkModes.rows[0].count, 10) === 0) {
+            console.log("🌱 Database usage_modes is empty. Auto-seeding 5 default modes...");
+            for (const item of DEFAULT_USAGE_MODES) {
+                await pool.query(
+                    `INSERT INTO usage_modes (id, slug, label, shortDescription, generationBehaviorHint, safetyNotes, visibleInWizard, sortOrder, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                    [
+                        item.id, item.slug, item.label, item.shortDescription, item.generationBehaviorHint,
+                        item.safetyNotes, item.visibleInWizard, item.sortOrder, item.status
+                    ]
+                );
+            }
+            console.log("✅ Seeded usage_modes.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed usage_modes:", e.message);
+    }
+
+    // 5. Seed personas
+    try {
+        const checkPersonas = await pool.query('SELECT COUNT(*) as count FROM personas');
+        if (parseInt(checkPersonas.rows[0].count, 10) === 0) {
+            console.log("🌱 Database personas is empty. Auto-seeding default personas...");
+            for (const item of DEFAULT_PERSONAS) {
+                await pool.query(
+                    `INSERT INTO personas (id, slug, displayName, shortDescription, longDescription, personaType, roleDefaults, ageGroup, audience_tags, language_tags, stylePreference, visualSummary, generationSafeDescription, usageMode, referenceImageStatus, recurringCharacter, visibilityScope, consentStatus, moderationStatus, approvedForGeneration, sort_order, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+                    [
+                        item.id, item.slug, item.displayName, item.shortDescription, item.longDescription,
+                        item.personaType, JSON.stringify(item.roleDefaults), item.ageGroup,
+                        JSON.stringify(item.audience_tags), JSON.stringify(item.language_tags),
+                        item.stylePreference, item.visualSummary, item.generationSafeDescription,
+                        item.usageMode, item.referenceImageStatus, item.recurringCharacter,
+                        item.visibilityScope, item.consentStatus, item.moderationStatus,
+                        item.approvedForGeneration, item.sort_order, item.status
+                    ]
+                );
+            }
+            console.log("✅ Seeded personas.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed personas:", e.message);
+    }
+
+    // 6. Seed styles
+    try {
+        const checkStyles = await pool.query('SELECT COUNT(*) as count FROM styles');
+        if (parseInt(checkStyles.rows[0].count, 10) === 0) {
+            console.log("🌱 Database styles is empty. Auto-seeding default styles...");
+            for (const item of DEFAULT_STYLES) {
+                await pool.query(
+                    `INSERT INTO styles (id, slug, title, shortDescription, longDescription, visualMood, audienceTags, useCaseTags, styleFamily, recommendationTags, visibleInStudio, visibleInHomeschool, visibleInTeacherFlow, visibilityState, featured, sortOrder, internalTestingOnly, artworkReference)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+                    [
+                        item.id, item.slug, item.title, item.shortDescription, item.longDescription,
+                        item.visualMood, JSON.stringify(item.audienceTags), JSON.stringify(item.useCaseTags),
+                        item.styleFamily, JSON.stringify(item.recommendationTags), item.visibleInStudio,
+                        item.visibleInHomeschool, item.visibleInTeacherFlow, item.visibilityState,
+                        item.featured, item.sortOrder, item.internalTestingOnly, item.artworkReference
+                    ]
+                );
+            }
+            console.log("✅ Seeded styles.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed styles:", e.message);
+    }
+
+    // 7. Seed prompt_templates
+    try {
+        const checkTemplates = await pool.query('SELECT COUNT(*) as count FROM prompt_templates');
+        if (parseInt(checkTemplates.rows[0].count, 10) === 0) {
+            console.log("🌱 Database prompt_templates is empty. Auto-seeding default templates...");
+            for (const item of DEFAULT_PROMPT_TEMPLATES) {
+                await pool.query(
+                    `INSERT INTO prompt_templates (id, slug, title, workflowType, formatMappings, creatorFlowMappings, styleModifiers, educationalMode, bilingualHandlingHint, personaConsistencyHint, status, visibleInAdmin, internalTestingOnly)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                    [
+                        item.id, item.slug, item.title, item.workflowType, item.formatMappings,
+                        item.creatorFlowMappings, item.styleModifiers, item.educationalMode,
+                        item.bilingualHandlingHint, item.personaConsistencyHint, item.status,
+                        item.visibleInAdmin, item.internalTestingOnly
+                    ]
+                );
+            }
+            console.log("✅ Seeded prompt_templates.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed prompt_templates:", e.message);
+    }
+
+    // 8. Seed languages
+    try {
+        const checkLangs = await pool.query('SELECT COUNT(*) as count FROM languages');
+        if (parseInt(checkLangs.rows[0].count, 10) === 0) {
+            console.log("🌱 Database languages is empty. Auto-seeding default languages...");
+            for (const item of DEFAULT_LANGUAGES) {
+                await pool.query(
+                    `INSERT INTO languages (id, code, slug, displayName, nativeName, direction, status, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, supportsBilingual, supportsNarration, supportsTranslation, internalTestingOnly, educationalNotes, sortOrder, featured)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+                    [
+                        item.id, item.code, item.slug, item.displayName, item.nativeName,
+                        item.direction, item.status, item.visibleInStudio, item.visibleInKidStory,
+                        item.visibleInComicStudio, item.visibleInTeacherFlow, item.visibleInHomeschool,
+                        item.supportsBilingual, item.supportsNarration, item.supportsTranslation,
+                        item.internalTestingOnly, item.educationalNotes, item.sortOrder, item.featured
+                    ]
+                );
+            }
+            console.log("✅ Seeded languages.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed languages:", e.message);
+    }
+
+    // 9. Seed glossary_entries
+    try {
+        const checkGlossary = await pool.query('SELECT COUNT(*) as count FROM glossary_entries');
+        if (parseInt(checkGlossary.rows[0].count, 10) === 0) {
+            console.log("🌱 Database glossary_entries is empty. Auto-seeding default terms...");
+            for (const item of DEFAULT_GLOSSARY) {
+                await pool.query(
+                    `INSERT INTO glossary_entries (id, slug, sourceTerm, preferredTranslation, sourceLanguageCode, targetLanguageCode, termType, preserveTerm, scopeType, internalTestingOnly, status, sortOrder)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    [
+                        item.id, item.slug, item.sourceTerm, item.preferredTranslation, item.sourceLanguageCode,
+                        item.targetLanguageCode, item.termType, item.preserveTerm, item.scopeType,
+                        item.internalTestingOnly, item.status, item.sortOrder
+                    ]
+                );
+            }
+            console.log("✅ Seeded glossary_entries.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed glossary_entries:", e.message);
+    }
+
+    // 10. Seed translation_workflows
+    try {
+        const checkWorkflows = await pool.query('SELECT COUNT(*) as count FROM translation_workflows');
+        if (parseInt(checkWorkflows.rows[0].count, 10) === 0) {
+            console.log("🌱 Database translation_workflows is empty. Auto-seeding default workflows...");
+            for (const item of DEFAULT_WORKFLOWS) {
+                await pool.query(
+                    `INSERT INTO translation_workflows (id, slug, title, workflowType, eligibleSourceLanguages, eligibleTargetLanguages, glossarySupport, protectedTermSupport, bilingualOutputSupport, narrationCompatibility, status, internalTestingOnly)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    [
+                        item.id, item.slug, item.title, item.workflowType, JSON.stringify(item.eligibleSourceLanguages),
+                        JSON.stringify(item.eligibleTargetLanguages), item.glossarySupport, item.protectedTermSupport,
+                        item.bilingualOutputSupport, item.narrationCompatibility, item.status, item.internalTestingOnly
+                    ]
+                );
+            }
+            console.log("✅ Seeded translation_workflows.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed translation_workflows:", e.message);
+    }
+
+    // 11. Seed voices
+    try {
+        const checkVoices = await pool.query('SELECT COUNT(*) as count FROM voices');
+        if (parseInt(checkVoices.rows[0].count, 10) === 0) {
+            console.log("🌱 Database voices is empty. Auto-seeding default voices...");
+            for (const item of DEFAULT_VOICES) {
+                await pool.query(
+                    `INSERT INTO voices (id, slug, displayName, providerId, modelId, languageCodes, primaryLanguageCode, accentLabel, toneLabel, ageDescriptor, narratorSuitability, childSafe, classroomSafe, supportsBilingualWorkflows, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, internalTestingOnly, status, featured, sortOrder)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+                    [
+                        item.id, item.slug, item.displayName, item.providerId, item.modelId, JSON.stringify(item.languageCodes),
+                        item.primaryLanguageCode, item.accentLabel, item.toneLabel, item.ageDescriptor, item.narratorSuitability,
+                        item.childSafe, item.classroomSafe, item.supportsBilingualWorkflows, item.visibleInStudio, item.visibleInKidStory,
+                        item.visibleInComicStudio, item.visibleInTeacherFlow, item.visibleInHomeschool, item.internalTestingOnly,
+                        item.status, item.featured, item.sortOrder
+                    ]
+                );
+            }
+            console.log("✅ Seeded voices.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed voices:", e.message);
+    }
+
+    // 12. Seed soundtrack_items
+    try {
+        const checkTracks = await pool.query('SELECT COUNT(*) as count FROM soundtrack_items');
+        if (parseInt(checkTracks.rows[0].count, 10) === 0) {
+            console.log("🌱 Database soundtrack_items is empty. Auto-seeding default tracks...");
+            for (const item of DEFAULT_SOUNDTRACKS) {
+                await pool.query(
+                    `INSERT INTO soundtrack_items (id, slug, title, category, mood, educationalSuitability, familySuitability, classroomSuitability, languageNeutral, status, internalTestingOnly, sortOrder)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    [
+                        item.id, item.slug, item.title, item.category, item.mood, item.educationalSuitability,
+                        item.familySuitability, item.classroomSuitability, item.languageNeutral, item.status,
+                        item.internalTestingOnly, item.sortOrder
+                    ]
+                );
+            }
+            console.log("✅ Seeded soundtrack_items.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed soundtrack_items:", e.message);
+    }
+
+    // 13. Seed narration_workflows
+    try {
+        const checkAudioWorkflows = await pool.query('SELECT COUNT(*) as count FROM narration_workflows');
+        if (parseInt(checkAudioWorkflows.rows[0].count, 10) === 0) {
+            console.log("🌱 Database narration_workflows is empty. Auto-seeding default workflows...");
+            for (const item of DEFAULT_NARRATION_WORKFLOWS) {
+                await pool.query(
+                    `INSERT INTO narration_workflows (id, slug, title, workflowType, eligibleLanguages, eligibleVoices, soundtrackSupport, bilingualCompatibility, exportCompatibility, status, internalTestingOnly)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                    [
+                        item.id, item.slug, item.title, item.workflowType, JSON.stringify(item.eligibleLanguages),
+                        JSON.stringify(item.eligibleVoices), item.soundtrackSupport, item.bilingualCompatibility,
+                        item.exportCompatibility, item.status, item.internalTestingOnly
+                    ]
+                );
+            }
+            console.log("✅ Seeded narration_workflows.");
+        }
+    } catch (e: any) {
+        console.warn("⚠️ Failed to seed narration_workflows:", e.message);
+    }
+}
 
 async function seedDefaultCategoriesIfEmpty(): Promise<void> {
     if (!isDatabaseConnected()) return;
@@ -485,7 +1741,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
     // Try starting & initializing PostgreSQL structure asynchronously so it does not block server startup
     console.info(`📡 Current server-side process.env.DATABASE_URL (masked): ${process.env.DATABASE_URL ? maskConnectionUri(process.env.DATABASE_URL) : 'None'}`);
     initializeDatabaseSchema().then(() => {
-        return seedDefaultCategoriesIfEmpty();
+        return seedDefaultWizardLibraries();
     }).catch((e) => {
         console.warn("Could not auto-initialize DB tables on reboot:", e);
     });
@@ -550,7 +1806,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
             
             // Re-attempt initial schema checks or pool verification
             await initializeDatabaseSchema();
-            await seedDefaultCategoriesIfEmpty();
+            await seedDefaultWizardLibraries();
             
             const connected = isDatabaseConnected();
             return res.json({
@@ -2760,6 +4016,1561 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // NEW WIZARD ROUTING: FORMATS, FLOWS, GOALS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Public API endpoints
+    app.get('/api/formats', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.starting_formats || DEFAULT_FORMATS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM starting_formats ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_FORMATS);
+        }
+    });
+
+    app.get('/api/flows', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.creator_flows || DEFAULT_FLOWS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM creator_flows ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_FLOWS);
+        }
+    });
+
+    app.get('/api/goals', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.story_goals || DEFAULT_GOALS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM story_goals ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_GOALS);
+        }
+    });
+
+    // Admin API endpoints: Formats
+    app.get('/api/admin/formats', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.starting_formats || DEFAULT_FORMATS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM starting_formats ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/formats', async (req, res): Promise<any> => {
+        const { id, slug, title, short_description, long_description, audience_tags, category_tags, recommended_for, sample_output_hint, age_range, visibility_state, show_in_onboarding, show_in_homeschool, show_in_teacher_flows, featured, sort_order, icon } = req.body;
+        const itemId = id || crypto.randomUUID();
+        const data = {
+            id: itemId,
+            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title, short_description, long_description,
+            audience_tags: Array.isArray(audience_tags) ? audience_tags : [],
+            category_tags: Array.isArray(category_tags) ? category_tags : [],
+            recommended_for, sample_output_hint, age_range,
+            visibility_state: visibility_state || 'Active',
+            show_in_onboarding: show_in_onboarding ?? true,
+            show_in_homeschool: show_in_homeschool ?? true,
+            show_in_teacher_flows: show_in_teacher_flows ?? true,
+            featured: featured ?? false,
+            sort_order: sort_order ?? 99,
+            icon: icon || '🏫'
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.starting_formats.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO starting_formats (id, slug, title, short_description, long_description, audience_tags, category_tags, recommended_for, sample_output_hint, age_range, visibility_state, show_in_onboarding, show_in_homeschool, show_in_teacher_flows, featured, sort_order, icon)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                [
+                    data.id, data.slug, data.title, data.short_description, data.long_description,
+                    JSON.stringify(data.audience_tags), JSON.stringify(data.category_tags),
+                    data.recommended_for, data.sample_output_hint, data.age_range,
+                    data.visibility_state, data.show_in_onboarding, data.show_in_homeschool,
+                    data.show_in_teacher_flows, data.featured, data.sort_order, data.icon
+                ]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/formats/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        
+        if (updateFields.audience_tags && Array.isArray(updateFields.audience_tags)) {
+            updateFields.audience_tags = JSON.stringify(updateFields.audience_tags);
+        }
+        if (updateFields.category_tags && Array.isArray(updateFields.category_tags)) {
+            updateFields.category_tags = JSON.stringify(updateFields.category_tags);
+        }
+
+        if (!isDatabaseConnected()) {
+            const idx = memoryDb.starting_formats.findIndex((item: any) => item.id === id);
+            if (idx !== -1) {
+                memoryDb.starting_formats[idx] = { ...memoryDb.starting_formats[idx], ...req.body };
+            }
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach((key) => {
+                if (key !== 'id') {
+                    fields.push(`${key} = $${i}`);
+                    values.push(updateFields[key]);
+                    i++;
+                }
+            });
+            values.push(id);
+            await pool.query(`UPDATE starting_formats SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/formats/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.starting_formats = memoryDb.starting_formats.filter((item: any) => item.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM starting_formats WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin API endpoints: Flows
+    app.get('/api/admin/flows', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.creator_flows || DEFAULT_FLOWS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM creator_flows ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/flows', async (req, res): Promise<any> => {
+        const { id, slug, title, short_description, best_for, output_hint, related_formats, visibility_state, show_in_onboarding, featured, sort_order } = req.body;
+        const itemId = id || crypto.randomUUID();
+        const data = {
+            id: itemId,
+            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title, short_description, best_for, output_hint,
+            related_formats: Array.isArray(related_formats) ? related_formats : [],
+            visibility_state: visibility_state || 'Active',
+            show_in_onboarding: show_in_onboarding ?? true,
+            featured: featured ?? false,
+            sort_order: sort_order ?? 99
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.creator_flows.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO creator_flows (id, slug, title, short_description, best_for, output_hint, related_formats, visibility_state, show_in_onboarding, featured, sort_order)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                [
+                    data.id, data.slug, data.title, data.short_description, data.best_for, data.output_hint,
+                    JSON.stringify(data.related_formats), data.visibility_state, data.show_in_onboarding,
+                    data.featured, data.sort_order
+                ]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/flows/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+
+        if (updateFields.related_formats && Array.isArray(updateFields.related_formats)) {
+            updateFields.related_formats = JSON.stringify(updateFields.related_formats);
+        }
+
+        if (!isDatabaseConnected()) {
+            const idx = memoryDb.creator_flows.findIndex((item: any) => item.id === id);
+            if (idx !== -1) {
+                memoryDb.creator_flows[idx] = { ...memoryDb.creator_flows[idx], ...req.body };
+            }
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach((key) => {
+                if (key !== 'id') {
+                    fields.push(`${key} = $${i}`);
+                    values.push(updateFields[key]);
+                    i++;
+                }
+            });
+            values.push(id);
+            await pool.query(`UPDATE creator_flows SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/flows/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.creator_flows = memoryDb.creator_flows.filter((item: any) => item.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM creator_flows WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin API endpoints: Goals
+    app.get('/api/admin/goals', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.story_goals || DEFAULT_GOALS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query('SELECT * FROM story_goals ORDER BY sort_order ASC');
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/goals', async (req, res): Promise<any> => {
+        const { id, slug, title, short_description, category, tags, related_formats, related_creator_flows, importance, visibility_state, show_in_wizard, show_in_homeschool, show_in_teacher_flows, featured, sort_order } = req.body;
+        const itemId = id || crypto.randomUUID();
+        const data = {
+            id: itemId,
+            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title, short_description,
+            category: category || 'General',
+            tags: Array.isArray(tags) ? tags : [],
+            related_formats: Array.isArray(related_formats) ? related_formats : [],
+            related_creator_flows: Array.isArray(related_creator_flows) ? related_creator_flows : [],
+            importance: importance || 'Primary',
+            visibility_state: visibility_state || 'Active',
+            show_in_wizard: show_in_wizard ?? true,
+            show_in_homeschool: show_in_homeschool ?? true,
+            show_in_teacher_flows: show_in_teacher_flows ?? true,
+            featured: featured ?? false,
+            sort_order: sort_order ?? 99
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.story_goals.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO story_goals (id, slug, title, short_description, category, tags, related_formats, related_creator_flows, importance, visibility_state, show_in_wizard, show_in_homeschool, show_in_teacher_flows, featured, sort_order)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                [
+                    data.id, data.slug, data.title, data.short_description, data.category,
+                    JSON.stringify(data.tags), JSON.stringify(data.related_formats), JSON.stringify(data.related_creator_flows),
+                    data.importance, data.visibility_state, data.show_in_wizard, data.show_in_homeschool,
+                    data.show_in_teacher_flows, data.featured, data.sort_order
+                ]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/goals/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+
+        if (updateFields.tags && Array.isArray(updateFields.tags)) {
+            updateFields.tags = JSON.stringify(updateFields.tags);
+        }
+        if (updateFields.related_formats && Array.isArray(updateFields.related_formats)) {
+            updateFields.related_formats = JSON.stringify(updateFields.related_formats);
+        }
+        if (updateFields.related_creator_flows && Array.isArray(updateFields.related_creator_flows)) {
+            updateFields.related_creator_flows = JSON.stringify(updateFields.related_creator_flows);
+        }
+
+        if (!isDatabaseConnected()) {
+            const idx = memoryDb.story_goals.findIndex((item: any) => item.id === id);
+            if (idx !== -1) {
+                memoryDb.story_goals[idx] = { ...memoryDb.story_goals[idx], ...req.body };
+            }
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach((key) => {
+                if (key !== 'id') {
+                    fields.push(`${key} = $${i}`);
+                    values.push(updateFields[key]);
+                    i++;
+                }
+            });
+            values.push(id);
+            await pool.query(`UPDATE story_goals SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/goals/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.story_goals = memoryDb.story_goals.filter((item: any) => item.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM story_goals WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PERSONAS, USAGE MODES, REFERENCE IMAGES, ROLE ASSIGNMENTS API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Public / User Personas APIs
+    app.get('/api/personas', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.personas || DEFAULT_PERSONAS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM personas WHERE status = 'Active' ORDER BY sort_order ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_PERSONAS);
+        }
+    });
+
+    app.post('/api/personas', async (req, res): Promise<any> => {
+        const { displayName, shortDescription, longDescription, personaType, roleDefaults, ageGroup, audience_tags, language_tags, stylePreference, visualSummary, generationSafeDescription, usageMode, referenceImageId, referenceImageStatus, recurringCharacter, visibilityScope, consentStatus, moderationStatus, approvedForGeneration } = req.body;
+        const id = crypto.randomUUID();
+        const slug = displayName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const data = {
+            id,
+            slug,
+            displayName,
+            shortDescription: shortDescription || '',
+            longDescription: longDescription || '',
+            personaType: personaType || 'Custom Character',
+            roleDefaults: Array.isArray(roleDefaults) ? roleDefaults : [],
+            ageGroup: ageGroup || 'General',
+            audience_tags: Array.isArray(audience_tags) ? audience_tags : [],
+            language_tags: Array.isArray(language_tags) ? language_tags : ['en'],
+            stylePreference: stylePreference || 'General',
+            visualSummary: visualSummary || '',
+            generationSafeDescription: generationSafeDescription || '',
+            usageMode: usageMode || 'none',
+            referenceImageId: referenceImageId || '',
+            referenceImageStatus: referenceImageStatus || 'None',
+            recurringCharacter: recurringCharacter ?? true,
+            visibilityScope: visibilityScope || 'Private',
+            consentStatus: consentStatus || 'Not Granted',
+            moderationStatus: moderationStatus || 'Unmoderated',
+            approvedForGeneration: approvedForGeneration ?? false,
+            sort_order: 99,
+            status: 'Active',
+            created_at: new Date().toISOString()
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.personas = memoryDb.personas || [];
+            memoryDb.personas.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO personas (id, slug, displayName, shortDescription, longDescription, personaType, roleDefaults, ageGroup, audience_tags, language_tags, stylePreference, visualSummary, generationSafeDescription, usageMode, referenceImageId, referenceImageStatus, recurringCharacter, visibilityScope, consentStatus, moderationStatus, approvedForGeneration, sort_order, status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+                [
+                    data.id, data.slug, data.displayName, data.shortDescription, data.longDescription,
+                    data.personaType, JSON.stringify(data.roleDefaults), data.ageGroup,
+                    JSON.stringify(data.audience_tags), JSON.stringify(data.language_tags),
+                    data.stylePreference, data.visualSummary, data.generationSafeDescription,
+                    data.usageMode, data.referenceImageId, data.referenceImageStatus, data.recurringCharacter,
+                    data.visibilityScope, data.consentStatus, data.moderationStatus,
+                    data.approvedForGeneration, data.sort_order, data.status
+                ]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/personas/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            memoryDb.personas = memoryDb.personas || [];
+            const index = memoryDb.personas.findIndex((p: any) => p.id === id);
+            if (index !== -1) {
+                memoryDb.personas[index] = { ...memoryDb.personas[index], ...updateFields };
+                return res.json(memoryDb.personas[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                let val = updateFields[key];
+                if (Array.isArray(val)) {
+                    val = JSON.stringify(val);
+                }
+                fields.push(`${key} = $${i++}`);
+                values.push(val);
+            });
+            values.push(id);
+            await pool.query(`UPDATE personas SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/personas/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.personas = (memoryDb.personas || []).filter((p: any) => p.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM personas WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Public / User Usage Modes APIs
+    app.get('/api/usage-modes', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.usage_modes || DEFAULT_USAGE_MODES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM usage_modes WHERE status = 'Active' ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_USAGE_MODES);
+        }
+    });
+
+    // User mock Reference Image Upload API
+    app.post('/api/reference-images', async (req, res): Promise<any> => {
+        const { fileName, mimeType, previewUrl } = req.body;
+        const data = {
+            id: crypto.randomUUID(),
+            fileName: fileName || 'photo-reference.jpg',
+            mimeType: mimeType || 'image/jpeg',
+            previewUrl: previewUrl || '',
+            uploadStatus: 'Completed',
+            cropStatus: 'Cropped',
+            moderationStatus: 'Pending',
+            consentVerified: true,
+            approvedForGeneration: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.reference_images = memoryDb.reference_images || [];
+            memoryDb.reference_images.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO reference_images (id, fileName, mimeType, previewUrl, uploadStatus, cropStatus, moderationStatus, consentVerified, approvedForGeneration)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [
+                    data.id, data.fileName, data.mimeType, data.previewUrl, data.uploadStatus,
+                    data.cropStatus, data.moderationStatus, data.consentVerified, data.approvedForGeneration
+                ]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin API endpoints: Usage Modes
+    app.get('/api/admin/usage-modes', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.usage_modes || DEFAULT_USAGE_MODES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM usage_modes ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/usage-modes', async (req, res): Promise<any> => {
+        const { label, slug, shortDescription, generationBehaviorHint, safetyNotes, visibleInWizard, sortOrder, status } = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id,
+            slug: slug || label.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            label, shortDescription, generationBehaviorHint, safetyNotes,
+            visibleInWizard: visibleInWizard ?? true,
+            sortOrder: sortOrder ?? 99,
+            status: status || 'Active'
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.usage_modes = memoryDb.usage_modes || [];
+            memoryDb.usage_modes.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO usage_modes (id, slug, label, shortDescription, generationBehaviorHint, safetyNotes, visibleInWizard, sortOrder, status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [data.id, data.slug, data.label, data.shortDescription, data.generationBehaviorHint, data.safetyNotes, data.visibleInWizard, data.sortOrder, data.status]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/usage-modes/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            memoryDb.usage_modes = memoryDb.usage_modes || [];
+            const index = memoryDb.usage_modes.findIndex((m: any) => m.id === id);
+            if (index !== -1) {
+                memoryDb.usage_modes[index] = { ...memoryDb.usage_modes[index], ...updateFields };
+                return res.json(memoryDb.usage_modes[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE usage_modes SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.get('/api/admin/reference-images', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.reference_images || []);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM reference_images ORDER BY createdAt DESC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Public / User Styles APIs
+    app.get('/api/styles', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.styles || DEFAULT_STYLES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM styles WHERE visibilityState = 'Active' ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_STYLES);
+        }
+    });
+
+
+    // Public / User Languages APIs
+    app.get('/api/languages', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.languages || DEFAULT_LANGUAGES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM languages WHERE status = 'Active' ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_LANGUAGES);
+        }
+    });
+
+    // Public / User Glossary entries APIs
+    app.get('/api/glossary', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.glossary_entries || DEFAULT_GLOSSARY);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM glossary_entries WHERE status = 'Active' ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_GLOSSARY);
+        }
+    });
+
+    // Public / User Translation workflows APIs
+    app.get('/api/translation/workflows', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.translation_workflows || DEFAULT_WORKFLOWS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM translation_workflows WHERE status = 'Active'");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_WORKFLOWS);
+        }
+    });
+
+    // simulated translation service call
+    app.post('/api/translation/execute', async (req, res): Promise<any> => {
+        const { text, sourceLang, targetLang, projectId } = req.body;
+        const glossaryList = !isDatabaseConnected() 
+            ? (memoryDb.glossary_entries || DEFAULT_GLOSSARY)
+            : (await getDbPool().query("SELECT * FROM glossary_entries WHERE status = 'Active'")).rows;
+
+        let translated = `[Translated to ${targetLang}]: ${text}`;
+        
+        // Preserve glossary terms
+        glossaryList.forEach((entry: any) => {
+            if (entry.sourceLanguageCode === sourceLang && entry.targetLanguageCode === targetLang) {
+                const regex = new RegExp(entry.sourceTerm, 'gi');
+                if (text.match(regex)) {
+                    translated = translated.replace(new RegExp(entry.sourceTerm, 'gi'), entry.preferredTranslation);
+                }
+            }
+        });
+
+        const jobId = crypto.randomUUID();
+        const unitId = crypto.randomUUID();
+
+        const job = {
+            id: jobId, projectId: projectId || 'current-project', providerId: "gemini-translate-sim",
+            modelId: "gemini-2.5-flash", workflowId: "workflow-translation-standard",
+            sourceLanguageCode: sourceLang, targetLanguageCode: targetLang, translationMode: "Standard",
+            status: "Completed", retryCount: 0, resultBindingIds: [unitId], createdAt: new Date().toISOString()
+        };
+
+        const unit = {
+            id: unitId, projectId: projectId || 'current-project', parentContentType: 'Panel',
+            parentContentId: 'current-panel', fieldType: 'dialogue', sourceText: text,
+            sourceLanguageCode: sourceLang, translatedText: translated, targetLanguageCode: targetLang,
+            translationStatus: 'Needs-Review', reviewStatus: 'Unmoderated', protectedTermIds: [],
+            glossaryEntryIds: [], overrideApplied: false
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.translation_jobs.push(job);
+            memoryDb.translation_units.push(unit);
+        } else {
+            const pool = getDbPool();
+            await pool.query(
+                `INSERT INTO translation_jobs (id, projectId, providerId, modelId, workflowId, sourceLanguageCode, targetLanguageCode, translationMode, status, retryCount, resultBindingIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                [job.id, job.projectId, job.providerId, job.modelId, job.workflowId, job.sourceLanguageCode, job.targetLanguageCode, job.translationMode, job.status, job.retryCount, JSON.stringify(job.resultBindingIds)]
+            );
+            await pool.query(
+                `INSERT INTO translation_units (id, projectId, parentContentType, parentContentId, fieldType, sourceText, sourceLanguageCode, translatedText, targetLanguageCode, translationStatus, reviewStatus, protectedTermIds, glossaryEntryIds, overrideApplied)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                [unit.id, unit.projectId, unit.parentContentType, unit.parentContentId, unit.fieldType, unit.sourceText, unit.sourceLanguageCode, unit.translatedText, unit.targetLanguageCode, unit.translationStatus, unit.reviewStatus, JSON.stringify(unit.protectedTermIds), JSON.stringify(unit.glossaryEntryIds), unit.overrideApplied]
+            );
+        }
+
+        return res.json({ success: true, translatedText: translated, job, unit });
+    });
+
+    // Public / User Voices APIs
+    app.get('/api/narration/voices', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.voices || DEFAULT_VOICES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM voices WHERE status = 'Active' ORDER BY sortOrder ASC");
+            const rows = result.rows.map(r => ({
+                ...r,
+                languageCodes: typeof r.languageCodes === 'string' ? JSON.parse(r.languageCodes) : r.languageCodes
+            }));
+            return res.json(rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_VOICES);
+        }
+    });
+
+    // Public / User Soundtracks APIs
+    app.get('/api/narration/soundtracks', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.soundtrack_items || DEFAULT_SOUNDTRACKS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM soundtrack_items WHERE status = 'Active' ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_SOUNDTRACKS);
+        }
+    });
+
+    // simulated TTS audio narration generation
+    app.post('/api/narration/generate-audio', async (req, res): Promise<any> => {
+        const { text, voiceId, projectId, parentContentId } = req.body;
+        const jobId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+        const unitId = crypto.randomUUID();
+
+        const job = {
+            id: jobId, projectId: projectId || 'current-project', providerId: "elevenlabs-voice-sim",
+            modelId: "eleven_monolingual_v1", workflowId: "workflow-audio-standard", voiceId: voiceId || 'voice-narrator-1',
+            languageCode: "en-US", narrationMode: "narrator-only", pacingMode: "standard",
+            status: "Completed", retryCount: 0, resultBindingIds: [assetId], createdAt: new Date().toISOString()
+        };
+
+        const unit = {
+            id: unitId, projectId: projectId || 'current-project', parentContentType: 'Panel',
+            parentContentId: parentContentId || 'current-panel', textBindingId: 'caption-text',
+            sourceText: text, languageCode: "en-US", assignedVoiceId: voiceId || 'voice-narrator-1',
+            narrationMode: "narrator-only", pacingMode: "standard", status: 'Completed',
+            reviewStatus: 'Approved', outputAssetId: assetId, overrideApplied: false
+        };
+
+        const asset = {
+            id: assetId, assetType: 'Panel', sourceJobId: jobId, sourceUnitId: unitId,
+            previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // high quality placeholder song
+            status: 'Completed', selected: true, approved: true, archived: false,
+            moderationState: 'Approved', durationMs: 4500, createdAt: new Date().toISOString()
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.narration_jobs.push(job);
+            memoryDb.narration_units.push(unit);
+            memoryDb.audio_assets.push(asset);
+        } else {
+            const pool = getDbPool();
+            await pool.query(
+                `INSERT INTO narration_jobs (id, projectId, providerId, modelId, workflowId, voiceId, languageCode, narrationMode, pacingMode, status, retryCount, resultBindingIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                [job.id, job.projectId, job.providerId, job.modelId, job.workflowId, job.voiceId, job.languageCode, job.narrationMode, job.pacingMode, job.status, job.retryCount, JSON.stringify(job.resultBindingIds)]
+            );
+            await pool.query(
+                `INSERT INTO narration_units (id, projectId, parentContentType, parentContentId, textBindingId, sourceText, languageCode, assignedVoiceId, narrationMode, pacingMode, status, reviewStatus, outputAssetId, overrideApplied)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                [unit.id, unit.projectId, unit.parentContentType, unit.parentContentId, unit.textBindingId, unit.sourceText, unit.languageCode, unit.assignedVoiceId, unit.narrationMode, unit.pacingMode, unit.status, unit.reviewStatus, unit.outputAssetId, unit.overrideApplied]
+            );
+            await pool.query(
+                `INSERT INTO audio_assets (id, assetType, sourceJobId, sourceUnitId, previewUrl, status, selected, approved, archived, moderationState, durationMs)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                [asset.id, asset.assetType, asset.sourceJobId, asset.sourceUnitId, asset.previewUrl, asset.status, asset.selected, asset.approved, asset.archived, asset.moderationState, asset.durationMs]
+            );
+        }
+
+        return res.json({ success: true, audioUrl: asset.previewUrl, durationMs: asset.durationMs, job, unit, asset });
+    });
+
+    // Admin CRUD endpoints for Voices
+    app.get('/api/admin/voices', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.voices || DEFAULT_VOICES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM voices ORDER BY sortOrder ASC");
+            const rows = result.rows.map(r => ({
+                ...r,
+                languageCodes: typeof r.languageCodes === 'string' ? JSON.parse(r.languageCodes) : r.languageCodes
+            }));
+            return res.json(rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/voices', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, slug: body.slug || body.displayName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            displayName: body.displayName, providerId: body.providerId || 'elevenlabs-voice-sim',
+            modelId: body.modelId || 'eleven_monolingual_v1',
+            languageCodes: Array.isArray(body.languageCodes) ? body.languageCodes : [body.primaryLanguageCode],
+            primaryLanguageCode: body.primaryLanguageCode || 'en-US',
+            accentLabel: body.accentLabel || '', toneLabel: body.toneLabel || '',
+            ageDescriptor: body.ageDescriptor || 'Adult', narratorSuitability: body.narratorSuitability ?? true,
+            childSafe: body.childSafe ?? true, classroomSafe: body.classroomSafe ?? true,
+            supportsBilingualWorkflows: body.supportsBilingualWorkflows ?? false,
+            visibleInStudio: body.visibleInStudio ?? true, visibleInKidStory: body.visibleInKidStory ?? true,
+            visibleInComicStudio: body.visibleInComicStudio ?? true, visibleInTeacherFlow: body.visibleInTeacherFlow ?? true,
+            visibleInHomeschool: body.visibleInHomeschool ?? true, internalTestingOnly: body.internalTestingOnly ?? false,
+            status: body.status || 'Active', featured: body.featured ?? false, sortOrder: body.sortOrder ?? 99
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.voices.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO voices (id, slug, displayName, providerId, modelId, languageCodes, primaryLanguageCode, accentLabel, toneLabel, ageDescriptor, narratorSuitability, childSafe, classroomSafe, supportsBilingualWorkflows, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, internalTestingOnly, status, featured, sortOrder)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+                [data.id, data.slug, data.displayName, data.providerId, data.modelId, JSON.stringify(data.languageCodes), data.primaryLanguageCode, data.accentLabel, data.toneLabel, data.ageDescriptor, data.narratorSuitability, data.childSafe, data.classroomSafe, data.supportsBilingualWorkflows, data.visibleInStudio, data.visibleInKidStory, data.visibleInComicStudio, data.visibleInTeacherFlow, data.visibleInHomeschool, data.internalTestingOnly, data.status, data.featured, data.sortOrder]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/voices/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.voices.findIndex((v: any) => v.id === id);
+            if (index !== -1) {
+                memoryDb.voices[index] = { ...memoryDb.voices[index], ...updateFields };
+                return res.json(memoryDb.voices[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                if (key === 'languageCodes') {
+                    fields.push(`languageCodes = $${i++}`);
+                    values.push(JSON.stringify(updateFields[key]));
+                } else {
+                    fields.push(`${key} = $${i++}`);
+                    values.push(updateFields[key]);
+                }
+            });
+            values.push(id);
+            await pool.query(`UPDATE voices SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/voices/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.voices = memoryDb.voices.filter((v: any) => v.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM voices WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin CRUD endpoints for Soundtracks
+    app.get('/api/admin/soundtracks', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.soundtrack_items || DEFAULT_SOUNDTRACKS);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM soundtrack_items ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/soundtracks', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title: body.title, category: body.category || 'Soundtrack', mood: body.mood || '',
+            educationalSuitability: body.educationalSuitability ?? true,
+            familySuitability: body.familySuitability ?? true, classroomSuitability: body.classroomSuitability ?? true,
+            languageNeutral: body.languageNeutral ?? true, status: body.status || 'Active',
+            internalTestingOnly: body.internalTestingOnly ?? false, sortOrder: body.sortOrder ?? 99
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.soundtrack_items.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO soundtrack_items (id, slug, title, category, mood, educationalSuitability, familySuitability, classroomSuitability, languageNeutral, status, internalTestingOnly, sortOrder)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                [data.id, data.slug, data.title, data.category, data.mood, data.educationalSuitability, data.familySuitability, data.classroomSuitability, data.languageNeutral, data.status, data.internalTestingOnly, data.sortOrder]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/soundtracks/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.soundtrack_items.findIndex((s: any) => s.id === id);
+            if (index !== -1) {
+                memoryDb.soundtrack_items[index] = { ...memoryDb.soundtrack_items[index], ...updateFields };
+                return res.json(memoryDb.soundtrack_items[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE soundtrack_items SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/soundtracks/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.soundtrack_items = memoryDb.soundtrack_items.filter((s: any) => s.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM soundtrack_items WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin CRUD endpoints for Languages
+    app.get('/api/admin/languages', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.languages || DEFAULT_LANGUAGES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM languages ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/languages', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, code: body.code, slug: body.slug || body.displayName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            displayName: body.displayName, nativeName: body.nativeName, direction: body.direction || 'ltr',
+            status: body.status || 'Active', visibleInStudio: body.visibleInStudio ?? true,
+            visibleInKidStory: body.visibleInKidStory ?? true, visibleInComicStudio: body.visibleInComicStudio ?? true,
+            visibleInTeacherFlow: body.visibleInTeacherFlow ?? true, visibleInHomeschool: body.visibleInHomeschool ?? true,
+            supportsBilingual: body.supportsBilingual ?? true, supportsNarration: body.supportsNarration ?? true,
+            supportsTranslation: body.supportsTranslation ?? true, internalTestingOnly: body.internalTestingOnly ?? false,
+            educationalNotes: body.educationalNotes || '', sortOrder: body.sortOrder ?? 99, featured: body.featured ?? false
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.languages.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO languages (id, code, slug, displayName, nativeName, direction, status, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, supportsBilingual, supportsNarration, supportsTranslation, internalTestingOnly, educationalNotes, sortOrder, featured)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+                [data.id, data.code, data.slug, data.displayName, data.nativeName, data.direction, data.status, data.visibleInStudio, data.visibleInKidStory, data.visibleInComicStudio, data.visibleInTeacherFlow, data.visibleInHomeschool, data.supportsBilingual, data.supportsNarration, data.supportsTranslation, data.internalTestingOnly, data.educationalNotes, data.sortOrder, data.featured]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/languages/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.languages.findIndex((l: any) => l.id === id);
+            if (index !== -1) {
+                memoryDb.languages[index] = { ...memoryDb.languages[index], ...updateFields };
+                return res.json(memoryDb.languages[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE languages SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/languages/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.languages = memoryDb.languages.filter((l: any) => l.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM languages WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin CRUD endpoints for Glossary entries
+    app.get('/api/admin/glossary', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.glossary_entries || DEFAULT_GLOSSARY);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM glossary_entries ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/glossary', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, slug: body.slug || body.sourceTerm.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            sourceTerm: body.sourceTerm, preferredTranslation: body.preferredTranslation,
+            sourceLanguageCode: body.sourceLanguageCode, targetLanguageCode: body.targetLanguageCode,
+            termType: body.termType || 'Name', preserveTerm: body.preserveTerm ?? true,
+            scopeType: body.scopeType || 'Global', internalTestingOnly: body.internalTestingOnly ?? false,
+            status: body.status || 'Active', sortOrder: body.sortOrder ?? 99
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.glossary_entries.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO glossary_entries (id, slug, sourceTerm, preferredTranslation, sourceLanguageCode, targetLanguageCode, termType, preserveTerm, scopeType, internalTestingOnly, status, sortOrder)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                [data.id, data.slug, data.sourceTerm, data.preferredTranslation, data.sourceLanguageCode, data.targetLanguageCode, data.termType, data.preserveTerm, data.scopeType, data.internalTestingOnly, data.status, data.sortOrder]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/glossary/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.glossary_entries.findIndex((g: any) => g.id === id);
+            if (index !== -1) {
+                memoryDb.glossary_entries[index] = { ...memoryDb.glossary_entries[index], ...updateFields };
+                return res.json(memoryDb.glossary_entries[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE glossary_entries SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/glossary/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.glossary_entries = memoryDb.glossary_entries.filter((g: any) => g.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM glossary_entries WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+    app.get('/api/prompt-templates', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.prompt_templates || DEFAULT_PROMPT_TEMPLATES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM prompt_templates WHERE status = 'Active'");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.json(DEFAULT_PROMPT_TEMPLATES);
+        }
+    });
+
+    // Public / User Image Jobs, Panel & Cover Request endpoints
+    app.get('/api/image/jobs', async (req, res): Promise<any> => {
+        const { projectId } = req.query;
+        if (!isDatabaseConnected()) {
+            let list = memoryDb.image_generation_jobs || [];
+            if (projectId) list = list.filter((j: any) => j.projectId === projectId);
+            return res.json(list);
+        }
+        const pool = getDbPool();
+        try {
+            const q = projectId 
+                ? await pool.query("SELECT * FROM image_generation_jobs WHERE projectId = $1 ORDER BY createdAt DESC", [projectId])
+                : await pool.query("SELECT * FROM image_generation_jobs ORDER BY createdAt DESC");
+            return res.json(q.rows);
+        } catch (e: any) {
+            return res.json([]);
+        }
+    });
+
+    app.get('/api/image/panel-requests', async (req, res): Promise<any> => {
+        const { projectId } = req.query;
+        if (!isDatabaseConnected()) {
+            let list = memoryDb.panel_generation_requests || [];
+            if (projectId) list = list.filter((j: any) => j.projectId === projectId);
+            return res.json(list);
+        }
+        const pool = getDbPool();
+        try {
+            const q = projectId 
+                ? await pool.query("SELECT * FROM panel_generation_requests WHERE projectId = $1 ORDER BY createdAt DESC", [projectId])
+                : await pool.query("SELECT * FROM panel_generation_requests ORDER BY createdAt DESC");
+            return res.json(q.rows);
+        } catch (e: any) {
+            return res.json([]);
+        }
+    });
+
+    app.get('/api/image/cover-requests', async (req, res): Promise<any> => {
+        const { projectId } = req.query;
+        if (!isDatabaseConnected()) {
+            let list = memoryDb.cover_generation_requests || [];
+            if (projectId) list = list.filter((j: any) => j.projectId === projectId);
+            return res.json(list);
+        }
+        const pool = getDbPool();
+        try {
+            const q = projectId 
+                ? await pool.query("SELECT * FROM cover_generation_requests WHERE projectId = $1 ORDER BY createdAt DESC", [projectId])
+                : await pool.query("SELECT * FROM cover_generation_requests ORDER BY createdAt DESC");
+            return res.json(q.rows);
+        } catch (e: any) {
+            return res.json([]);
+        }
+    });
+
+    app.get('/api/image/assets', async (req, res): Promise<any> => {
+        const { sourceRequestId } = req.query;
+        if (!isDatabaseConnected()) {
+            let list = memoryDb.generated_assets || [];
+            if (sourceRequestId) list = list.filter((j: any) => j.sourceRequestId === sourceRequestId);
+            return res.json(list);
+        }
+        const pool = getDbPool();
+        try {
+            const q = sourceRequestId 
+                ? await pool.query("SELECT * FROM generated_assets WHERE sourceRequestId = $1 ORDER BY createdAt DESC", [sourceRequestId])
+                : await pool.query("SELECT * FROM generated_assets ORDER BY createdAt DESC");
+            return res.json(q.rows);
+        } catch (e: any) {
+            return res.json([]);
+        }
+    });
+
+    // Create Simulated Generation Action
+    app.post('/api/image/generate-panel', async (req, res): Promise<any> => {
+        const { projectId, panelTitle, beatSummary, styleId, personaIds, languageHandlingMode } = req.body;
+        const jobId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+
+        const job = {
+            id: jobId, projectId, workflowType: "Panel", providerId: "gemini-imagen-sim", modelId: "imagen-3",
+            status: "Completed", requestType: "Panel", promptTemplateId: "template-panel-standard",
+            styleId, personaIds: personaIds || [], coverMode: false, retryCount: 0,
+            outputAssetIds: [assetId], createdAt: new Date().toISOString()
+        };
+
+        const panelRequest = {
+            id: requestId, projectId, panelTitle, beatSummary, educationalFocus: "Science Vocabulary Integration",
+            visualSummary: "Detailed illustrated scene supporting the story beat.", settingDescription: "Classroom / Outdoor setting",
+            personaIds: personaIds || [], styleId, languageHandlingMode: languageHandlingMode || 'original',
+            promptSafeDescription: `Generated scene for ${panelTitle}`, generationState: 'Completed',
+            selectedAssetId: assetId, variantAssetIds: [assetId], createdAt: new Date().toISOString()
+        };
+
+        const previewUrls = [
+            'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=300',
+            'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=300',
+            'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&q=80&w=300'
+        ];
+        const previewUrl = previewUrls[Math.floor(Math.random() * previewUrls.length)];
+
+        const asset = {
+            id: assetId, assetType: 'Panel', sourceJobId: jobId, sourceRequestId: requestId,
+            previewUrl, status: 'Completed', selected: true, approved: true, archived: false,
+            moderationState: 'Approved', createdAt: new Date().toISOString()
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.image_generation_jobs.push(job);
+            memoryDb.panel_generation_requests.push(panelRequest);
+            memoryDb.generated_assets.push(asset);
+        } else {
+            const pool = getDbPool();
+            await pool.query(
+                `INSERT INTO image_generation_jobs (id, projectId, workflowType, providerId, modelId, status, requestType, promptTemplateId, styleId, personaIds, coverMode, retryCount, outputAssetIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                [job.id, job.projectId, job.workflowType, job.providerId, job.modelId, job.status, job.requestType, job.promptTemplateId, job.styleId, JSON.stringify(job.personaIds), job.coverMode, job.retryCount, JSON.stringify(job.outputAssetIds)]
+            );
+            await pool.query(
+                `INSERT INTO panel_generation_requests (id, projectId, panelTitle, beatSummary, educationalFocus, visualSummary, settingDescription, personaIds, styleId, languageHandlingMode, promptSafeDescription, generationState, selectedAssetId, variantAssetIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                [panelRequest.id, panelRequest.projectId, panelRequest.panelTitle, panelRequest.beatSummary, panelRequest.educationalFocus, panelRequest.visualSummary, panelRequest.settingDescription, JSON.stringify(panelRequest.personaIds), panelRequest.styleId, panelRequest.languageHandlingMode, panelRequest.promptSafeDescription, panelRequest.generationState, panelRequest.selectedAssetId, JSON.stringify(panelRequest.variantAssetIds)]
+            );
+            await pool.query(
+                `INSERT INTO generated_assets (id, assetType, sourceJobId, sourceRequestId, previewUrl, status, selected, approved, archived, moderationState)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                [asset.id, asset.assetType, asset.sourceJobId, asset.sourceRequestId, asset.previewUrl, asset.status, asset.selected, asset.approved, asset.archived, asset.moderationState]
+            );
+        }
+        return res.json({ success: true, asset, panelRequest });
+    });
+
+    app.post('/api/image/generate-cover', async (req, res): Promise<any> => {
+        const { projectId, title, subtitle, styleId, personaIds } = req.body;
+        const jobId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+
+        const job = {
+            id: jobId, projectId, workflowType: "Cover", providerId: "gemini-imagen-sim", modelId: "imagen-3",
+            status: "Completed", requestType: "Cover", promptTemplateId: "template-cover-standard",
+            styleId, personaIds: personaIds || [], coverMode: true, retryCount: 0,
+            outputAssetIds: [assetId], createdAt: new Date().toISOString()
+        };
+
+        const coverRequest = {
+            id: requestId, projectId, title, subtitle, educationalFocus: "Science Cover Topic",
+            personaIds: personaIds || [], styleId, visualSummary: "Atmospheric front cover layout.",
+            promptSafeDescription: `Generated cover artwork for ${title}`, generationState: 'Completed',
+            selectedAssetId: assetId, variantAssetIds: [assetId], createdAt: new Date().toISOString()
+        };
+
+        const asset = {
+            id: assetId, assetType: 'Cover', sourceJobId: jobId, sourceRequestId: requestId,
+            previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400',
+            status: 'Completed', selected: true, approved: true, archived: false,
+            moderationState: 'Approved', createdAt: new Date().toISOString()
+        };
+
+        if (!isDatabaseConnected()) {
+            memoryDb.image_generation_jobs.push(job);
+            memoryDb.cover_generation_requests.push(coverRequest);
+            memoryDb.generated_assets.push(asset);
+        } else {
+            const pool = getDbPool();
+            await pool.query(
+                `INSERT INTO image_generation_jobs (id, projectId, workflowType, providerId, modelId, status, requestType, promptTemplateId, styleId, personaIds, coverMode, retryCount, outputAssetIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                [job.id, job.projectId, job.workflowType, job.providerId, job.modelId, job.status, job.requestType, job.promptTemplateId, job.styleId, JSON.stringify(job.personaIds), job.coverMode, job.retryCount, JSON.stringify(job.outputAssetIds)]
+            );
+            await pool.query(
+                `INSERT INTO cover_generation_requests (id, projectId, title, subtitle, educationalFocus, personaIds, styleId, visualSummary, promptSafeDescription, generationState, selectedAssetId, variantAssetIds)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                [coverRequest.id, coverRequest.projectId, coverRequest.title, coverRequest.subtitle, coverRequest.educationalFocus, JSON.stringify(coverRequest.personaIds), coverRequest.styleId, coverRequest.visualSummary, coverRequest.promptSafeDescription, coverRequest.generationState, coverRequest.selectedAssetId, JSON.stringify(coverRequest.variantAssetIds)]
+            );
+            await pool.query(
+                `INSERT INTO generated_assets (id, assetType, sourceJobId, sourceRequestId, previewUrl, status, selected, approved, archived, moderationState)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                [asset.id, asset.assetType, asset.sourceJobId, asset.sourceRequestId, asset.previewUrl, asset.status, asset.selected, asset.approved, asset.archived, asset.moderationState]
+            );
+        }
+        return res.json({ success: true, asset, coverRequest });
+    });
+
+    // Admin CRUD endpoints for Styles
+    app.get('/api/admin/styles', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.styles || DEFAULT_STYLES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM styles ORDER BY sortOrder ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/styles', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title: body.title, shortDescription: body.shortDescription, longDescription: body.longDescription,
+            visualMood: body.visualMood, audienceTags: body.audienceTags || [], useCaseTags: body.useCaseTags || [],
+            styleFamily: body.styleFamily, recommendationTags: body.recommendationTags || [], visibleInStudio: body.visibleInStudio ?? true,
+            visibleInHomeschool: body.visibleInHomeschool ?? true, visibleInTeacherFlow: body.visibleInTeacherFlow ?? true,
+            visibilityState: body.visibilityState || 'Active', featured: body.featured ?? false, sortOrder: body.sortOrder ?? 99,
+            internalTestingOnly: body.internalTestingOnly ?? false, artworkReference: body.artworkReference || ''
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.styles.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO styles (id, slug, title, shortDescription, longDescription, visualMood, audienceTags, useCaseTags, styleFamily, recommendationTags, visibleInStudio, visibleInHomeschool, visibleInTeacherFlow, visibilityState, featured, sortOrder, internalTestingOnly, artworkReference)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+                [data.id, data.slug, data.title, data.shortDescription, data.longDescription, data.visualMood, JSON.stringify(data.audienceTags), JSON.stringify(data.useCaseTags), data.styleFamily, JSON.stringify(data.recommendationTags), data.visibleInStudio, data.visibleInHomeschool, data.visibleInTeacherFlow, data.visibilityState, data.featured, data.sortOrder, data.internalTestingOnly, data.artworkReference]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/styles/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.styles.findIndex((s: any) => s.id === id);
+            if (index !== -1) {
+                memoryDb.styles[index] = { ...memoryDb.styles[index], ...updateFields };
+                return res.json(memoryDb.styles[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                let val = updateFields[key];
+                if (Array.isArray(val)) val = JSON.stringify(val);
+                fields.push(`${key} = $${i++}`);
+                values.push(val);
+            });
+            values.push(id);
+            await pool.query(`UPDATE styles SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/styles/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.styles = memoryDb.styles.filter((s: any) => s.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM styles WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    // Admin CRUD endpoints for Prompt Templates
+    app.get('/api/admin/prompt-templates', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.prompt_templates || DEFAULT_PROMPT_TEMPLATES);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM prompt_templates ORDER BY title ASC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.post('/api/admin/prompt-templates', async (req, res): Promise<any> => {
+        const body = req.body;
+        const id = crypto.randomUUID();
+        const data = {
+            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            title: body.title, workflowType: body.workflowType, formatMappings: body.formatMappings,
+            creatorFlowMappings: body.creatorFlowMappings, styleModifiers: body.styleModifiers,
+            educationalMode: body.educationalMode, bilingualHandlingHint: body.bilingualHandlingHint,
+            personaConsistencyHint: body.personaConsistencyHint, status: body.status || 'Active',
+            visibleInAdmin: body.visibleInAdmin ?? true, internalTestingOnly: body.internalTestingOnly ?? false
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.prompt_templates.push(data);
+            return res.json(data);
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query(
+                `INSERT INTO prompt_templates (id, slug, title, workflowType, formatMappings, creatorFlowMappings, styleModifiers, educationalMode, bilingualHandlingHint, personaConsistencyHint, status, visibleInAdmin, internalTestingOnly)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                [data.id, data.slug, data.title, data.workflowType, data.formatMappings, data.creatorFlowMappings, data.styleModifiers, data.educationalMode, data.bilingualHandlingHint, data.personaConsistencyHint, data.status, data.visibleInAdmin, data.internalTestingOnly]
+            );
+            return res.json(data);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/prompt-templates/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            const index = memoryDb.prompt_templates.findIndex((pt: any) => pt.id === id);
+            if (index !== -1) {
+                memoryDb.prompt_templates[index] = { ...memoryDb.prompt_templates[index], ...updateFields };
+                return res.json(memoryDb.prompt_templates[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE prompt_templates SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.delete('/api/admin/prompt-templates/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        if (!isDatabaseConnected()) {
+            memoryDb.prompt_templates = memoryDb.prompt_templates.filter((pt: any) => pt.id !== id);
+            return res.json({ success: true });
+        }
+        const pool = getDbPool();
+        try {
+            await pool.query('DELETE FROM prompt_templates WHERE id = $1', [id]);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.get('/api/admin/reference-images', async (req, res): Promise<any> => {
+        if (!isDatabaseConnected()) return res.json(memoryDb.reference_images || []);
+        const pool = getDbPool();
+        try {
+            const result = await pool.query("SELECT * FROM reference_images ORDER BY createdAt DESC");
+            return res.json(result.rows);
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.put('/api/admin/reference-images/:id', async (req, res): Promise<any> => {
+        const id = req.params.id;
+        const updateFields = req.body;
+        if (!isDatabaseConnected()) {
+            memoryDb.reference_images = memoryDb.reference_images || [];
+            const index = memoryDb.reference_images.findIndex((img: any) => img.id === id);
+            if (index !== -1) {
+                memoryDb.reference_images[index] = { ...memoryDb.reference_images[index], ...updateFields };
+                return res.json(memoryDb.reference_images[index]);
+            }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        const pool = getDbPool();
+        try {
+            const fields: string[] = [];
+            const values: any[] = [];
+            let i = 1;
+            Object.keys(updateFields).forEach(key => {
+                if (key === 'id') return;
+                fields.push(`${key} = $${i++}`);
+                values.push(updateFields[key]);
+            });
+            values.push(id);
+            await pool.query(`UPDATE reference_images SET ${fields.join(', ')} WHERE id = $${i}`, values);
+            return res.json({ success: true });
+        } catch (e: any) {
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
     app.get('/api/admin/categories', async (req, res): Promise<any> => {
         if (!isDatabaseConnected()) {
             return res.json(memoryDb.content_categories || DEFAULT_CATEGORIES);
@@ -3650,7 +6461,155 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
 
+    // =========================================================================
+    // AI ENGINE ADMIN ROUTES — Providers, Models, Workflows, Routing Rules
+    // =========================================================================
+
+    // --- AI Providers ---
+    app.get('/api/admin/ai-providers', requireAdmin, async (_req, res): Promise<any> => {
+        return res.json(memoryDb.ai_providers || []);
+    });
+
+    app.post('/api/admin/ai-providers', requireAdmin, async (req, res): Promise<any> => {
+        const provider = { id: `prov-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
+        memoryDb.ai_providers.push(provider);
+        return res.json(provider);
+    });
+
+    app.put('/api/admin/ai-providers/:id', requireAdmin, async (req, res): Promise<any> => {
+        const idx = memoryDb.ai_providers.findIndex((p: any) => p.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Provider not found' });
+        memoryDb.ai_providers[idx] = { ...memoryDb.ai_providers[idx], ...req.body };
+        return res.json(memoryDb.ai_providers[idx]);
+    });
+
+    app.delete('/api/admin/ai-providers/:id', requireAdmin, async (req, res): Promise<any> => {
+        memoryDb.ai_providers = memoryDb.ai_providers.filter((p: any) => p.id !== req.params.id);
+        return res.json({ success: true });
+    });
+
+    // --- AI Models ---
+    app.get('/api/admin/ai-models', requireAdmin, async (_req, res): Promise<any> => {
+        return res.json(memoryDb.ai_models || []);
+    });
+
+    app.post('/api/admin/ai-models', requireAdmin, async (req, res): Promise<any> => {
+        const model = { id: `model-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
+        memoryDb.ai_models.push(model);
+        return res.json(model);
+    });
+
+    app.put('/api/admin/ai-models/:id', requireAdmin, async (req, res): Promise<any> => {
+        const idx = memoryDb.ai_models.findIndex((m: any) => m.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Model not found' });
+        memoryDb.ai_models[idx] = { ...memoryDb.ai_models[idx], ...req.body };
+        return res.json(memoryDb.ai_models[idx]);
+    });
+
+    app.delete('/api/admin/ai-models/:id', requireAdmin, async (req, res): Promise<any> => {
+        memoryDb.ai_models = memoryDb.ai_models.filter((m: any) => m.id !== req.params.id);
+        return res.json({ success: true });
+    });
+
+    // --- AI Workflows ---
+    app.get('/api/admin/ai-workflows', requireAdmin, async (_req, res): Promise<any> => {
+        return res.json(memoryDb.ai_workflows || []);
+    });
+
+    app.post('/api/admin/ai-workflows', requireAdmin, async (req, res): Promise<any> => {
+        const workflow = { id: `flow-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
+        memoryDb.ai_workflows.push(workflow);
+        return res.json(workflow);
+    });
+
+    app.put('/api/admin/ai-workflows/:id', requireAdmin, async (req, res): Promise<any> => {
+        const idx = memoryDb.ai_workflows.findIndex((w: any) => w.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Workflow not found' });
+        memoryDb.ai_workflows[idx] = { ...memoryDb.ai_workflows[idx], ...req.body };
+        return res.json(memoryDb.ai_workflows[idx]);
+    });
+
+    app.delete('/api/admin/ai-workflows/:id', requireAdmin, async (req, res): Promise<any> => {
+        memoryDb.ai_workflows = memoryDb.ai_workflows.filter((w: any) => w.id !== req.params.id);
+        return res.json({ success: true });
+    });
+
+    // --- AI Routing Rules ---
+    app.get('/api/admin/ai-routing-rules', requireAdmin, async (_req, res): Promise<any> => {
+        return res.json(memoryDb.ai_routing_rules || []);
+    });
+
+    app.post('/api/admin/ai-routing-rules', requireAdmin, async (req, res): Promise<any> => {
+        const rule = { id: `rule-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
+        memoryDb.ai_routing_rules.push(rule);
+        return res.json(rule);
+    });
+
+    app.put('/api/admin/ai-routing-rules/:id', requireAdmin, async (req, res): Promise<any> => {
+        const idx = memoryDb.ai_routing_rules.findIndex((r: any) => r.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Rule not found' });
+        memoryDb.ai_routing_rules[idx] = { ...memoryDb.ai_routing_rules[idx], ...req.body };
+        return res.json(memoryDb.ai_routing_rules[idx]);
+    });
+
+    app.delete('/api/admin/ai-routing-rules/:id', requireAdmin, async (req, res): Promise<any> => {
+        memoryDb.ai_routing_rules = memoryDb.ai_routing_rules.filter((r: any) => r.id !== req.params.id);
+        return res.json({ success: true });
+    });
+
+    // --- AI Fallback Configs ---
+    app.get('/api/admin/ai-fallback-configs', requireAdmin, async (_req, res): Promise<any> => {
+        return res.json(memoryDb.ai_fallback_configs || []);
+    });
+
+    app.put('/api/admin/ai-fallback-configs/:id', requireAdmin, async (req, res): Promise<any> => {
+        const idx = memoryDb.ai_fallback_configs.findIndex((f: any) => f.id === req.params.id);
+        if (idx === -1) return res.status(404).json({ error: 'Fallback config not found' });
+        memoryDb.ai_fallback_configs[idx] = { ...memoryDb.ai_fallback_configs[idx], ...req.body };
+        return res.json(memoryDb.ai_fallback_configs[idx]);
+    });
+
+    // --- Dry-Run Resolver: simulate which model a given workflow+tier resolves to ---
+    app.get('/api/admin/ai-routing/resolve', requireAdmin, async (req, res): Promise<any> => {
+        const { workflow, tier = 'Free', env = 'production' } = req.query as any;
+        if (!workflow) return res.status(400).json({ error: 'workflow query param is required' });
+        const resolution = resolveAIRoute(workflow, tier, env);
+        const model = (memoryDb.ai_models || []).find((m: any) => m.id === resolution.modelId);
+        const provider = (memoryDb.ai_providers || []).find((p: any) => p.id === resolution.providerId);
+        return res.json({
+            ...resolution,
+            modelDisplayName: model?.displayName || resolution.modelSlug,
+            providerDisplayName: provider?.displayName || resolution.providerSlug,
+            costTier: model?.costTier || 'Unknown',
+            performanceTier: model?.performanceTier || 'Unknown'
+        });
+    });
+
+    // --- AI Engine Summary (for Diagnostics) ---
+    app.get('/api/admin/ai-engine/summary', requireAdmin, async (_req, res): Promise<any> => {
+        const providers = memoryDb.ai_providers || [];
+        const models = memoryDb.ai_models || [];
+        const workflows = memoryDb.ai_workflows || [];
+        const rules = memoryDb.ai_routing_rules || [];
+        const fallbacks = memoryDb.ai_fallback_configs || [];
+
+        return res.json({
+            totalProviders: providers.length,
+            activeProviders: providers.filter((p: any) => p.status === 'Active').length,
+            totalModels: models.length,
+            activeModels: models.filter((m: any) => m.status === 'Active').length,
+            totalWorkflows: workflows.length,
+            activeWorkflows: workflows.filter((w: any) => w.status === 'Active').length,
+            totalRoutingRules: rules.length,
+            activeRoutingRules: rules.filter((r: any) => r.status === 'Active').length,
+            fallbackConfigsActive: fallbacks.filter((f: any) => f.status === 'Active').length,
+            providerStatuses: providers.map((p: any) => ({ displayName: p.displayName, status: p.status, slug: p.slug }))
+        });
+    });
+
+
     // Start listening on port only when all API endpoints and static assets are fully configured
+
 
     try {
 

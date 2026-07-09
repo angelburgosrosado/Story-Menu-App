@@ -1,7 +1,14 @@
 /**
+ * Screen Name: Types Definitions
+ * Purpose: Central TypeScript interfaces and data constants for Story.Menu
+ * Version: 1.2.0
+ * Date: 2026-07-09
+ * Phase: Phase 3 - Character and Photo-Persona System Implementation
+ * What changed in this revision: Added TypeScript interfaces for Persona, ReferenceImage, RoleAssignment, and UsageMode.
+ * 
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 
 export const MAX_STORY_PAGES = 10;
 export const BACK_COVER_PAGE = 11;
@@ -225,3 +232,576 @@ export const WARDROBE_PRESETS = {
             }
         }
     };
+
+export interface StartingFormat {
+    id: string;
+    slug: string;
+    title: string;
+    short_description: string;
+    long_description: string;
+    audience_tags: string[];
+    category_tags: string[];
+    recommended_for: string;
+    sample_output_hint: string;
+    age_range: string;
+    visibility_state: 'Draft' | 'Active' | 'Hidden' | 'Internal';
+    show_in_onboarding: boolean;
+    show_in_homeschool: boolean;
+    show_in_teacher_flows: boolean;
+    featured: boolean;
+    sort_order: number;
+    icon: string;
+}
+
+export interface CreatorFlow {
+    id: string;
+    slug: string;
+    title: string;
+    short_description: string;
+    best_for: string;
+    output_hint: string;
+    related_formats: string[];
+    visibility_state: 'Draft' | 'Active' | 'Hidden' | 'Internal';
+    show_in_onboarding: boolean;
+    featured: boolean;
+    sort_order: number;
+}
+
+export interface StoryGoal {
+    id: string;
+    slug: string;
+    title: string;
+    short_description: string;
+    category: string;
+    tags: string[];
+    related_formats: string[];
+    related_creator_flows: string[];
+    importance: 'Primary' | 'Secondary' | 'Optional';
+    visibility_state: 'Draft' | 'Active' | 'Hidden' | 'Internal';
+    show_in_wizard: boolean;
+    show_in_homeschool: boolean;
+    show_in_teacher_flows: boolean;
+    featured: boolean;
+    sort_order: number;
+}
+
+export interface Persona {
+    id: string;
+    slug: string;
+    displayName: string;
+    shortDescription: string;
+    longDescription: string;
+    personaType: 'Me' | 'Child Reader' | 'Story Guide' | 'Science Helper' | 'Teacher Voice Character' | 'Family Character' | 'Custom Character';
+    roleDefaults: string[];
+    ageGroup: string;
+    audience_tags: string[];
+    language_tags: string[];
+    stylePreference: string;
+    visualSummary: string;
+    generationSafeDescription: string;
+    usageMode: string; // references UsageMode.slug
+    referenceImageId?: string;
+    referenceImageStatus?: 'None' | 'Pending' | 'Approved' | 'Rejected';
+    recurringCharacter: boolean;
+    visibilityScope: 'Private' | 'Classroom-only' | 'Family-only' | 'Public';
+    consentStatus: 'Granted' | 'Not Granted';
+    moderationStatus: 'Unmoderated' | 'Approved' | 'Flagged';
+    approvedForGeneration: boolean;
+    internalNotes?: string;
+    sort_order: number;
+    status: 'Active' | 'Archived';
+    created_at?: string;
+}
+
+export interface ReferenceImage {
+    id: string;
+    fileName: string;
+    mimeType: string;
+    previewUrl: string;
+    uploadStatus: 'Uploading' | 'Completed' | 'Failed';
+    cropStatus: 'Uncropped' | 'Cropped';
+    moderationStatus: 'Pending' | 'Approved' | 'Flagged';
+    consentVerified: boolean;
+    approvedForGeneration: boolean;
+    altText?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface RoleAssignment {
+    id: string;
+    personaId: string;
+    projectId: string; // or wizard session binding
+    roleType: 'Main character' | 'Narrator guide' | 'Supporting family member' | 'Teacher/host' | 'Science explainer' | 'Class mascot' | 'Side character';
+    isPrimary: boolean;
+    displayPriority: number;
+    recurringIntent: boolean;
+    storyNotes?: string;
+}
+
+export interface UsageMode {
+    id: string;
+    slug: string;
+    label: string;
+    shortDescription: string;
+    generationBehaviorHint: string;
+    safetyNotes: string;
+    visibleInWizard: boolean;
+    sortOrder: number;
+    status: 'Active' | 'Archived';
+}
+
+export interface StyleRecord {
+    id: string;
+    slug: string;
+    title: string;
+    shortDescription: string;
+    longDescription: string;
+    visualMood: string;
+    audienceTags: string[];
+    useCaseTags: string[];
+    styleFamily: string;
+    recommendationTags: string[];
+    visibleInStudio: boolean;
+    visibleInHomeschool: boolean;
+    visibleInTeacherFlow: boolean;
+    visibilityState: 'Draft' | 'Active' | 'Hidden' | 'Internal';
+    featured: boolean;
+    sortOrder: number;
+    internalTestingOnly: boolean;
+    previewToken?: string;
+    artworkReference?: string;
+}
+
+export interface ImageGenerationJob {
+    id: string;
+    projectId: string;
+    workflowType: string;
+    providerId: string;
+    modelId: string;
+    status: 'Pending' | 'Processing' | 'Completed' | 'Failed';
+    requestType: 'Panel' | 'Cover' | 'Variant';
+    promptTemplateId: string;
+    styleId: string;
+    personaIds: string[];
+    sceneIds?: string[];
+    panelIds?: string[];
+    coverMode: boolean;
+    retryCount: number;
+    errorState?: string;
+    outputAssetIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PanelGenerationRequest {
+    id: string;
+    projectId: string;
+    panelTitle: string;
+    beatSummary: string;
+    educationalFocus: string;
+    visualSummary: string;
+    settingDescription: string;
+    personaIds: string[];
+    styleId: string;
+    languageHandlingMode: 'original' | 'bilingual-parallel' | 'bilingual-alternating';
+    consistencyNotes?: string;
+    promptSafeDescription: string;
+    generationState: 'Pending' | 'Generating' | 'Completed' | 'Failed';
+    selectedAssetId?: string;
+    variantAssetIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface CoverGenerationRequest {
+    id: string;
+    projectId: string;
+    title: string;
+    subtitle?: string;
+    educationalFocus?: string;
+    personaIds: string[];
+    styleId: string;
+    visualSummary: string;
+    promptSafeDescription: string;
+    generationState: 'Pending' | 'Generating' | 'Completed' | 'Failed';
+    selectedAssetId?: string;
+    variantAssetIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface GeneratedAsset {
+    id: string;
+    assetType: 'Panel' | 'Cover' | 'Variant';
+    sourceJobId: string;
+    sourceRequestId: string;
+    previewUrl: string;
+    status: 'Pending' | 'Completed' | 'Archived';
+    selected: boolean;
+    approved: boolean;
+    archived: boolean;
+    moderationState: 'Unmoderated' | 'Approved' | 'Flagged';
+    storageBindingPlaceholder?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PromptTemplate {
+    id: string;
+    slug: string;
+    title: string;
+    workflowType: string;
+    formatMappings: string;
+    creatorFlowMappings: string;
+    styleModifiers: string;
+    educationalMode: string;
+    bilingualHandlingHint: string;
+    personaConsistencyHint: string;
+    status: 'Active' | 'Draft' | 'Archived';
+    visibleInAdmin: boolean;
+    internalTestingOnly: boolean;
+}
+
+export interface LanguageRecord {
+    id: string;
+    code: string;
+    slug: string;
+    displayName: string;
+    nativeName: string;
+    localizedDisplayName?: string;
+    direction: 'ltr' | 'rtl';
+    status: 'Active' | 'Archived';
+    visibleInStudio: boolean;
+    visibleInKidStory: boolean;
+    visibleInComicStudio: boolean;
+    visibleInTeacherFlow: boolean;
+    visibleInHomeschool: boolean;
+    supportsBilingual: boolean;
+    supportsNarration: boolean;
+    supportsTranslation: boolean;
+    internalTestingOnly: boolean;
+    educationalNotes?: string;
+    sortOrder: number;
+    featured: boolean;
+}
+
+export interface ProjectLanguageSettings {
+    id: string;
+    projectId: string;
+    sourceLanguageCode: string;
+    targetLanguageCode: string;
+    bilingualMode: boolean;
+    primaryReadingLanguage: string;
+    secondaryDisplayLanguage?: string;
+    translationToneMode?: string;
+    readingOrderMode?: string;
+    narrationLanguageMode?: string;
+    fallbackLanguageCode?: string;
+    status: string;
+}
+
+export interface TranslationUnit {
+    id: string;
+    projectId: string;
+    parentContentType: 'Panel' | 'Cover' | 'Teaser';
+    parentContentId: string;
+    fieldType: 'caption' | 'dialogue' | 'scene' | 'title' | 'subtitle';
+    sourceText: string;
+    sourceLanguageCode: string;
+    translatedText: string;
+    targetLanguageCode: string;
+    translationStatus: 'Pending' | 'Draft' | 'Needs-Review' | 'Approved';
+    reviewStatus: 'Approved' | 'Flagged' | 'Unmoderated';
+    protectedTermIds: string[];
+    glossaryEntryIds: string[];
+    overrideApplied: boolean;
+    providerJobId?: string;
+    variantGroupId?: string;
+}
+
+export interface TranslationJob {
+    id: string;
+    projectId: string;
+    providerId: string;
+    modelId: string;
+    workflowId: string;
+    sourceLanguageCode: string;
+    targetLanguageCode: string;
+    translationMode: string;
+    glossarySnapshot?: string;
+    protectedTermsSnapshot?: string;
+    status: 'Pending' | 'Processing' | 'Completed' | 'Failed';
+    retryCount: number;
+    errorState?: string;
+    resultBindingIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface GlossaryEntry {
+    id: string;
+    slug: string;
+    sourceTerm: string;
+    preferredTranslation: string;
+    sourceLanguageCode: string;
+    targetLanguageCode: string;
+    termType: 'Name' | 'Science Term' | 'Recurring Phrase' | 'Classroom Phrase' | 'Brand Term';
+    preserveTerm: boolean;
+    scopeType: 'Global' | 'Project-specific';
+    scopeId?: string;
+    notes?: string;
+    internalTestingOnly: boolean;
+    status: 'Active' | 'Archived';
+    sortOrder: number;
+}
+
+export interface LanguageAvailabilityRule {
+    id: string;
+    languageCode: string;
+    productArea: string;
+    studioType: string;
+    enabled: boolean;
+    internalTestingOnly: boolean;
+    note?: string;
+    sortOrder: number;
+}
+
+export interface TranslationWorkflow {
+    id: string;
+    slug: string;
+    title: string;
+    workflowType: string;
+    eligibleSourceLanguages: string[];
+    eligibleTargetLanguages: string[];
+    glossarySupport: boolean;
+    protectedTermSupport: boolean;
+    bilingualOutputSupport: boolean;
+    narrationCompatibility: boolean;
+    status: 'Active' | 'Archived';
+    internalTestingOnly: boolean;
+}
+
+export interface VoiceRecord {
+    id: string;
+    slug: string;
+    displayName: string;
+    providerId: string;
+    modelId: string;
+    languageCodes: string[];
+    primaryLanguageCode: string;
+    accentLabel: string;
+    toneLabel: string;
+    ageDescriptor: 'Child' | 'Teen' | 'Adult' | 'Senior';
+    narratorSuitability: boolean;
+    childSafe: boolean;
+    classroomSafe: boolean;
+    supportsBilingualWorkflows: boolean;
+    visibleInStudio: boolean;
+    visibleInKidStory: boolean;
+    visibleInComicStudio: boolean;
+    visibleInTeacherFlow: boolean;
+    visibleInHomeschool: boolean;
+    internalTestingOnly: boolean;
+    status: 'Active' | 'Archived';
+    featured: boolean;
+    sortOrder: number;
+}
+
+export interface ProjectNarrationSettings {
+    id: string;
+    projectId: string;
+    narrationEnabled: boolean;
+    narrationMode: 'narrator-only' | 'character-aware' | 'bilingual-alternating';
+    narratorVoiceId: string;
+    characterVoiceMode: boolean;
+    narrationLanguageCode: string;
+    pacingMode: 'slow' | 'standard' | 'fast';
+    readingStyleMode?: string;
+    soundtrackEnabled: boolean;
+    soundtrackSelectionId?: string;
+    ambienceSelectionId?: string;
+    fallbackVoiceId?: string;
+    status: string;
+}
+
+export interface NarrationUnit {
+    id: string;
+    projectId: string;
+    parentContentType: 'Panel' | 'Intro' | 'Outro';
+    parentContentId: string;
+    textBindingId: string;
+    sourceText: string;
+    languageCode: string;
+    assignedVoiceId: string;
+    narrationMode: string;
+    pacingMode: string;
+    status: 'Pending' | 'Generating' | 'Completed' | 'Failed';
+    reviewStatus: 'Approved' | 'Flagged' | 'Unmoderated';
+    outputAssetId?: string;
+    overrideApplied: boolean;
+    providerJobId?: string;
+    variantGroupId?: string;
+}
+
+export interface NarrationJob {
+    id: string;
+    projectId: string;
+    providerId: string;
+    modelId: string;
+    workflowId: string;
+    voiceId: string;
+    languageCode: string;
+    narrationMode: string;
+    pacingMode: string;
+    soundtrackBindingId?: string;
+    unitIds: string[];
+    status: 'Pending' | 'Processing' | 'Completed' | 'Failed';
+    retryCount: number;
+    errorState?: string;
+    resultBindingIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface AudioAsset {
+    id: string;
+    assetType: 'Intro' | 'Panel' | 'Dialogue' | 'Outro' | 'Soundtrack' | 'Ambience';
+    sourceJobId: string;
+    sourceUnitId: string;
+    previewUrl: string;
+    status: 'Pending' | 'Completed' | 'Archived';
+    selected: boolean;
+    approved: boolean;
+    archived: boolean;
+    moderationState: 'Approved' | 'Flagged' | 'Unmoderated';
+    storageBindingPlaceholder?: string;
+    durationMs: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface SoundtrackAmbienceItem {
+    id: string;
+    slug: string;
+    title: string;
+    category: 'Soundtrack' | 'Ambience';
+    mood: string;
+    educationalSuitability: boolean;
+    familySuitability: boolean;
+    classroomSuitability: boolean;
+    languageNeutral: boolean;
+    status: 'Active' | 'Archived';
+    internalTestingOnly: boolean;
+    sortOrder: number;
+}
+
+export interface NarrationWorkflow {
+    id: string;
+    slug: string;
+    title: string;
+    workflowType: string;
+    eligibleLanguages: string[];
+    eligibleVoices: string[];
+    soundtrackSupport: boolean;
+    bilingualCompatibility: boolean;
+    exportCompatibility: boolean;
+    status: 'Active' | 'Archived';
+    internalTestingOnly: boolean;
+}
+
+export interface VoiceAvailabilityRule {
+    id: string;
+    voiceId: string;
+    productArea: string;
+    studioType: string;
+    languageCode: string;
+    enabled: boolean;
+    internalTestingOnly: boolean;
+    note?: string;
+    sortOrder: number;
+}
+
+export interface AiProvider {
+    id: string;
+    slug: string;
+    displayName: string;
+    providerType: 'text' | 'image' | 'translation' | 'narration' | 'audio' | 'multimodal';
+    baseEndpoint?: string;
+    status: 'Active' | 'Inactive' | 'Testing' | 'Deprecated';
+    internalTestingOnly: boolean;
+    notes?: string;
+    sortOrder: number;
+}
+
+export interface AiModel {
+    id: string;
+    providerId: string;
+    slug: string;
+    displayName: string;
+    capabilityTypes: ('text' | 'image' | 'translation' | 'narration' | 'audio' | 'multimodal')[];
+    recommendedUseCases?: string;
+    maxContextLength?: number;
+    costTier: 'Free' | 'Low' | 'Medium' | 'High';
+    performanceTier: 'Standard' | 'Premium' | 'Ultra';
+    status: 'Active' | 'Inactive' | 'Testing' | 'Deprecated';
+    internalTestingOnly: boolean;
+    defaultForWorkflowType?: boolean;
+    notes?: string;
+}
+
+export interface AiWorkflow {
+    id: string;
+    slug: string;
+    title: string;
+    workflowType: string;
+    capabilityTypes: string[];
+    description?: string;
+    defaultProviderId: string;
+    defaultModelId: string;
+    status: 'Active' | 'Archived';
+    internalTestingOnly: boolean;
+    notes?: string;
+}
+
+export interface AiRoutingRule {
+    id: string;
+    workflowType: string;
+    planTier: 'Free' | 'Entry' | 'High User';
+    environment: 'production' | 'testing';
+    sourceLanguageCode?: string;
+    targetLanguageCode?: string;
+    providerId: string;
+    modelId: string;
+    configSnapshot?: any;
+    status: 'Active' | 'Inactive';
+    internalTestingOnly: boolean;
+    priority: number;
+    notes?: string;
+}
+
+export interface AiFallbackConfig {
+    id: string;
+    workflowType: string;
+    primaryProviderId: string;
+    primaryModelId: string;
+    fallbackProviderId: string;
+    fallbackModelId: string;
+    retryThreshold: number;
+    enabled: boolean;
+    notes?: string;
+}
+
+export interface PlanTierCapabilityMap {
+    id: string;
+    planTier: 'Free' | 'Entry' | 'High User';
+    workflowType: string;
+    capabilityLabel: string;
+    enabled: boolean;
+    notes?: string;
+}
+
+
+
+
+

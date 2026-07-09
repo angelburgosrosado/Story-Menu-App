@@ -3050,6 +3050,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                 )}
             </div>
         )}
+        {/* Toast Notification */}
+        {toast && (
+            <div className={`fixed bottom-6 right-6 z-[600] px-4 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 ${toast.type === 'success' ? 'bg-green-500/10 border border-green-500 text-green-400' : 'bg-red-500/10 border border-red-500 text-red-400'}`}>
+                {toast.type === 'success' ? <Shield size={18} /> : <X size={18} />}
+                <span className="font-bold text-sm">{toast.message}</span>
+            </div>
+        )}
       </div>
     </dialog>
   );

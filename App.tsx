@@ -1589,7 +1589,7 @@ const handleVillainUpload = async (file: File) => {
         onUserChange={setCurrentUser}
         onOpenAuth={() => setShowAuthModal(true)}
         onOpenCheckout={() => setIsCheckoutOpen(true)}
-        onOpenAdmin={() => { setGalleryView('moderation-dashboard'); setAppMode('gallery'); }}
+        onOpenAdmin={() => window.location.href = '/admin'}
         onOpenSettings={() => { setGalleryView('settings'); setAppMode('gallery'); }}
         onOpenAutomation={() => { setGalleryView('automation'); setAppMode('gallery'); }}
         onOpenEducation={() => { setGalleryView('education-dashboard'); setAppMode('gallery'); }}

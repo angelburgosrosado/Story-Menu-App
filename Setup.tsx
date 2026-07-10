@@ -302,7 +302,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
         props.onLaunch({
             title: projectTitle,
             desc: projectDesc,
-            audience: selectedFormat ? selectedFormat.audience_tags.join(', ') : audienceType,
+            audience: (selectedFormat && selectedFormat.audience_tags) ? selectedFormat.audience_tags.join(', ') : audienceType,
             grade: ageGrade,
             level: readingLevel,
             goal: fullStoryGoal,

@@ -117,7 +117,7 @@ const NAV_ITEMS: {
   active: boolean;
   badge?: string;
 }[] = [
-  { id: 'overview',    label: 'Project Overview',  icon: <Compass size={15} />,       active: true },
+  { id: 'overview',    label: 'Project Overview',  icon: <BookOpen size={15} />,       active: true },
   { id: 'outline',     label: 'Story Outline',      icon: <List size={15} />,          active: true },
   { id: 'characters',  label: 'Characters',         icon: <Users size={15} />,         active: true },
   { id: 'scenes',      label: 'Scene Library',      icon: <Layers size={15} />,        active: false, badge: 'Soon' },

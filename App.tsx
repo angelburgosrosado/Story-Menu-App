@@ -1,10 +1,10 @@
 /**
  * Screen Name: App Main Shell
  * Purpose: Global state manager and router for Story.Menu features
- * Version: 1.2
- * Phase: Phase 12
- * Date: 2026-07-08
- * What changed in this revision: Added Account Settings dashboard integration.
+ * Version: 1.3
+ * Phase: Phase 12 Refinement
+ * Date: 2026-07-09
+ * What changed in this revision: Integrated true separation between Kid Story dashboard and Comic Studio workspace layouts using the story_menu_skin preference.
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
@@ -13,6 +13,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from './types';
 import { Setup } from './Setup';
+import { KidStoryDashboard } from './KidStoryDashboard';
 import { StoryWorkspace } from './StoryWorkspace';
 import { WorkspaceReader } from './WorkspaceReader';
 import { PublicGallery, MOCK_STORIES } from './PublicGallery';
@@ -94,11 +95,24 @@ const App: React.FC = () => {
   // --- Firebase User Account States ---
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; displayName?: string; isOffline?: boolean; tier?: string; subscriptionId?: string; paymentMethod?: string; tokenBalance?: number; role?: 'Creator' | 'Teacher' | 'Parent' | 'Student' | 'Admin' } | null>(null);
-  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(false);
+  const [skin, setSkin] = useState<'comic' | 'writers-journal' | 'kid-story'>(() => {
+    const saved = localStorage.getItem('story_menu_skin');
+    return (saved as any) || 'comic';
+  });
+  const [hasSelectedMode, setHasSelectedMode] = useState<boolean>(() => {
+    return !!localStorage.getItem('story_menu_skin');
+  });
 
   useEffect(() => {
-    // Force reset on mount to ensure Fast Refresh doesn't preserve a dirty 'true' state from earlier tests
-    setHasSelectedMode(false);
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('story_menu_skin');
+      if (saved) {
+        setSkin(saved as any);
+        setHasSelectedMode(true);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -377,7 +391,7 @@ const App: React.FC = () => {
     setActiveProjectId(""); // Drafts don't overwrite active published documents
     setIsStarted(false);
     setShowSetup(true);
-    alert(`📂 WIP snapshot loaded successfully!\\n"\"${draft.title || 'Untitled Draft'}\"" has been restored directly to your active Workspace!`);
+    alert(`📂 WIP snapshot loaded successfully!\n"${draft.title || 'Untitled Draft'}" has been restored directly to your active Workspace!`);
   };
 
   // Auto-save comic pages to database active project when changed
@@ -992,29 +1006,67 @@ const App: React.FC = () => {
     }
   };
 
-  const launchStory = async () => {
+  const launchStory = async (config?: any) => {
     // --- API KEY VALIDATION ---
     const hasKey = await validateApiKey();
     if (!hasKey) return; // Stop if cancelled or invalid
     
-    if (!heroRef.current) return;
-    if (selectedGenre === 'Custom' && !customPremise.trim()) {
-        alert("Please enter a custom story premise.");
-        return;
+    let finalTitle = `Multiverse Reborn: ${selectedGenre}`;
+    let finalDesc = customPremise;
+    let finalGenre = selectedGenre;
+    let finalLanguage = selectedLanguage;
+    let finalVoice = selectedVoice;
+    let finalSoundtrack = soundtrackEnabled;
+    let finalStyle = selectedStyle;
+    let finalTone = storyTone;
+
+    if (config) {
+      if (config.title) {
+        setProjectTitle(config.title);
+        finalTitle = config.title;
+      }
+      if (config.desc) {
+        setCustomPremise(config.desc);
+        finalDesc = config.desc;
+      }
+      if (config.genre) {
+        setSelectedGenre(config.genre);
+        finalGenre = config.genre;
+      }
+      if (config.language) {
+        setSelectedLanguage(config.language);
+        finalLanguage = config.language;
+      }
+      if (config.voice) {
+        setSelectedVoice(config.voice);
+        finalVoice = config.voice;
+      }
+      if (config.soundtrack !== undefined) {
+        setSoundtrackEnabled(config.soundtrack !== 'None');
+        finalSoundtrack = config.soundtrack !== 'None';
+      }
+      if (config.style) {
+        setSelectedStyle(config.style);
+        finalStyle = config.style;
+      }
+      if (config.tone) {
+        setStoryTone(config.tone);
+        finalTone = config.tone;
+      }
     }
+
     setIsTransitioning(true);
     
     // Sync book project with correct database settings (PostgreSQL / Firestore)
-    const titleText = `Multiverse Reborn: ${selectedGenre}`;
     const isFirebaseUser = activeCreator.id && activeCreator.id !== '00000000-0000-0000-0000-000000000000' && !activeCreator.id.includes('local-creator') && !activeCreator.id.includes('offline');
     if (isFirebaseUser) {
         try {
             const initialFacesCoverKey: ComicFace[] = [{ id: 'cover', type: 'cover', choices: [], isLoading: true, pageIndex: 0 }];
             const fireProjectId = await saveProjectToFirestore(activeCreator.id, {
                 userId: activeCreator.id,
-                title: titleText,
-                genre: selectedGenre,
-                language: selectedLanguage,
+                title: finalTitle,
+                genre: finalGenre,
+                language: finalLanguage,
                 comicFaces: JSON.stringify(initialFacesCoverKey)
             });
             if (fireProjectId) {
@@ -1033,38 +1085,20 @@ const App: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: activeCreator.id,
-                    title: titleText,
-                    genre: selectedGenre,
-                    language: selectedLanguage
+                    title: finalTitle,
+                    genre: finalGenre,
+                    language: finalLanguage
                 })
             });
             const projData = await projRes.json();
             if (projData && projData.id) {
                  console.log("📂 Synced project entry created:", projData.id);
                  setActiveProjectId(projData.id); // Save active project ID!
-                 
-                 // Cast linkages
-                 if (heroRef.current) {
-                     await fetch('/api/project-casting', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ projectId: projData.id, characterId: activeCreator.id, userEmail: currentUser?.email || (localStorage.getItem('ADMIN_LOGGED_IN') === 'true' ? 'abglco@protonmail.com' : undefined) }) // or link specific cast ids
-                     }).catch(() => {});
-                 }
             }
         } catch (e) {
             console.warn("Project sync tracker offline:", e);
         }
     }
-
-    let availableTones = TONES;
-    if (selectedGenre === "Teen Drama / Slice of Life" || selectedGenre === "Lighthearted Comedy") {
-        availableTones = TONES.filter(t => t.includes("CASUAL") || t.includes("WHOLESOME") || t.includes("QUIPPY"));
-    } else if (selectedGenre === "Classic Horror") {
-        availableTones = TONES.filter(t => t.includes("INNER-MONOLOGUE") || t.includes("OPERATIC"));
-    }
-    
-    setStoryTone(availableTones[Math.floor(Math.random() * availableTones.length)]);
 
     const coverFace: ComicFace = { id: 'cover', type: 'cover', choices: [], isLoading: true, pageIndex: 0 };
     setComicFaces([coverFace]);
@@ -1078,9 +1112,8 @@ const App: React.FC = () => {
         setShowSetup(false);
         setIsTransitioning(false);
         await generateBatch(1, INITIAL_PAGES);
-        generateBatch(3, 3);
     }, 1100);
-  }
+  };
 
   const downloadPDF = () => {
     const PAGE_WIDTH = 480;
@@ -1147,6 +1180,7 @@ const handleVillainUpload = async (file: File) => {
         // Save the chosen mode globally so MainLayout switches the UI!
         localStorage.setItem('story_menu_skin', mode);
         window.dispatchEvent(new Event('storage'));
+        setSkin(mode);
         setHasSelectedMode(true); 
       }} />
     );
@@ -1157,7 +1191,7 @@ const handleVillainUpload = async (file: File) => {
       <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700`}>
 
         {/* Left Sidebar / Controls (conditionally rendered) */}
-        {!showSetup && (
+        {!showSetup && skin !== 'kid-story' && (
           <aside className={`w-72 flex-shrink-0 p-6 pt-4 border-r ${isLightMode ? 'bg-white border-amber-200' : 'bg-black/50 border-orange-500/30'} transition-all duration-700`}>
             {/* User Account Info */}
             <div className="flex items-center mb-6 justify-between">
@@ -1294,8 +1328,44 @@ const handleVillainUpload = async (file: File) => {
         {/* Main Content Area */}
         <main className={`flex-1 flex items-center justify-center relative overflow-hidden ${isLightMode ? 'bg-amber-50' : 'bg-black/90'} transition-all duration-700`}>
           {appMode === 'studio' ? (
-            <>
-              {showSetup && (
+            skin === 'kid-story' ? (
+              <KidStoryDashboard 
+                onNavigate={(view) => {
+                  if (view === 'home') {
+                    setAppMode('gallery');
+                    setGalleryView('home');
+                  }
+                }}
+                currentUser={currentUser}
+                activeCreator={activeCreator}
+                validateApiKey={validateApiKey}
+                onDeductTokens={async (cost) => {
+                  if (currentUser) {
+                    const currentBalance = currentUser.tokenBalance ?? 0;
+                    if (currentBalance < cost) {
+                      alert(`Insufficient tokens! This action costs ${cost} tokens, but you only have ${currentBalance}. Please upgrade or add tokens.`);
+                      return false;
+                    }
+                    const updatedUser = {
+                      ...currentUser,
+                      tokenBalance: currentBalance - cost
+                    };
+                    setCurrentUser(updatedUser);
+                    // Deduct token dynamically from backend
+                    await fetch('/api/creator/deduct-tokens', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: currentUser.id, tokens: cost })
+                    }).catch(() => {});
+                    return true;
+                  }
+                  return true;
+                }}
+                isLightMode={isLightMode}
+              />
+            ) : (
+              <>
+                {showSetup && (
             <Setup 
                 show={showSetup}
                 isTransitioning={isTransitioning}
@@ -1473,7 +1543,8 @@ const handleVillainUpload = async (file: File) => {
               </div>
             )
           )}
-            </>
+              </>
+            )
           ) : (
             <div className="w-full h-full overflow-y-auto relative">
               {galleryView === 'home' && (

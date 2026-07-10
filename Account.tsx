@@ -1,10 +1,10 @@
 /**
  * Screen Name: Account and Authentication
  * Purpose: Authentication modals and user account dropdown controls
- * Version: 1.1
- * Phase: Phase 12
- * Date: 2026-07-08
- * What changed in this revision: Added onOpenSettings support to route to Account Settings dashboard.
+ * Version: 1.2
+ * Phase: Phase 12 Refinement
+ * Date: 2026-07-09
+ * What changed in this revision: Consolidated and departmentalized user profile menu options by roles (Creator, Teacher, Parent, Student, Admin) and added styled section groups.
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +24,7 @@ interface AccountProps {
     tier?: string;
     subscriptionId?: string;
     paymentMethod?: string;
+    role?: 'Creator' | 'Teacher' | 'Parent' | 'Student' | 'Admin';
   } | null;
   onUserChange: (user: any | null) => void;
   onClose?: () => void;
@@ -553,106 +554,134 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
             )}
           </div>
 
-          {!hasSubscription && onOpenCheckout && (
-            <button
-              id="btn-creator-upgrade"
-              type="button"
-              onClick={() => {
-                onOpenCheckout('Pro');
-                setOpen(false);
-              }}
-              className={upgradeBtn}
-            >
-              {isEditorial
-                ? <><Feather size={11} /> {t('account.auto3', 'Upgrade Membership')}</>
-                : <><Sparkles size={11} className="animate-pulse" /> {t('account.auto4', 'UPGRADE MEMBERSHIP')}</>
-              }
-            </button>
+          {/* Section 1: Personal & Workspace */}
+          <div className="mb-3">
+            <span className={`text-[9px] uppercase tracking-wider block mb-1.5 font-bold ${isEditorial ? 'text-stone-400' : 'text-gray-500'}`}>
+              {isEditorial ? 'Personal Settings' : 'PERSONAL PORTAL'}
+            </span>
+            {!hasSubscription && onOpenCheckout && (
+              <button
+                id="btn-creator-upgrade"
+                type="button"
+                onClick={() => {
+                  onOpenCheckout('Pro');
+                  setOpen(false);
+                }}
+                className={upgradeBtn}
+              >
+                {isEditorial
+                  ? <><Feather size={11} /> {t('account.auto3', 'Upgrade Membership')}</>
+                  : <><Sparkles size={11} className="animate-pulse" /> {t('account.auto4', 'UPGRADE MEMBERSHIP')}</>
+                }
+              </button>
+            )}
+
+            {onOpenSettings && (
+              <button
+                id="btn-creator-settings-trigger"
+                type="button"
+                onClick={() => {
+                  onOpenSettings();
+                  setOpen(false);
+                }}
+                className={settingsBtn}
+              >
+                <Settings size={11} className={isEditorial ? 'text-stone-500' : 'text-gray-400'} />
+                {isEditorial ? 'Settings & Preferences' : 'ACCOUNT SETTINGS'}
+              </button>
+            )}
+          </div>
+
+          {/* Section 2: Creator Workspace (Visible to Creators, Teachers, Admins) */}
+          {(currentUser.role === 'Creator' || currentUser.role === 'Teacher' || currentUser.role === 'Admin' || !currentUser.role) && onOpenAutomation && (
+            <div className="mb-3 border-t border-dashed border-slate-700/50 pt-2">
+              <span className={`text-[9px] uppercase tracking-wider block mb-1.5 font-bold ${isEditorial ? 'text-stone-400' : 'text-gray-500'}`}>
+                {isEditorial ? 'Author Workspace' : 'CREATOR STUDIO'}
+              </span>
+              <button
+                id="btn-creator-automation-trigger"
+                type="button"
+                onClick={() => {
+                  onOpenAutomation();
+                  setOpen(false);
+                }}
+                className={automationBtn}
+              >
+                <Zap size={11} className={isEditorial ? 'text-indigo-500' : 'text-fuchsia-400'} />
+                {isEditorial ? 'Routines & Automations' : 'ROUTINES'}
+              </button>
+            </div>
           )}
 
-          {onOpenSettings && (
-            <button
-              id="btn-creator-settings-trigger"
-              type="button"
-              onClick={() => {
-                onOpenSettings();
-                setOpen(false);
-              }}
-              className={settingsBtn}
-            >
-              <Settings size={11} className={isEditorial ? 'text-stone-500' : 'text-gray-400'} />
-              {isEditorial ? 'Settings & Preferences' : 'ACCOUNT SETTINGS'}
-            </button>
+          {/* Section 3: Classroom & Homeschool (Visible to Teachers, Parents, Students, Admins) */}
+          {(currentUser.role === 'Teacher' || currentUser.role === 'Parent' || currentUser.role === 'Student' || currentUser.role === 'Admin' || !currentUser.role) && (onOpenEducation || onOpenProgress) && (
+            <div className="mb-3 border-t border-dashed border-slate-700/50 pt-2">
+              <span className={`text-[9px] uppercase tracking-wider block mb-1.5 font-bold ${isEditorial ? 'text-stone-400' : 'text-gray-500'}`}>
+                {isEditorial ? 'Classroom Hub' : 'HOMESCHOOL & LEARNING'}
+              </span>
+              {onOpenEducation && (
+                <button
+                  id="btn-creator-education-trigger"
+                  type="button"
+                  onClick={() => {
+                    onOpenEducation();
+                    setOpen(false);
+                  }}
+                  className={educationBtn}
+                >
+                  <GraduationCap size={11} className={isEditorial ? 'text-emerald-500' : 'text-emerald-400'} />
+                  {isEditorial ? 'Homeschool & Classroom' : 'EDUCATION'}
+                </button>
+              )}
+
+              {onOpenProgress && (
+                <button
+                  id="btn-creator-progress-trigger"
+                  type="button"
+                  onClick={() => {
+                    onOpenProgress();
+                    setOpen(false);
+                  }}
+                  className={progressBtn}
+                >
+                  <Activity size={11} className={isEditorial ? 'text-blue-500' : 'text-blue-400'} />
+                  {isEditorial ? 'Progress & Analytics' : 'PROGRESS'}
+                </button>
+              )}
+            </div>
           )}
 
-          {onOpenAutomation && (
-            <button
-              id="btn-creator-automation-trigger"
-              type="button"
-              onClick={() => {
-                onOpenAutomation();
-                setOpen(false);
-              }}
-              className={automationBtn}
-            >
-              <Zap size={11} className={isEditorial ? 'text-indigo-500' : 'text-fuchsia-400'} />
-              {isEditorial ? 'Routines & Automations' : 'ROUTINES'}
-            </button>
+          {/* Section 4: System Administration (Strictly visible to Admins only) */}
+          {currentUser.role === 'Admin' && onOpenAdmin && (
+            <div className="mb-3 border-t border-dashed border-slate-700/50 pt-2">
+              <span className={`text-[9px] uppercase tracking-wider block mb-1.5 font-bold ${isEditorial ? 'text-stone-400' : 'text-gray-500'}`}>
+                {isEditorial ? 'Administration' : 'SYSTEM MANAGEMENT'}
+              </span>
+              <button
+                id="btn-creator-admin-trigger"
+                type="button"
+                onClick={() => {
+                  onOpenAdmin();
+                  setOpen(false);
+                }}
+                className={adminBtn}
+              >
+                <Shield size={11} className={isEditorial ? '' : 'animate-pulse text-black'} />
+                {isEditorial ? 'Admin Dashboard' : 'SAAS ADMIN CONTROL'}
+              </button>
+            </div>
           )}
 
-          {onOpenEducation && (
+          <div className="border-t border-dashed border-slate-700/50 pt-2">
             <button
-              id="btn-creator-education-trigger"
-              type="button"
-              onClick={() => {
-                onOpenEducation();
-                setOpen(false);
-              }}
-              className={educationBtn}
+              id="btn-auth-logout"
+              onClick={handleLogout}
+              className={logoutBtn}
             >
-              <GraduationCap size={11} className={isEditorial ? 'text-emerald-500' : 'text-emerald-400'} />
-              {isEditorial ? 'Homeschool & Classroom' : 'EDUCATION'}
+              <LogOut size={12} />
+              {isEditorial ? 'Sign Out' : 'POWER DOWN CONSOLE'}
             </button>
-          )}
-
-          {onOpenProgress && (
-            <button
-              id="btn-creator-progress-trigger"
-              type="button"
-              onClick={() => {
-                onOpenProgress();
-                setOpen(false);
-              }}
-              className={progressBtn}
-            >
-              <Activity size={11} className={isEditorial ? 'text-blue-500' : 'text-blue-400'} />
-              {isEditorial ? 'Progress & Analytics' : 'PROGRESS'}
-            </button>
-          )}
-
-          {onOpenAdmin && (
-            <button
-              id="btn-creator-admin-trigger"
-              type="button"
-              onClick={() => {
-                onOpenAdmin();
-                setOpen(false);
-              }}
-              className={adminBtn}
-            >
-              <Shield size={11} className={isEditorial ? '' : 'animate-pulse text-black'} />
-              {isEditorial ? 'Admin Dashboard' : 'SAAS ADMIN CONTROL'}
-            </button>
-          )}
-
-          <button
-            id="btn-auth-logout"
-            onClick={handleLogout}
-            className={logoutBtn}
-          >
-            <LogOut size={12} />
-            {isEditorial ? 'Sign Out' : 'POWER DOWN CONSOLE'}
-          </button>
+          </div>
         </div>
       )}
     </div>

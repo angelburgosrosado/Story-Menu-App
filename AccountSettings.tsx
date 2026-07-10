@@ -1,10 +1,10 @@
 /*
 Screen Name: Account Settings
 Purpose: Account settings, preferences, and operational controls layer for Story.Menu
-Version: 1.0
-Phase: Phase 12
-Date: 2026-07-08
-What changed in this revision: Initial creation.
+Version: 1.1
+Phase: Phase 12 Refinement
+Date: 2026-07-09
+What changed in this revision: Added Active Studio Mode setting to let users dynamically switch between Comic Studio and Kid Story workspaces.
 */
 
 import React, { useState, useEffect } from 'react';
@@ -250,6 +250,29 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ currentUser, o
                 <div className="animate-fadeIn">
                   <h2 className={headingClass}>Story Settings</h2>
                   
+                  <div className={sectionClass}>
+                    <h3 className={sectionTitle}>Active Studio Mode</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                      <div>
+                        <label className={labelClass}>Studio Interface Theme</label>
+                        <select 
+                          value={skin}
+                          onChange={(e) => {
+                            const newSkin = e.target.value as any;
+                            setSkin(newSkin);
+                            localStorage.setItem('story_menu_skin', newSkin);
+                            window.dispatchEvent(new Event('storage'));
+                          }}
+                          className={selectClass}
+                        >
+                          <option value="comic">Comic Studio (Advanced)</option>
+                          <option value="writers-journal">Writer's Journal (Sequential)</option>
+                          <option value="kid-story">Kid Story (Simple & Visual)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className={sectionClass}>
                     <h3 className={sectionTitle}>Default Story Settings</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">

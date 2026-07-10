@@ -61,6 +61,7 @@ export const AdminApp: React.FC = () => {
     | "dashboard"
     | "memberships"
     | "categories"
+    | "languages"
     | "moderation"
     | "plans"
     | "integrations"
@@ -136,6 +137,12 @@ export const AdminApp: React.FC = () => {
     referenceImages: [] as string[],
   });
   const [globalCharacters, setGlobalCharacters] = useState<any[]>([]);
+  const [languages, setLanguages] = useState<any[]>([]);
+  const [glossaries, setGlossaries] = useState<any[]>([]);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showGlossaryModal, setShowGlossaryModal] = useState(false);
+  const [editingLanguage, setEditingLanguage] = useState<any>(null);
+  const [editingGlossary, setEditingGlossary] = useState<any>(null);
 
   const [costAnalytics, setCostAnalytics] = useState<any>({
     totals: {},
@@ -286,6 +293,12 @@ export const AdminApp: React.FC = () => {
         adminFetch("/api/admin/system/bypasses")
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
+        adminFetch("/api/admin/languages")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
+        adminFetch("/api/admin/glossary")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
       ]);
       if (statsRes) setStats(statsRes);
       setCustomers(custRes);
@@ -297,6 +310,8 @@ export const AdminApp: React.FC = () => {
       setCostAnalytics(costsRes);
       setAdminUsers(Array.isArray(adminUsersRes) ? adminUsersRes : []);
       setBypasses(Array.isArray(bypassesRes) ? bypassesRes : []);
+      setLanguages(Array.isArray(languagesRes) ? languagesRes : []);
+      setGlossaries(Array.isArray(glossaryRes) ? glossaryRes : []);
       runDiagnostics();
     } catch (error) {
       console.error("Admin API Error:", error);
@@ -559,6 +574,7 @@ export const AdminApp: React.FC = () => {
           <NavItem tab="memberships" icon={Users} label="Memberships" />
           <NavItem tab="plans" icon={DollarSign} label="Subscription Plans" />
           <NavItem tab="categories" icon={Layers} label="Taxonomy" />
+          <NavItem tab="languages" icon={Globe} label="Languages & Glossary" />
           <NavItem
             tab="moderation"
             icon={AlertTriangle}
@@ -1522,6 +1538,254 @@ export const AdminApp: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeTab === "languages" && (
+                <div className="p-8 bg-slate-50 relative text-left">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-800 mb-1">
+                        Active Languages Registry & Protected Glossaries
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Configure languages visible in user onboarding and set protected terms/phrases for translation.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                        onClick={() => {
+                          setEditingLanguage({
+                            code: "",
+                            displayName: "",
+                            nativeName: "",
+                            direction: "ltr",
+                            status: "Active"
+                          });
+                          setShowLanguageModal(true);
+                        }}
+                      >
+                        + Add Language
+                      </button>
+                      <button
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                        onClick={() => {
+                          setEditingGlossary({
+                            sourceTerm: "",
+                            preferredTranslation: "",
+                            sourceLanguageCode: "en-US",
+                            targetLanguageCode: "es-MX",
+                            status: "Active",
+                            sortOrder: 1
+                          });
+                          setShowGlossaryModal(true);
+                        }}
+                      >
+                        + Add Glossary Entry
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Languages Grid Section */}
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
+                    <h4 className="font-extrabold text-sm text-slate-800 mb-4 uppercase tracking-wider">Registered Languages</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {languages.map((lang) => (
+                        <div key={lang.id} className="p-4 border border-slate-250 rounded-xl flex justify-between items-center bg-slate-50/50">
+                          <div>
+                            <p className="font-bold text-xs text-slate-800">{lang.displayName} ({lang.nativeName})</p>
+                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{lang.code} • {lang.direction.toUpperCase()}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const newStatus = lang.status === "Active" ? "Disabled" : "Active";
+                                await adminFetch(`/api/admin/languages/${lang.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ status: newStatus })
+                                });
+                                fetchData();
+                              }}
+                              className={`px-2.5 py-1 text-[10px] rounded font-bold transition-all ${
+                                lang.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                              }`}
+                            >
+                              {lang.status === "Active" ? "Active" : "Disabled"}
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                if (confirm(`Delete language ${lang.displayName}?`)) {
+                                  await adminFetch(`/api/admin/languages/${lang.id}`, { method: "DELETE" });
+                                  fetchData();
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-50 p-1 rounded"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Glossaries List Section */}
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h4 className="font-extrabold text-sm text-slate-800 mb-4 uppercase tracking-wider">Global protected glossary & terms</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 text-slate-500 font-bold bg-slate-50">
+                            <th className="p-3">Source Term</th>
+                            <th className="p-3">Preferred Translation</th>
+                            <th className="p-3">Source Lang</th>
+                            <th className="p-3">Target Lang</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {glossaries.map((entry) => (
+                            <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="p-3 font-bold text-slate-800">{entry.sourceTerm}</td>
+                              <td className="p-3 text-slate-700">{entry.preferredTranslation}</td>
+                              <td className="p-3 text-slate-500 font-mono">{entry.sourceLanguageCode}</td>
+                              <td className="p-3 text-slate-500 font-mono">{entry.targetLanguageCode}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  entry.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {entry.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right">
+                                <button
+                                  onClick={async () => {
+                                    if (confirm("Delete this glossary entry?")) {
+                                      await adminFetch(`/api/admin/glossary/${entry.id}`, { method: "DELETE" });
+                                      fetchData();
+                                    }
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1.5 rounded"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Add Language Modal */}
+                  {showLanguageModal && editingLanguage && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                      <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
+                        <h4 className="font-extrabold text-sm text-slate-800">Add Registered Language</h4>
+                        <div className="space-y-3 text-xs">
+                          <div>
+                            <label className="block text-slate-500 font-bold mb-1">Language Display Name</label>
+                            <input
+                              type="text"
+                              value={editingLanguage.displayName}
+                              onChange={e => setEditingLanguage({...editingLanguage, displayName: e.target.value})}
+                              placeholder="e.g. German"
+                              className="w-full border border-slate-300 p-2.5 rounded text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-500 font-bold mb-1">Language Code</label>
+                            <input
+                              type="text"
+                              value={editingLanguage.code}
+                              onChange={e => setEditingLanguage({...editingLanguage, code: e.target.value})}
+                              placeholder="e.g. de-DE"
+                              className="w-full border border-slate-300 p-2.5 rounded text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-500 font-bold mb-1">Native Name</label>
+                            <input
+                              type="text"
+                              value={editingLanguage.nativeName}
+                              onChange={e => setEditingLanguage({...editingLanguage, nativeName: e.target.value})}
+                              placeholder="e.g. Deutsch"
+                              className="w-full border border-slate-300 p-2.5 rounded text-slate-800"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-3 border-t">
+                          <button className="px-4 py-2 bg-slate-100 rounded-xl" onClick={() => setShowLanguageModal(false)}>Cancel</button>
+                          <button
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold"
+                            onClick={async () => {
+                              await adminFetch("/api/admin/languages", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(editingLanguage)
+                              });
+                              setShowLanguageModal(false);
+                              fetchData();
+                            }}
+                          >
+                            Save Language
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Glossary Modal */}
+                  {showGlossaryModal && editingGlossary && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                      <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
+                        <h4 className="font-extrabold text-sm text-slate-800">Add Protected Glossary Entry</h4>
+                        <div className="space-y-3 text-xs">
+                          <div>
+                            <label className="block text-slate-500 font-bold mb-1">Source Term</label>
+                            <input
+                              type="text"
+                              value={editingGlossary.sourceTerm}
+                              onChange={e => setEditingGlossary({...editingGlossary, sourceTerm: e.target.value})}
+                              placeholder="e.g. Professor Pumpernickel"
+                              className="w-full border border-slate-300 p-2.5 rounded text-slate-800"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-500 font-bold mb-1">Preferred Translation</label>
+                            <input
+                              type="text"
+                              value={editingGlossary.preferredTranslation}
+                              onChange={e => setEditingGlossary({...editingGlossary, preferredTranslation: e.target.value})}
+                              placeholder="e.g. Profesor Pumpernickel"
+                              className="w-full border border-slate-300 p-2.5 rounded text-slate-800"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-3 border-t">
+                          <button className="px-4 py-2 bg-slate-100 rounded-xl" onClick={() => setShowGlossaryModal(false)}>Cancel</button>
+                          <button
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold"
+                            onClick={async () => {
+                              await adminFetch("/api/admin/glossary", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(editingGlossary)
+                              });
+                              setShowGlossaryModal(false);
+                              fetchData();
+                            }}
+                          >
+                            Save Glossary Entry
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
 

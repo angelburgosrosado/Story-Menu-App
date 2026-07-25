@@ -34,6 +34,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiSuggestSchema } from './middleware/security';
 
 try {
     admin.initializeApp({});
@@ -1642,6 +1643,9 @@ async function startServer(app: express.Express) {
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+    
+    // Task 1.7: Security headers on all responses
+    app.use(securityHeaders);
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
@@ -3247,7 +3251,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/checkout', async (req, res): Promise<any> => {
+    app.post('/api/checkout', validate(checkoutSchema), async (req, res): Promise<any> => {
         const { email, tier, paymentMethod, paypalEmail, type, tokensAwarded } = req.body;
 
         if (!email) {

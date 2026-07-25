@@ -38,6 +38,7 @@ import { generalLimiter, aiGenerationLimiter, authLimiter, checkoutLimiter, enfo
 import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiSuggestSchema } from './middleware/security';
 import { logger } from './middleware/logger';
 import { errorTracker } from './middleware/errorTracker';
+import { requireRole } from './middleware/rbac';
 
 try {
     admin.initializeApp({});

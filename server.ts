@@ -34,7 +34,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { requireRole } from './middleware/rbac';
+import { analytics } from './middleware/analytics';
 
 try {
     admin.initializeApp({});
@@ -3499,6 +3499,10 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             timestamp: new Date().toISOString(),
             message: `Checkout Successful! Welcome to story.menu's "${tier}" subscription tier.`
         });
+
+        // Analytics: track successful payment
+        analytics.paymentCompleted(email, tier, amountCents || 0);
+        if (type === 'subscription') analytics.subscriptionActivated(email, tier);
     });
 
     /**

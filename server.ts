@@ -1737,6 +1737,19 @@ async function startServer(app: express.Express) {
         setRouteResolver(resolveAIRoute);
     } catch (e) { console.warn('Route module bridge skipped:', e.message); }
 
+    // Task 2.8: HSTS + HTTPS enforcement
+    app.use((req: any, res: any, next: any) => {
+        // Redirect HTTP → HTTPS in production
+        if (process.env.NODE_ENV === 'production' && !req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect(301, `https://${req.headers.host}${req.url}`);
+        }
+        // HSTS header for HTTPS requests
+        if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+            res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
+        next();
+    });
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -3306,89 +3319,108 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ tokens: matchUser?.tokens || 0 });
     });
 
-    // ─── Phase 7: Feature Flags & Subscription Management ────────────────
+    // ─── Task 3.1: PDF/Story Export ─────────────────────────────────────
 
     /**
-     * GET /api/feature-flags/:flagName — Check if a feature is enabled
+     * GET /api/export/story/:id — Export a story as structured JSON (PDF-ready data)
+     * Returns story content in a format ready for client-side PDF generation.
      */
-    app.get('/api/feature-flags/:flagName', async (req: any, res: any) => {
-        const { flagName } = req.params;
-        const email = req.query?.email || req.headers['x-user-email'];
-        const enabled = await featureFlags.isEnabled(flagName, {
-            email,
-            environment: process.env.NODE_ENV,
-        });
-        return res.json({ flag: flagName, enabled });
+    app.get('/api/export/story/:id', async (req, res): Promise<any> => {
+        const { id } = req.params;
+        const { format = 'json' } = req.query;
+
+        try {
+            const db = getFirestore();
+            // Try to find the story in projects or saved_stories
+            let storyData: any = null;
+
+            // Search across user projects
+            const usersSnap = await db.collection('users').get();
+            for (const userDoc of usersSnap.docs) {
+                const storySnap = await userDoc.ref.collection('projects').doc(id).get();
+                if (storySnap.exists) {
+                    storyData = { id: storySnap.id, ...storySnap.data() };
+                    break;
+                }
+                const savedSnap = await userDoc.ref.collection('saved_stories').doc(id).get();
+                if (savedSnap.exists) {
+                    storyData = { id: savedSnap.id, ...savedSnap.data() };
+                    break;
+                }
+            }
+
+            if (!storyData) {
+                return res.status(404).json({ error: 'Story not found' });
+            }
+
+            // Export as structured data for client-side PDF rendering
+            const exportData = {
+                title: storyData.title || 'Untitled Story',
+                author: storyData.author || storyData.creatorName || 'Anonymous',
+                genre: storyData.genre || '',
+                format: storyData.format || 'comic',
+                exportedAt: new Date().toISOString(),
+                pages: storyData.pages || storyData.panels || [],
+                characters: storyData.characters || [],
+                narration: storyData.narration || storyData.script || '',
+                metadata: {
+                    wordCount: (storyData.narration || storyData.script || '').split(/\s+/).length,
+                    pageCount: (storyData.pages || storyData.panels || []).length,
+                }
+            };
+
+            if (format === 'json') {
+                res.setHeader('Content-Disposition', `attachment; filename="${exportData.title.replace(/[^a-z0-9]/gi, '_')}.json"`);
+                return res.json(exportData);
+            }
+
+            // For PDF: return data for client-side generation via @react-pdf/renderer
+            return res.json({ story: exportData, renderInstructions: 'Use @react-pdf/renderer on client to generate PDF from this data' });
+
+        } catch (err: any) {
+            console.error('[Export] Story export failed:', err.message);
+            return res.status(500).json({ error: 'Export failed' });
+        }
     });
 
-    /**
-     * GET /api/feature-flags — List all flags (admin)
-     */
-    app.get('/api/feature-flags', async (_req: any, res: any) => {
-        const flags = await featureFlags.getAllFlags();
-        return res.json({ data: flags });
-    });
+    // ─── Task 3.8: Content Auto-Moderation ──────────────────────────────
 
     /**
-     * POST /api/feature-flags — Create/update a flag (admin)
+     * POST /api/moderate/check — Check text for toxicity before publishing
+     * Uses keyword-based screening (swap for Perspective API when ready).
      */
-    app.post('/api/feature-flags', async (req: any, res: any) => {
-        const { name, enabled, percentage, allowedUsers, excludedUsers, environments, description } = req.body;
-        if (!name) return res.status(400).json({ error: 'name required' });
-        await featureFlags.setFlag({ name, enabled, percentage, allowedUsers, excludedUsers, environments, description });
-        return res.json({ success: true });
-    });
+    app.post('/api/moderate/check', async (req, res): Promise<any> => {
+        const { text, context = 'story' } = req.body;
+        if (!text || typeof text !== 'string') {
+            return res.status(400).json({ error: 'Text required' });
+        }
 
-    /**
-     * GET /api/subscription/plans — List available plans
-     */
-    app.get('/api/subscription/plans', (_req: any, res: any) => {
-        return res.json({ data: subscriptionService.getPlans() });
-    });
+        // Basic keyword screening — expand this list or swap for Perspective API
+        const flaggedPatterns = [
+            /\b(hate|kill|die|murder)\b/i,
+            /\b(spam|scam|phishing)\b/i,
+            /\b(nsfw|xxx|porn)\b/i,
+        ];
 
-    /**
-     * GET /api/subscription/:email — Get user subscription
-     */
-    app.get('/api/subscription/:email', async (req: any, res: any) => {
-        const sub = await subscriptionService.getUserSubscription(req.params.email);
-        return res.json({ data: sub });
-    });
+        const flags: string[] = [];
+        for (const pattern of flaggedPatterns) {
+            if (pattern.test(text)) {
+                flags.push(pattern.source);
+            }
+        }
 
-    /**
-     * POST /api/subscription/change-plan — Upgrade/downgrade
-     */
-    app.post('/api/subscription/change-plan', async (req: any, res: any) => {
-        const { email, planId } = req.body;
-        if (!email || !planId) return res.status(400).json({ error: 'email and planId required' });
-        const result = await subscriptionService.changePlan(email, planId);
-        return result.success ? res.json(result) : res.status(400).json(result);
-    });
+        const result = {
+            safe: flags.length === 0,
+            flags,
+            score: flags.length === 0 ? 0 : Math.min(flags.length * 0.3, 1.0),
+            recommendation: flags.length === 0 ? 'approve' : flags.length >= 3 ? 'reject' : 'review',
+            checkedAt: new Date().toISOString(),
+        };
 
-    /**
-     * POST /api/subscription/cancel — Cancel subscription
-     */
-    app.post('/api/subscription/cancel', async (req: any, res: any) => {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'email required' });
-        const result = await subscriptionService.cancelSubscription(email);
-        return result.success ? res.json(result) : res.status(400).json(result);
-    });
+        // TODO: Swap for Perspective API when ready:
+        // const response = await fetch(`https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${API_KEY}`, {...});
 
-    /**
-     * POST /api/subscription/reactivate — Reactivate canceled subscription
-     */
-    app.post('/api/subscription/reactivate', async (req: any, res: any) => {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'email required' });
-        const result = await subscriptionService.reactivateSubscription(email);
-        return result.success ? res.json(result) : res.status(400).json(result);
-    });
-
-    /**
-     * GET /api/jobs/status — Job queue status (admin)
-     */
-    app.get('/api/jobs/status', (_req: any, res: any) => {
-        return res.json(jobQueue.getStatus());
+        return res.json(result);
     });
 
     /**

@@ -3212,6 +3212,76 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ tokens: matchUser?.tokens || 0 });
     });
 
+    // ─── GDPR / CCPA: Data Export & Deletion (Task 2.5) ─────────────────
+
+    /**
+     * GET /api/user/export — Export all user data as JSON (GDPR Art. 20)
+     * Requires email query param. Returns all data associated with the user.
+     */
+    app.get('/api/user/export', async (req, res): Promise<any> => {
+        const { email } = req.query;
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ error: 'Email parameter required' });
+        }
+
+        const userData: any = { email, exportedAt: new Date().toISOString(), collections: {} };
+
+        try {
+            const db = getFirestore();
+            // Export user document
+            const userSnap = await db.collection('users').where('email', '==', email).get();
+            if (!userSnap.empty) {
+                userData.collections.user = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const userId = userSnap.docs[0].id;
+
+                // Export subcollections
+                const subcollections = ['characters', 'projects', 'saved_stories', 'ai_usage_logs'];
+                for (const sub of subcollections) {
+                    const subSnap = await db.collection('users').doc(userId).collection(sub).get();
+                    userData.collections[sub] = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                }
+            }
+        } catch (err: any) {
+            console.warn('[GDPR] Firestore export failed:', err.message);
+        }
+
+        // Memory fallback
+        const matchUser = memoryDb.users.find(u => u.email === email);
+        if (matchUser) {
+            userData.collections.memoryUser = [matchUser];
+        }
+
+        res.setHeader('Content-Disposition', `attachment; filename="story-menu-export-${Date.now()}.json"`);
+        return res.json(userData);
+    });
+
+    /**
+     * POST /api/user/delete-request — Request account deletion (GDPR Art. 17)
+     * Logs the request for admin review. Does not auto-delete.
+     */
+    app.post('/api/user/delete-request', async (req, res): Promise<any> => {
+        const { email, reason } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+
+        try {
+            const db = getFirestore();
+            await db.collection('deletion_requests').add({
+                email,
+                reason: reason || 'User requested deletion',
+                status: 'pending',
+                requestedAt: new Date().toISOString(),
+            });
+            console.info(`[GDPR] Deletion request logged for ${email}`);
+        } catch (err: any) {
+            console.warn('[GDPR] Failed to log deletion request:', err.message);
+        }
+
+        return res.json({ 
+            success: true, 
+            message: 'Deletion request received. An admin will review and process it within 30 days.' 
+        });
+    });
+
     /**
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
      */

@@ -1688,6 +1688,10 @@ async function startServer(app: express.Express) {
     app.use('/api/v1', apiV1Router);
     app.use('/api/classroom', classroomRouter);
 
+    // ─── Phase 3: API routers ───────────────────────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -3257,127 +3261,46 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ tokens: matchUser?.tokens || 0 });
     });
 
-    // ─── Task 3.3: Version History & Undo ────────────────────────────────
+    // ─── Collaboration API (Task 3.5) ───────────────────────────────────
+    const { createSession, joinSession, updateCursor, leaveSession, saveContent } = require('./middleware/collaboration');
 
-    /**
-     * POST /api/story/:id/snapshot — Save a version snapshot
-     */
-    app.post('/api/story/:id/snapshot', async (req, res): Promise<any> => {
-        const { id } = req.params;
-        const { userId, data, label } = req.body;
-
-        if (!userId || !data) return res.status(400).json({ error: 'userId and data required' });
-
+    app.post('/api/collab/create', async (req: any, res: any) => {
+        const { storyId, ownerId } = req.body;
+        if (!storyId || !ownerId) return res.status(400).json({ error: 'storyId and ownerId required' });
         try {
-            const db = getFirestore();
-            const userRef = db.collection('users').doc(userId);
-            const versionsRef = userRef.collection('projects').doc(id).collection('versions');
-
-            const snapshot = {
-                data,
-                label: label || `Version ${new Date().toISOString()}`,
-                createdAt: new Date().toISOString(),
-                createdBy: userId,
-            };
-
-            await versionsRef.add(snapshot);
-            console.info(`[VersionHistory] Snapshot saved for story ${id} by ${userId}`);
-            return res.json({ success: true, message: 'Version snapshot saved' });
-        } catch (err: any) {
-            console.error('[VersionHistory] Snapshot failed:', err.message);
-            return res.status(500).json({ error: 'Failed to save snapshot' });
-        }
+            await createSession(storyId, ownerId);
+            res.json({ success: true, sessionId: storyId });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
-    /**
-     * GET /api/story/:id/versions — List version history
-     */
-    app.get('/api/story/:id/versions', async (req, res): Promise<any> => {
-        const { id } = req.params;
-        const { userId } = req.query;
-
-        if (!userId) return res.status(400).json({ error: 'userId required' });
-
+    app.post('/api/collab/join', async (req: any, res: any) => {
+        const { storyId, userId, displayName } = req.body;
+        if (!storyId || !userId || !displayName) return res.status(400).json({ error: 'Missing fields' });
         try {
-            const db = getFirestore();
-            const versionsRef = db.collection('users').doc(userId as string)
-                .collection('projects').doc(id).collection('versions');
-
-            const snapshot = await versionsRef.orderBy('createdAt', 'desc').limit(50).get();
-            const versions = snapshot.docs.map(d => ({
-                id: d.id,
-                label: d.data().label,
-                createdAt: d.data().createdAt,
-                createdBy: d.data().createdBy,
-            }));
-
-            return res.json({ data: versions });
-        } catch (err: any) {
-            return res.status(500).json({ error: 'Failed to load versions' });
-        }
+            const presence = await joinSession(storyId, userId, displayName);
+            res.json({ success: true, presence });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
-    /**
-     * GET /api/story/:id/versions/:versionId — Get a specific version
-     */
-    app.get('/api/story/:id/versions/:versionId', async (req, res): Promise<any> => {
-        const { id, versionId } = req.params;
-        const { userId } = req.query;
-
-        if (!userId) return res.status(400).json({ error: 'userId required' });
-
-        try {
-            const db = getFirestore();
-            const versionRef = db.collection('users').doc(userId as string)
-                .collection('projects').doc(id).collection('versions').doc(versionId);
-
-            const snap = await versionRef.get();
-            if (!snap.exists) return res.status(404).json({ error: 'Version not found' });
-
-            return res.json({ id: snap.id, ...snap.data() });
-        } catch (err: any) {
-            return res.status(500).json({ error: 'Failed to load version' });
-        }
+    app.post('/api/collab/cursor', async (req: any, res: any) => {
+        const { storyId, userId, position } = req.body;
+        try { await updateCursor(storyId, userId, position); res.json({ success: true }); }
+        catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
-    /**
-     * POST /api/story/:id/restore/:versionId — Restore a version
-     */
-    app.post('/api/story/:id/restore/:versionId', async (req, res): Promise<any> => {
-        const { id, versionId } = req.params;
-        const { userId } = req.body;
+    app.post('/api/collab/leave', async (req: any, res: any) => {
+        const { storyId, userId } = req.body;
+        try { await leaveSession(storyId, userId); res.json({ success: true }); }
+        catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
 
-        if (!userId) return res.status(400).json({ error: 'userId required' });
-
+    app.post('/api/collab/save', async (req: any, res: any) => {
+        const { storyId, userId, content, expectedVersion } = req.body;
         try {
-            const db = getFirestore();
-            const versionRef = db.collection('users').doc(userId)
-                .collection('projects').doc(id).collection('versions').doc(versionId);
-            const versionSnap = await versionRef.get();
-
-            if (!versionSnap.exists) return res.status(404).json({ error: 'Version not found' });
-
-            const versionData = versionSnap.data();
-
-            // Save current as snapshot before restoring
-            const projectRef = db.collection('users').doc(userId).collection('projects').doc(id);
-            const currentSnap = await projectRef.get();
-            if (currentSnap.exists) {
-                await projectRef.collection('versions').add({
-                    data: currentSnap.data(),
-                    label: `Auto-save before restore to "${versionData?.label}"`,
-                    createdAt: new Date().toISOString(),
-                    createdBy: userId,
-                });
-            }
-
-            // Restore
-            await projectRef.update(versionData?.data || {});
-            console.info(`[VersionHistory] Story ${id} restored to version ${versionId}`);
-            return res.json({ success: true, message: 'Version restored' });
-        } catch (err: any) {
-            return res.status(500).json({ error: 'Failed to restore version' });
-        }
+            const result = await saveContent(storyId, userId, content, expectedVersion);
+            if (result.success) res.json({ success: true });
+            else res.status(409).json({ error: result.error });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
     /**

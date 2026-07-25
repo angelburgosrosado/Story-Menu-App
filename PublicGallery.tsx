@@ -124,6 +124,7 @@ export const PublicGallery: React.FC<PublicGalleryProps> = ({
           onClick={(e) => { e.stopPropagation(); onToggleSave?.(story.id); }}
           className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSaved ? 'bg-indigo-600 text-white' : 'bg-black/60 backdrop-blur-md text-slate-300 hover:text-white hover:bg-black/80 opacity-0 group-hover:opacity-100'}`}
           title={isSaved ? "Saved for later" : "Save story"}
+          aria-label={isSaved ? "Remove from saved stories" : "Save this story"}
         >
           <Bookmark size={16} className={isSaved ? "fill-white" : ""} />
         </button>

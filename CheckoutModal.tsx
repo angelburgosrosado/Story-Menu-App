@@ -262,7 +262,7 @@ export const CheckoutModalContent: React.FC<CheckoutModalProps> = ({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="native-modal w-full max-w-2xl bg-slate-900 border-4 border-black shadow-[12px_12px_0px_#000] text-white flex-col md:flex-row overflow-hidden"
+      role="dialog" aria-modal="true" aria-label="Checkout" className="native-modal w-full max-w-2xl bg-slate-900 border-4 border-black shadow-[12px_12px_0px_#000] text-white flex-col md:flex-row overflow-hidden"
       id="checkout-panel"
     >
       <div className="flex flex-col md:flex-row w-full h-full relative">

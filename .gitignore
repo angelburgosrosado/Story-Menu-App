@@ -24,3 +24,12 @@ dist-ssr
 *.sw?
 .env
 tmp/
+
+# Build artifacts and stale files
+*.bak
+*.compiled
+*.tmp
+*.orig
+*.swp
+coverage/
+.nyc_output/

@@ -363,7 +363,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                 
                 {/* SAVED LIBRARY PANEL */}
                 {isLibraryOpen && (
-                    <aside className="w-80 border-r border-slate-800/80 p-5 bg-slate-900/50 shrink-0 flex flex-col justify-between overflow-y-auto">
+                    <aside className="w-full md:w-80 border-r border-slate-800/80 p-5 bg-slate-900/50 shrink-0 flex flex-col justify-between overflow-y-auto absolute md:relative z-20 md:z-auto">
                         <div className="space-y-6">
                             <h3 className="font-bold text-slate-300 text-sm tracking-tight border-b border-slate-800 pb-2">Recent Stories</h3>
                             {isLoadingLibrary ? (

@@ -20,6 +20,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
+import adminRoutesRouter from './routes/admin';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -28,6 +31,12 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
+import adminRoutesRouter from './routes/admin';
+import adminAiRouter from './routes/admin-ai';
+import adminUsersRouter from './routes/admin-users';
+import adminContentRouter from './routes/admin-content';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
 
@@ -39,6 +48,9 @@ import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiS
 import { logger } from './middleware/logger';
 import { errorTracker } from './middleware/errorTracker';
 import { requireRole } from './middleware/rbac';
+import { featureFlags } from './middleware/featureFlags';
+import { jobQueue } from './middleware/jobQueue';
+import { subscriptionService } from './middleware/subscription';
 
 try {
     admin.initializeApp({});
@@ -1689,6 +1701,35 @@ async function startServer(app: express.Express) {
     // Task 1.8: Structured request logging
     app.use(logger.requestMiddleware);
 
+    // ─── Route modules (extracted from monolith) ─────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+    app.use('/api/admin', adminRoutesRouter);
+    app.use('/api/admin/ai', adminAiRouter);
+    app.use('/api/admin/users', adminUsersRouter);
+    app.use('/api/admin/content', adminContentRouter);
+
+    // Bridge: pass memoryDb to extracted routers
+    try {
+        const { setMemoryDb: setAdminDb } = require('./routes/admin');
+        const { setMemoryDb: setAiDb, setRouteResolver } = require('./routes/admin-ai');
+        const { setMemoryDb: setUsersDb } = require('./routes/admin-users');
+        const { setMemoryDb: setContentDb } = require('./routes/admin-content');
+        setAdminDb(memoryDb); setAiDb(memoryDb); setUsersDb(memoryDb); setContentDb(memoryDb);
+        setRouteResolver(resolveAIRoute);
+    } catch (e) { console.warn('Route module bridge skipped:', e.message); }
+
+    // Task 2.8: HSTS + HTTPS enforcement
+    app.use((req: any, res: any, next: any) => {
+        if (process.env.NODE_ENV === 'production' && !req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect(301, `https://${req.headers.host}${req.url}`);
+        }
+        if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+            res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
+        next();
+    });
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -3262,25 +3303,19 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
     /**
      * GET /api/user/export — Export all user data as JSON (GDPR Art. 20)
-     * Requires email query param. Returns all data associated with the user.
      */
     app.get('/api/user/export', async (req, res): Promise<any> => {
         const { email } = req.query;
         if (!email || typeof email !== 'string') {
             return res.status(400).json({ error: 'Email parameter required' });
         }
-
         const userData: any = { email, exportedAt: new Date().toISOString(), collections: {} };
-
         try {
             const db = getFirestore();
-            // Export user document
             const userSnap = await db.collection('users').where('email', '==', email).get();
             if (!userSnap.empty) {
                 userData.collections.user = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 const userId = userSnap.docs[0].id;
-
-                // Export subcollections
                 const subcollections = ['characters', 'projects', 'saved_stories', 'ai_usage_logs'];
                 for (const sub of subcollections) {
                     const subSnap = await db.collection('users').doc(userId).collection(sub).get();
@@ -3290,42 +3325,77 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         } catch (err: any) {
             console.warn('[GDPR] Firestore export failed:', err.message);
         }
-
-        // Memory fallback
         const matchUser = memoryDb.users.find(u => u.email === email);
-        if (matchUser) {
-            userData.collections.memoryUser = [matchUser];
-        }
-
+        if (matchUser) userData.collections.memoryUser = [matchUser];
         res.setHeader('Content-Disposition', `attachment; filename="story-menu-export-${Date.now()}.json"`);
         return res.json(userData);
     });
 
     /**
      * POST /api/user/delete-request — Request account deletion (GDPR Art. 17)
-     * Logs the request for admin review. Does not auto-delete.
      */
     app.post('/api/user/delete-request', async (req, res): Promise<any> => {
         const { email, reason } = req.body;
         if (!email) return res.status(400).json({ error: 'Email required' });
-
         try {
             const db = getFirestore();
             await db.collection('deletion_requests').add({
-                email,
-                reason: reason || 'User requested deletion',
-                status: 'pending',
-                requestedAt: new Date().toISOString(),
+                email, reason: reason || 'User requested deletion',
+                status: 'pending', requestedAt: new Date().toISOString(),
             });
-            console.info(`[GDPR] Deletion request logged for ${email}`);
         } catch (err: any) {
             console.warn('[GDPR] Failed to log deletion request:', err.message);
         }
+        return res.json({ success: true, message: 'Deletion request received. An admin will review within 30 days.' });
+    });
 
-        return res.json({ 
-            success: true, 
-            message: 'Deletion request received. An admin will review and process it within 30 days.' 
+    // ─── Task 3.1: PDF/Story Export ─────────────────────────────────────
+
+    app.get('/api/export/story/:id', async (req, res): Promise<any> => {
+        const { id } = req.params;
+        const { format = 'json' } = req.query;
+        try {
+            const db = getFirestore();
+            let storyData: any = null;
+            const usersSnap = await db.collection('users').get();
+            for (const userDoc of usersSnap.docs) {
+                const storySnap = await userDoc.ref.collection('projects').doc(id).get();
+                if (storySnap.exists) { storyData = { id: storySnap.id, ...storySnap.data() }; break; }
+                const savedSnap = await userDoc.ref.collection('saved_stories').doc(id).get();
+                if (savedSnap.exists) { storyData = { id: savedSnap.id, ...savedSnap.data() }; break; }
+            }
+            if (!storyData) return res.status(404).json({ error: 'Story not found' });
+            const exportData = {
+                title: storyData.title || 'Untitled Story', author: storyData.author || 'Anonymous',
+                genre: storyData.genre || '', format: storyData.format || 'comic',
+                exportedAt: new Date().toISOString(), pages: storyData.pages || storyData.panels || [],
+                characters: storyData.characters || [], narration: storyData.narration || storyData.script || '',
+                metadata: { wordCount: (storyData.narration || '').split(/\s+/).length, pageCount: (storyData.pages || []).length }
+            };
+            if (format === 'json') {
+                res.setHeader('Content-Disposition', `attachment; filename="${exportData.title.replace(/[^a-z0-9]/gi, '_')}.json"`);
+                return res.json(exportData);
+            }
+            return res.json({ story: exportData, renderInstructions: 'Use @react-pdf/renderer on client' });
+        } catch (err: any) {
+            return res.status(500).json({ error: 'Export failed' });
+        }
+    });
+
+    // ─── Task 3.8: Content Auto-Moderation ──────────────────────────────
+
+    app.post('/api/moderate/check', async (req, res): Promise<any> => {
+        const { text, context = 'story' } = req.body;
+        if (!text || typeof text !== 'string') return res.status(400).json({ error: 'Text required' });
+        const flaggedPatterns = [/\b(hate|kill|die|murder)\b/i, /\b(spam|scam|phishing)\b/i, /\b(nsfw|xxx|porn)\b/i];
+        const flags: string[] = [];
+        for (const pattern of flaggedPatterns) { if (pattern.test(text)) flags.push(pattern.source); }
+        return res.json({
+            safe: flags.length === 0, flags, score: flags.length === 0 ? 0 : Math.min(flags.length * 0.3, 1.0),
+            recommendation: flags.length === 0 ? 'approve' : flags.length >= 3 ? 'reject' : 'review',
+            checkedAt: new Date().toISOString(),
         });
+    });
     });
 
     /**
@@ -3509,6 +3579,10 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             timestamp: new Date().toISOString(),
             message: `Checkout Successful! Welcome to story.menu's "${tier}" subscription tier.`
         });
+
+        // Analytics: track successful payment
+        analytics.paymentCompleted(email, tier, amountCents || 0);
+        if (type === 'subscription') analytics.subscriptionActivated(email, tier);
     });
 
     /**
@@ -3668,6 +3742,9 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
     /**
      * 1.2 ADMINISTRATIVE SAAS API ENDPOINTS
+     * NOTE: Settings, Plans, Formats routes are now handled by routes/admin.ts
+     * (mounted at /api/admin). Remaining routes below will be extracted in
+     * subsequent PRs. Do NOT add new routes here — use the extracted router.
      */
 
     

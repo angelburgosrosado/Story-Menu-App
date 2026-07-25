@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { Search, Flame, Clock, Star, BookOpen, Layers, Zap, User, Bookmark, ChevronRight, BookMarked } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 export interface PublishedStory {
   id: string;
@@ -124,6 +125,7 @@ export const PublicGallery: React.FC<PublicGalleryProps> = ({
           onClick={(e) => { e.stopPropagation(); onToggleSave?.(story.id); }}
           className={`absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSaved ? 'bg-indigo-600 text-white' : 'bg-black/60 backdrop-blur-md text-slate-300 hover:text-white hover:bg-black/80 opacity-0 group-hover:opacity-100'}`}
           title={isSaved ? "Saved for later" : "Save story"}
+          aria-label={isSaved ? "Remove from saved stories" : "Save this story"}
         >
           <Bookmark size={16} className={isSaved ? "fill-white" : ""} />
         </button>
@@ -187,6 +189,15 @@ export const PublicGallery: React.FC<PublicGalleryProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0c0e14] text-slate-100 flex flex-col font-sans">
+      <Helmet>
+        <title>Gallery — Story.Menu | AI-Generated Comics & Stories</title>
+        <meta name="description" content="Browse AI-generated comic books, stories, and illustrations. Discover multiverse adventures created with Gemini AI." />
+        <meta property="og:title" content="Gallery — Story.Menu" />
+        <meta property="og:description" content="Browse AI-generated comic books and stories" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://storymenu.app/gallery" />
+        <link rel="canonical" href="https://storymenu.app/gallery" />
+      </Helmet>
       
       {/* Top Navigation */}
       <header className="h-16 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-8">

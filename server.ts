@@ -3396,6 +3396,161 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     /**
+     * STRIPE WEBHOOK HANDLER (Task 1.2)
+     * Verifies webhook signatures and processes payment events server-side.
+     * This is the authoritative source for payment status — never trust the client.
+     */
+    app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res): Promise<any> => {
+        const stripeKey = await getSettingValue('stripe_secret_key');
+        if (!stripeKey) {
+            console.warn('[Stripe Webhook] Stripe key not configured, ignoring webhook');
+            return res.status(200).json({ received: true });
+        }
+
+        const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as any });
+        const sig = req.headers['stripe-signature'];
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+        if (!webhookSecret) {
+            console.error('[Stripe Webhook] STRIPE_WEBHOOK_SECRET not set — cannot verify signature');
+            return res.status(500).json({ error: 'Webhook secret not configured' });
+        }
+
+        let event: Stripe.Event;
+        try {
+            event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
+        } catch (err: any) {
+            console.error(`[Stripe Webhook] Signature verification failed: ${err.message}`);
+            return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+        }
+
+        console.info(`[Stripe Webhook] Received event: ${event.type} (${event.id})`);
+
+        try {
+            switch (event.type) {
+                case 'payment_intent.succeeded': {
+                    const intent = event.data.object as Stripe.PaymentIntent;
+                    const email = intent.receipt_email || intent.metadata?.email;
+                    if (email) {
+                        await activateSubscription(email, intent);
+                    }
+                    break;
+                }
+                case 'invoice.payment_succeeded': {
+                    const invoice = event.data.object as Stripe.Invoice;
+                    const subscriptionId = invoice.subscription as string;
+                    if (subscriptionId) {
+                        await renewSubscription(subscriptionId, invoice);
+                    }
+                    break;
+                }
+                case 'invoice.payment_failed': {
+                    const invoice = event.data.object as Stripe.Invoice;
+                    console.warn(`[Stripe Webhook] Payment failed for subscription ${invoice.subscription}`);
+                    // Downgrade to free tier on payment failure
+                    if (invoice.customer_email) {
+                        await deactivateSubscription(invoice.customer_email, 'payment_failed');
+                    }
+                    break;
+                }
+                case 'customer.subscription.deleted': {
+                    const subscription = event.data.object as Stripe.Subscription;
+                    const customerId = subscription.customer as string;
+                    // Look up email from customer
+                    try {
+                        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+                        if (customer.email) {
+                            await deactivateSubscription(customer.email, 'subscription_cancelled');
+                        }
+                    } catch (e: any) {
+                        console.warn(`[Stripe Webhook] Could not retrieve customer ${customerId}: ${e.message}`);
+                    }
+                    break;
+                }
+                default:
+                    console.info(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+            }
+        } catch (err: any) {
+            console.error(`[Stripe Webhook] Error processing ${event.type}: ${err.message}`);
+            return res.status(500).json({ error: 'Webhook processing failed' });
+        }
+
+        res.json({ received: true });
+    });
+
+    /**
+     * Activate subscription for a user after successful payment.
+     */
+    async function activateSubscription(email: string, intent: Stripe.PaymentIntent): Promise<void> {
+        const tier = intent.metadata?.tier || 'Pro';
+        const tokensAwarded = parseInt(intent.metadata?.tokens || '0', 10);
+
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(100);');
+                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id VARCHAR(100);');
+                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);');
+                await pool.query(
+                    'UPDATE users SET tier = $1, subscription_id = $2, payment_method = $3, tokens = COALESCE(tokens, 0) + $4 WHERE email = $5',
+                    [tier, intent.id, 'Stripe', tokensAwarded, email]
+                );
+                console.info(`[Stripe Webhook] Activated ${tier} for ${email}`);
+            } catch (err: any) {
+                console.error(`[Stripe Webhook] DB error activating subscription: ${err.message}`);
+            }
+        }
+        // Memory fallback
+        const matchUser = memoryDb.users.find(u => u.email === email);
+        if (matchUser) {
+            matchUser.tier = tier;
+            matchUser.subscriptionId = intent.id;
+            matchUser.paymentMethod = 'Stripe';
+            matchUser.tokens = (matchUser.tokens || 0) + tokensAwarded;
+        }
+    }
+
+    /**
+     * Renew subscription on successful invoice payment.
+     */
+    async function renewSubscription(subscriptionId: string, invoice: Stripe.Invoice): Promise<void> {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query(
+                    'UPDATE users SET subscription_status = $1, last_payment_at = NOW() WHERE subscription_id = $2',
+                    ['active', subscriptionId]
+                );
+                console.info(`[Stripe Webhook] Renewed subscription ${subscriptionId}`);
+            } catch (err: any) {
+                console.error(`[Stripe Webhook] DB error renewing subscription: ${err.message}`);
+            }
+        }
+    }
+
+    /**
+     * Deactivate subscription (downgrade to free tier).
+     */
+    async function deactivateSubscription(email: string, reason: string): Promise<void> {
+        const pool = getDbPool();
+        if (pool) {
+            try {
+                await pool.query(
+                    'UPDATE users SET tier = $1, subscription_status = $2 WHERE email = $3',
+                    ['free', `deactivated_${reason}`, email]
+                );
+                console.info(`[Stripe Webhook] Deactivated subscription for ${email}: ${reason}`);
+            } catch (err: any) {
+                console.error(`[Stripe Webhook] DB error deactivating subscription: ${err.message}`);
+            }
+        }
+        const matchUser = memoryDb.users.find(u => u.email === email);
+        if (matchUser) {
+            matchUser.tier = 'free';
+        }
+    }
+
+    /**
      * 1.2 ADMINISTRATIVE SAAS API ENDPOINTS
      */
 

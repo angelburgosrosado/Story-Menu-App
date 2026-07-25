@@ -20,6 +20,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import apiV1Router from './api/v1/index';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -1679,6 +1680,9 @@ async function startServer(app: express.Express) {
     // Task 1.8: Structured request logging
     app.use(logger.requestMiddleware);
 
+    // ─── Developer API v1 (Task 3.6) ────────────────────────────────────
+    app.use('/api/v1', apiV1Router);
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -3248,74 +3252,127 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ tokens: matchUser?.tokens || 0 });
     });
 
-    // ─── GDPR / CCPA: Data Export & Deletion (Task 2.5) ─────────────────
+    // ─── Task 3.3: Version History & Undo ────────────────────────────────
 
     /**
-     * GET /api/user/export — Export all user data as JSON (GDPR Art. 20)
-     * Requires email query param. Returns all data associated with the user.
+     * POST /api/story/:id/snapshot — Save a version snapshot
      */
-    app.get('/api/user/export', async (req, res): Promise<any> => {
-        const { email } = req.query;
-        if (!email || typeof email !== 'string') {
-            return res.status(400).json({ error: 'Email parameter required' });
-        }
+    app.post('/api/story/:id/snapshot', async (req, res): Promise<any> => {
+        const { id } = req.params;
+        const { userId, data, label } = req.body;
 
-        const userData: any = { email, exportedAt: new Date().toISOString(), collections: {} };
+        if (!userId || !data) return res.status(400).json({ error: 'userId and data required' });
 
         try {
             const db = getFirestore();
-            // Export user document
-            const userSnap = await db.collection('users').where('email', '==', email).get();
-            if (!userSnap.empty) {
-                userData.collections.user = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                const userId = userSnap.docs[0].id;
+            const userRef = db.collection('users').doc(userId);
+            const versionsRef = userRef.collection('projects').doc(id).collection('versions');
 
-                // Export subcollections
-                const subcollections = ['characters', 'projects', 'saved_stories', 'ai_usage_logs'];
-                for (const sub of subcollections) {
-                    const subSnap = await db.collection('users').doc(userId).collection(sub).get();
-                    userData.collections[sub] = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                }
-            }
+            const snapshot = {
+                data,
+                label: label || `Version ${new Date().toISOString()}`,
+                createdAt: new Date().toISOString(),
+                createdBy: userId,
+            };
+
+            await versionsRef.add(snapshot);
+            console.info(`[VersionHistory] Snapshot saved for story ${id} by ${userId}`);
+            return res.json({ success: true, message: 'Version snapshot saved' });
         } catch (err: any) {
-            console.warn('[GDPR] Firestore export failed:', err.message);
+            console.error('[VersionHistory] Snapshot failed:', err.message);
+            return res.status(500).json({ error: 'Failed to save snapshot' });
         }
-
-        // Memory fallback
-        const matchUser = memoryDb.users.find(u => u.email === email);
-        if (matchUser) {
-            userData.collections.memoryUser = [matchUser];
-        }
-
-        res.setHeader('Content-Disposition', `attachment; filename="story-menu-export-${Date.now()}.json"`);
-        return res.json(userData);
     });
 
     /**
-     * POST /api/user/delete-request — Request account deletion (GDPR Art. 17)
-     * Logs the request for admin review. Does not auto-delete.
+     * GET /api/story/:id/versions — List version history
      */
-    app.post('/api/user/delete-request', async (req, res): Promise<any> => {
-        const { email, reason } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email required' });
+    app.get('/api/story/:id/versions', async (req, res): Promise<any> => {
+        const { id } = req.params;
+        const { userId } = req.query;
+
+        if (!userId) return res.status(400).json({ error: 'userId required' });
 
         try {
             const db = getFirestore();
-            await db.collection('deletion_requests').add({
-                email,
-                reason: reason || 'User requested deletion',
-                status: 'pending',
-                requestedAt: new Date().toISOString(),
-            });
-            console.info(`[GDPR] Deletion request logged for ${email}`);
-        } catch (err: any) {
-            console.warn('[GDPR] Failed to log deletion request:', err.message);
-        }
+            const versionsRef = db.collection('users').doc(userId as string)
+                .collection('projects').doc(id).collection('versions');
 
-        return res.json({ 
-            success: true, 
-            message: 'Deletion request received. An admin will review and process it within 30 days.' 
-        });
+            const snapshot = await versionsRef.orderBy('createdAt', 'desc').limit(50).get();
+            const versions = snapshot.docs.map(d => ({
+                id: d.id,
+                label: d.data().label,
+                createdAt: d.data().createdAt,
+                createdBy: d.data().createdBy,
+            }));
+
+            return res.json({ data: versions });
+        } catch (err: any) {
+            return res.status(500).json({ error: 'Failed to load versions' });
+        }
+    });
+
+    /**
+     * GET /api/story/:id/versions/:versionId — Get a specific version
+     */
+    app.get('/api/story/:id/versions/:versionId', async (req, res): Promise<any> => {
+        const { id, versionId } = req.params;
+        const { userId } = req.query;
+
+        if (!userId) return res.status(400).json({ error: 'userId required' });
+
+        try {
+            const db = getFirestore();
+            const versionRef = db.collection('users').doc(userId as string)
+                .collection('projects').doc(id).collection('versions').doc(versionId);
+
+            const snap = await versionRef.get();
+            if (!snap.exists) return res.status(404).json({ error: 'Version not found' });
+
+            return res.json({ id: snap.id, ...snap.data() });
+        } catch (err: any) {
+            return res.status(500).json({ error: 'Failed to load version' });
+        }
+    });
+
+    /**
+     * POST /api/story/:id/restore/:versionId — Restore a version
+     */
+    app.post('/api/story/:id/restore/:versionId', async (req, res): Promise<any> => {
+        const { id, versionId } = req.params;
+        const { userId } = req.body;
+
+        if (!userId) return res.status(400).json({ error: 'userId required' });
+
+        try {
+            const db = getFirestore();
+            const versionRef = db.collection('users').doc(userId)
+                .collection('projects').doc(id).collection('versions').doc(versionId);
+            const versionSnap = await versionRef.get();
+
+            if (!versionSnap.exists) return res.status(404).json({ error: 'Version not found' });
+
+            const versionData = versionSnap.data();
+
+            // Save current as snapshot before restoring
+            const projectRef = db.collection('users').doc(userId).collection('projects').doc(id);
+            const currentSnap = await projectRef.get();
+            if (currentSnap.exists) {
+                await projectRef.collection('versions').add({
+                    data: currentSnap.data(),
+                    label: `Auto-save before restore to "${versionData?.label}"`,
+                    createdAt: new Date().toISOString(),
+                    createdBy: userId,
+                });
+            }
+
+            // Restore
+            await projectRef.update(versionData?.data || {});
+            console.info(`[VersionHistory] Story ${id} restored to version ${versionId}`);
+            return res.json({ success: true, message: 'Version restored' });
+        } catch (err: any) {
+            return res.status(500).json({ error: 'Failed to restore version' });
+        }
     });
 
     /**

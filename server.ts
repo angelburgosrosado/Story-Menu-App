@@ -108,18 +108,52 @@ if (typeof __dirname !== 'undefined' && __dirname) {
 }
 
 /**
+ * RBAC ADMIN CHECK
+ * Checks if a user has admin role in Firestore users collection.
+ * Falls back to ADMIN_EMAIL env var only for bootstrap (first admin).
+ * TASK 1.1 — Replaces hardcoded email checks.
+ */
+async function isAdminUser(email: string): Promise<boolean> {
+    if (!email) return false;
+    
+    // 1. Check Firestore user document for role field (production path)
+    try {
+        const db = getFirestore();
+        const snapshot = await db.collection('users').where('email', '==', email).get();
+        if (!snapshot.empty) {
+            const userData = snapshot.docs[0].data();
+            if (userData.role === 'admin' || userData.role === 'super_admin') {
+                return true;
+            }
+        }
+    } catch (err: any) {
+        console.warn('[RBAC] Firestore role check failed:', err.message);
+    }
+    
+    // 2. Env var fallback — bootstrap only for initial admin setup
+    // REMOVE this block after first admin is seeded in Firestore with role='admin'
+    const bootstrapEmails = process.env.ADMIN_EMAIL 
+        ? process.env.ADMIN_EMAIL.split(',').map(e => e.trim().toLowerCase()) 
+        : [];
+    if (bootstrapEmails.includes(email.toLowerCase())) {
+        console.warn(`[RBAC] Bootstrap admin match via env var for ${email}. Seed this user in Firestore with role='admin' and remove ADMIN_EMAIL.`);
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * TOKEN MANAGEMENT ENGINE
  * Deducts tokens from PostgreSQL DB or memory fallback for a user.
  */
 async function consumeTokens(email: string, amount: number): Promise<boolean> {
     if (!email) return false;
     
-    // The admin bypass was removed so we can calculate token consumption for all users.
     try {
         const db = getFirestore();
         const snapshot = await db.collection('users').where('email', '==', email).get();
-        const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
-        const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
+        const isAdmin = await isAdminUser(email);
 
         if (snapshot.empty) {
              if (isAdmin) throw new Error("Admin not in Firestore, fallback to memory");
@@ -133,10 +167,9 @@ async function consumeTokens(email: string, amount: number): Promise<boolean> {
             if (!userDoc.exists) return false;
             
             const currentTokens = userDoc.data()?.tokens || 0;
-            const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',').map(e => e.trim()) : [];
-            const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
+            const adminNow = await isAdminUser(email);
 
-            if (currentTokens >= amount || isAdmin) {
+            if (currentTokens >= amount || adminNow) {
                 transaction.update(userRef, { tokens: currentTokens - amount });
                 return true;
             }
@@ -146,15 +179,14 @@ async function consumeTokens(email: string, amount: number): Promise<boolean> {
         console.warn("Failed to consume tokens in Firestore:", err.message);
         
         // Memory fallback
-        const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',').map(e => e.trim()) : [];
-        const isAdmin = email === 'admin-sandbox@example.com' || adminEmails.includes(email);
+        const adminNow = await isAdminUser(email);
         const matchUser = memoryDb.users.find(u => u.email === email);
         if (matchUser) {
-            if ((matchUser.tokens || 0) >= amount || isAdmin) {
+            if ((matchUser.tokens || 0) >= amount || adminNow) {
                 matchUser.tokens = (matchUser.tokens || 0) - amount;
                 return true;
             }
-        } else if (isAdmin) {
+        } else if (adminNow) {
              // Let admins generate even if they aren't in memory DB yet
              memoryDb.users.push({ id: crypto.randomUUID(), email, tokens: -amount, created_at: new Date().toISOString() });
              return true;
@@ -3403,8 +3435,6 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     const requireAdmin = async (req: any, res: any, next: any) => {
     try {
         const authHeader = req.headers.authorization;
-        const fallbackEmail = req.headers['x-admin-email'];
-        console.log(`[requireAdmin] Checking auth. authHeader=${!!authHeader}, fallbackEmail=${fallbackEmail}`);
         
         let isCustomAdmin = false;
         let email = '';
@@ -3420,15 +3450,13 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                     if (sessionCheck.rows.length > 0) {
                         isCustomAdmin = true;
                         email = sessionCheck.rows[0].username;
-                        console.log(`[requireAdmin] Custom session matched in DB for user: ${email}`);
                     }
                 }
             } else {
                  const session = memoryDb.admin_sessions?.find((s: any) => s.token === token);
                  if (session && new Date(session.expires_at) > new Date()) {
                      isCustomAdmin = true;
-                     email = session.username; // For custom admin, email field holds username
-                     console.log(`[requireAdmin] Custom session matched in Memory for user: ${email}`);
+                     email = session.username;
                  }
             }
 
@@ -3437,39 +3465,29 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 try {
                     const decoded = await getAuth().verifyIdToken(token);
                     email = decoded.email || '';
-                    console.log(`[requireAdmin] Firebase JWT verified. email=${email}`);
                 } catch (e: any) {
-                    console.log(`[requireAdmin] Firebase verify failed: ${e.message}`);
-                    if (process.env.NODE_ENV !== 'production' && fallbackEmail) {
-                        email = fallbackEmail;
-                        console.log(`[requireAdmin] Using fallbackEmail=${email}`);
-                    } else {
-                        console.log(`[requireAdmin] Rejecting: Invalid token`);
-                        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-                    }
+                    // TASK 1.1: Removed x-admin-email header fallback — was a privilege escalation vector.
+                    // In production, invalid tokens are always rejected.
+                    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
                 }
             }
         } else {
-            console.log(`[requireAdmin] Rejecting: No auth header`);
             return res.status(401).json({ error: 'Unauthorized: No token provided' });
         }
 
-        // 3. Final validation
+        // 3. Custom admin session — trusted, grant access
         if (isCustomAdmin) {
              (req as any).adminEmail = email;
              return next();
         }
 
-        const superAdminEnv = process.env.ADMIN_EMAIL || '';
-        const superAdmins = superAdminEnv.split(',').map(e => e.trim().toLowerCase());
-        console.log(`[requireAdmin] Comparing email=${email} with superAdmins=[${superAdmins.join(', ')}]`);
-        
-        if (superAdmins.includes(email.toLowerCase())) {
+        // 4. RBAC check via Firestore role field (TASK 1.1)
+        const hasAdminRole = await isAdminUser(email);
+        if (hasAdminRole) {
             (req as any).adminEmail = email;
             return next();
         }
 
-        console.log(`[requireAdmin] Rejecting: Forbidden access`);
         return res.status(403).json({ error: 'Forbidden: Admin access required' });
     } catch (err: any) {
         console.error(`[requireAdmin] Error: ${err.message}`);
@@ -3830,8 +3848,6 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     app.get('/api/public/debug-env', (req, res) => {
         return res.json({
             timestamp: new Date().toISOString(),
-            adminEmailStatus: process.env.ADMIN_EMAIL ? `Loaded (${process.env.ADMIN_EMAIL.length} chars)` : 'MISSING',
-            adminEmailPreview: process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.substring(0, 10) + '...' : '',
             geminiKeyStatus: process.env.GEMINI_API_KEY ? 'Loaded' : 'MISSING',
             stripeKeyStatus: process.env.STRIPE_SECRET_KEY ? 'Loaded' : 'MISSING'
         });

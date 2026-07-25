@@ -20,6 +20,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -1643,6 +1645,10 @@ async function startServer(app: express.Express) {
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+    // ─── Phase 3: API routers ───────────────────────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -3210,6 +3216,48 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         // Fallback to memory
         const matchUser = memoryDb.users.find(u => u.email === email);
         return res.json({ tokens: matchUser?.tokens || 0 });
+    });
+
+    // ─── Collaboration API (Task 3.5) ───────────────────────────────────
+    const { createSession, joinSession, updateCursor, leaveSession, saveContent } = require('./middleware/collaboration');
+
+    app.post('/api/collab/create', async (req: any, res: any) => {
+        const { storyId, ownerId } = req.body;
+        if (!storyId || !ownerId) return res.status(400).json({ error: 'storyId and ownerId required' });
+        try {
+            await createSession(storyId, ownerId);
+            res.json({ success: true, sessionId: storyId });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    app.post('/api/collab/join', async (req: any, res: any) => {
+        const { storyId, userId, displayName } = req.body;
+        if (!storyId || !userId || !displayName) return res.status(400).json({ error: 'Missing fields' });
+        try {
+            const presence = await joinSession(storyId, userId, displayName);
+            res.json({ success: true, presence });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    app.post('/api/collab/cursor', async (req: any, res: any) => {
+        const { storyId, userId, position } = req.body;
+        try { await updateCursor(storyId, userId, position); res.json({ success: true }); }
+        catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    app.post('/api/collab/leave', async (req: any, res: any) => {
+        const { storyId, userId } = req.body;
+        try { await leaveSession(storyId, userId); res.json({ success: true }); }
+        catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    app.post('/api/collab/save', async (req: any, res: any) => {
+        const { storyId, userId, content, expectedVersion } = req.body;
+        try {
+            const result = await saveContent(storyId, userId, content, expectedVersion);
+            if (result.success) res.json({ success: true });
+            else res.status(409).json({ error: result.error });
+        } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
     /**

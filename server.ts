@@ -28,6 +28,12 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
+import adminRoutesRouter from './routes/admin';
+import adminAiRouter from './routes/admin-ai';
+import adminUsersRouter from './routes/admin-users';
+import adminContentRouter from './routes/admin-content';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
 
@@ -1642,6 +1648,24 @@ async function startServer(app: express.Express) {
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+    // ─── Extracted route modules ────────────────────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+    app.use('/api/admin', adminRoutesRouter);
+    app.use('/api/admin/ai', adminAiRouter);
+    app.use('/api/admin/users', adminUsersRouter);
+    app.use('/api/admin/content', adminContentRouter);
+
+    // Bridge: pass memoryDb to extracted routers
+    try {
+        const { setMemoryDb: setAdminDb } = require('./routes/admin');
+        const { setMemoryDb: setAiDb, setRouteResolver } = require('./routes/admin-ai');
+        const { setMemoryDb: setUsersDb } = require('./routes/admin-users');
+        const { setMemoryDb: setContentDb } = require('./routes/admin-content');
+        setAdminDb(memoryDb); setAiDb(memoryDb); setUsersDb(memoryDb); setContentDb(memoryDb);
+        setRouteResolver(resolveAIRoute);
+    } catch (e) { console.warn('Route module bridge skipped:', e.message); }
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {

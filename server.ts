@@ -34,6 +34,9 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { featureFlags } from './middleware/featureFlags';
+import { jobQueue } from './middleware/jobQueue';
+import { subscriptionService } from './middleware/subscription';
 
 try {
     admin.initializeApp({});
@@ -3210,6 +3213,91 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         // Fallback to memory
         const matchUser = memoryDb.users.find(u => u.email === email);
         return res.json({ tokens: matchUser?.tokens || 0 });
+    });
+
+    // ─── Phase 7: Feature Flags & Subscription Management ────────────────
+
+    /**
+     * GET /api/feature-flags/:flagName — Check if a feature is enabled
+     */
+    app.get('/api/feature-flags/:flagName', async (req: any, res: any) => {
+        const { flagName } = req.params;
+        const email = req.query?.email || req.headers['x-user-email'];
+        const enabled = await featureFlags.isEnabled(flagName, {
+            email,
+            environment: process.env.NODE_ENV,
+        });
+        return res.json({ flag: flagName, enabled });
+    });
+
+    /**
+     * GET /api/feature-flags — List all flags (admin)
+     */
+    app.get('/api/feature-flags', async (_req: any, res: any) => {
+        const flags = await featureFlags.getAllFlags();
+        return res.json({ data: flags });
+    });
+
+    /**
+     * POST /api/feature-flags — Create/update a flag (admin)
+     */
+    app.post('/api/feature-flags', async (req: any, res: any) => {
+        const { name, enabled, percentage, allowedUsers, excludedUsers, environments, description } = req.body;
+        if (!name) return res.status(400).json({ error: 'name required' });
+        await featureFlags.setFlag({ name, enabled, percentage, allowedUsers, excludedUsers, environments, description });
+        return res.json({ success: true });
+    });
+
+    /**
+     * GET /api/subscription/plans — List available plans
+     */
+    app.get('/api/subscription/plans', (_req: any, res: any) => {
+        return res.json({ data: subscriptionService.getPlans() });
+    });
+
+    /**
+     * GET /api/subscription/:email — Get user subscription
+     */
+    app.get('/api/subscription/:email', async (req: any, res: any) => {
+        const sub = await subscriptionService.getUserSubscription(req.params.email);
+        return res.json({ data: sub });
+    });
+
+    /**
+     * POST /api/subscription/change-plan — Upgrade/downgrade
+     */
+    app.post('/api/subscription/change-plan', async (req: any, res: any) => {
+        const { email, planId } = req.body;
+        if (!email || !planId) return res.status(400).json({ error: 'email and planId required' });
+        const result = await subscriptionService.changePlan(email, planId);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * POST /api/subscription/cancel — Cancel subscription
+     */
+    app.post('/api/subscription/cancel', async (req: any, res: any) => {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
+        const result = await subscriptionService.cancelSubscription(email);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * POST /api/subscription/reactivate — Reactivate canceled subscription
+     */
+    app.post('/api/subscription/reactivate', async (req: any, res: any) => {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
+        const result = await subscriptionService.reactivateSubscription(email);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * GET /api/jobs/status — Job queue status (admin)
+     */
+    app.get('/api/jobs/status', (_req: any, res: any) => {
+        return res.json(jobQueue.getStatus());
     });
 
     /**

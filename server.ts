@@ -28,6 +28,10 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
+import adminRoutesRouter from './routes/admin';
+import adminAiRouter from './routes/admin-ai';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
 
@@ -1642,6 +1646,19 @@ async function startServer(app: express.Express) {
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+    // ─── Extracted route modules ────────────────────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+    app.use('/api/admin', adminRoutesRouter);
+    app.use('/api/admin/ai', adminAiRouter);
+
+    // Bridge: pass memoryDb and route resolver to extracted routers
+    const { setMemoryDb: setAdminMemoryDb } = require('./routes/admin');
+    const { setMemoryDb: setAiMemoryDb, setRouteResolver } = require('./routes/admin-ai');
+    setAdminMemoryDb(memoryDb);
+    setAiMemoryDb(memoryDb);
+    setRouteResolver(resolveAIRoute);
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {

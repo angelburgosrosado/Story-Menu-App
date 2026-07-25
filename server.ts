@@ -20,6 +20,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
+import adminRoutesRouter from './routes/admin';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -1642,6 +1645,11 @@ async function startServer(app: express.Express) {
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+    // ─── Route modules (extracted from monolith) ─────────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
+    app.use('/api/admin', adminRoutesRouter);
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
@@ -3397,6 +3405,9 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
     /**
      * 1.2 ADMINISTRATIVE SAAS API ENDPOINTS
+     * NOTE: Settings, Plans, Formats routes are now handled by routes/admin.ts
+     * (mounted at /api/admin). Remaining routes below will be extracted in
+     * subsequent PRs. Do NOT add new routes here — use the extracted router.
      */
 
     

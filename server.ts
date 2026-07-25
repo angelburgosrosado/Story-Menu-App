@@ -21,6 +21,7 @@ dotenv.config();
 
 import express from 'express';
 import apiV1Router from './api/v1/index';
+import classroomRouter from './api/classroom';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -1682,6 +1683,10 @@ async function startServer(app: express.Express) {
 
     // ─── Developer API v1 (Task 3.6) ────────────────────────────────────
     app.use('/api/v1', apiV1Router);
+
+    // ─── Developer API v1 + Classroom API (Phase 3) ─────────────────────
+    app.use('/api/v1', apiV1Router);
+    app.use('/api/classroom', classroomRouter);
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {

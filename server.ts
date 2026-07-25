@@ -34,6 +34,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { requireRole } from './middleware/rbac';
 
 try {
     admin.initializeApp({});

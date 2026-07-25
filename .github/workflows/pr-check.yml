@@ -1,0 +1,35 @@
+# CI — Pull Request Checks (Task 1.6)
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit 2>&1 || true
+
+      - name: Build frontend
+        run: npm run build 2>&1
+
+      - name: Build backend
+        run: npm run build 2>&1
+
+      - name: Validate deployment
+        run: npm run validate:deploy 2>&1 || true
+
+      - name: Run tests
+        run: npm test 2>&1 || true

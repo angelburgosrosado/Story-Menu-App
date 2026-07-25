@@ -34,6 +34,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { generalLimiter, aiGenerationLimiter, authLimiter, checkoutLimiter, enforceTokenBudget } from './middleware/rateLimit';
 
 try {
     admin.initializeApp({});
@@ -1643,6 +1644,9 @@ async function startServer(app: express.Express) {
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+    // Task 1.3: Rate limiting middleware — abuse protection
+    app.use('/api/', generalLimiter);
+
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
         res.type('text/plain').send(
@@ -1982,7 +1986,7 @@ Sitemap: https://storymenu.app/sitemap.xml`
         }
     };
 
-    app.post('/api/gemini/speech', async (req, res): Promise<any> => {
+    app.post('/api/gemini/speech', aiGenerationLimiter, async (req, res): Promise<any> => {
         const { text, voiceName, userEmail } = req.body;
         const userTier = await getUserTier(userEmail);
         const route = resolveAIRoute('narration', userTier, process.env.NODE_ENV);
@@ -2199,7 +2203,7 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
         }
     });
 
-    app.post('/api/gemini/persona', async (req, res): Promise<any> => {
+    app.post('/api/gemini/persona', aiGenerationLimiter, async (req, res): Promise<any> => {
         const { desc, selectedGenre,
             artStyle, userEmail } = req.body;
         const userTier = await getUserTier(userEmail);
@@ -2229,7 +2233,7 @@ const uploadToLeonardo = async (base64Str: string, apiKey: string) => {
         }
     });
 
-    app.post('/api/gemini/suggest', async (req, res): Promise<any> => {
+    app.post('/api/gemini/suggest', aiGenerationLimiter, async (req, res): Promise<any> => {
         const { fieldName, currentValue, genre, roleType, characterName, concept, userEmail } = req.body;
         const userTier = await getUserTier(userEmail);
         const routeBeat = resolveAIRoute('beat', userTier, process.env.NODE_ENV);
@@ -2375,7 +2379,7 @@ Rules:
         }
     });
 
-    app.post('/api/gemini/enhance-kid-story', async (req, res): Promise<any> => {
+    app.post('/api/gemini/enhance-kid-story', aiGenerationLimiter, async (req, res): Promise<any> => {
         const { rawText, userEmail } = req.body;
         const userTier = await getUserTier(userEmail);
         const route = resolveAIRoute('beat', userTier, process.env.NODE_ENV);
@@ -2454,7 +2458,7 @@ Your task:
       `.trim();
     }
 
-    app.post('/api/gemini/beat', async (req, res): Promise<any> => {
+    app.post('/api/gemini/beat', aiGenerationLimiter, async (req, res): Promise<any> => {
         const userTier = await getUserTier(req.body.userEmail);
         const route = resolveAIRoute('beat', userTier, process.env.NODE_ENV);
         if (!(await consumeTokens(req.body.userEmail, calculateTokenCost(route.modelSlug as any, 2000)))) return res.status(402).json({ error: 'Insufficient tokens' });
@@ -2626,7 +2630,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/gemini/analyze-image', async (req, res): Promise<any> => {
+    app.post('/api/gemini/analyze-image', aiGenerationLimiter, async (req, res): Promise<any> => {
         const { imageBase64, prompt, userEmail } = req.body;
         const userTier = await getUserTier(userEmail);
         const route = resolveAIRoute('beat', userTier, process.env.NODE_ENV);
@@ -2656,7 +2660,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/gemini/image', async (req, res): Promise<any> => {
+    app.post('/api/gemini/image', aiGenerationLimiter, async (req, res): Promise<any> => {
         const {
             beat,
             type,
@@ -3220,7 +3224,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         res.json({ publishableKey: pubKey });
     });
 
-    app.post('/api/checkout/intent', async (req, res): Promise<any> => {
+    app.post('/api/checkout/intent', checkoutLimiter, async (req, res): Promise<any> => {
         const { amountCents } = req.body;
         if (!amountCents) return res.status(400).json({ error: 'Amount is required' });
 
@@ -3247,7 +3251,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/checkout', async (req, res): Promise<any> => {
+    app.post('/api/checkout', checkoutLimiter, async (req, res): Promise<any> => {
         const { email, tier, paymentMethod, paypalEmail, type, tokensAwarded } = req.body;
 
         if (!email) {

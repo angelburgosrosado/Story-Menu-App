@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { ArrowLeft, Play, Bookmark, Share2, Star, User, MessageSquare, Repeat, Zap, Flag } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import { PublishedStory, MOCK_STORIES } from './PublicGallery';
 
 interface PublicStoryDetailProps {
@@ -40,6 +41,19 @@ export const PublicStoryDetail: React.FC<PublicStoryDetailProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0c0e14] text-slate-100 flex flex-col font-sans">
+      <Helmet>
+        <title>{story.title} — Story.Menu</title>
+        <meta name="description" content={story.description || `Read "${story.title}" on Story.Menu. AI-generated ${story.genre || 'comic'} story.`} />
+        <meta property="og:title" content={`${story.title} — Story.Menu`} />
+        <meta property="og:description" content={story.description || `AI-generated ${story.genre || 'comic'} story`} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://storymenu.app/story/${storyId}`} />
+        {story.coverImage && <meta property="og:image" content={story.coverImage} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${story.title} — Story.Menu`} />
+        <meta name="twitter:description" content={story.description || `AI-generated story on Story.Menu`} />
+        <link rel="canonical" href={`https://storymenu.app/story/${storyId}`} />
+      </Helmet>
       
       {/* Top Nav */}
       <header className="h-16 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md sticky top-0 z-50 flex items-center px-8">

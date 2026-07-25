@@ -35,6 +35,7 @@ import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { generalLimiter, aiGenerationLimiter, authLimiter, checkoutLimiter, enforceTokenBudget } from './middleware/rateLimit';
+import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiSuggestSchema } from './middleware/security';
 
 try {
     admin.initializeApp({});
@@ -1675,6 +1676,9 @@ async function startServer(app: express.Express) {
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+    
+    // Task 1.7: Security headers on all responses
+    app.use(securityHeaders);
 
     // Task 1.3: Rate limiting middleware — abuse protection
     app.use('/api/', generalLimiter);
@@ -3283,7 +3287,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.post('/api/checkout', checkoutLimiter, async (req, res): Promise<any> => {
+    app.post('/api/checkout', checkoutLimiter, validate(checkoutSchema), async (req, res): Promise<any> => {
         const { email, tier, paymentMethod, paypalEmail, type, tokensAwarded } = req.body;
 
         if (!email) {

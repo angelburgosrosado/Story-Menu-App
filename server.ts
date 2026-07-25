@@ -36,6 +36,8 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { generalLimiter, aiGenerationLimiter, authLimiter, checkoutLimiter, enforceTokenBudget } from './middleware/rateLimit';
 import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiSuggestSchema } from './middleware/security';
+import { logger } from './middleware/logger';
+import { errorTracker } from './middleware/errorTracker';
 
 try {
     admin.initializeApp({});
@@ -1682,6 +1684,9 @@ async function startServer(app: express.Express) {
 
     // Task 1.3: Rate limiting middleware — abuse protection
     app.use('/api/', generalLimiter);
+
+    // Task 1.8: Structured request logging
+    app.use(logger.requestMiddleware);
 
     // ─── SEO: robots.txt & multilingual sitemap ──────────────────────────────
     app.get('/robots.txt', (_req, res) => {
@@ -6860,6 +6865,9 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         });
     });
 
+
+    // Task 1.5: Global error handler
+    app.use(errorTracker.errorHandler.bind(errorTracker));
 
     // Start listening on port only when all API endpoints and static assets are fully configured
 

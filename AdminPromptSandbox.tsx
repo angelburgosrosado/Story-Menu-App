@@ -156,7 +156,7 @@ export const AdminPromptSandbox: React.FC = () => {
                     fieldName: field === 'narrative_guidance' ? 'Narrative Guidance' : 'Creative Directives',
                     currentValue,
                     genre: selectedGenre,
-                    userEmail: 'admin-sandbox@example.com'
+                    userEmail: localStorage.getItem('admin_email') || 'unknown'
                 })
             });
 
@@ -217,7 +217,7 @@ export const AdminPromptSandbox: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
                 body: JSON.stringify({
-                    userEmail: 'admin-sandbox@example.com',
+                    userEmail: localStorage.getItem('admin_email') || 'unknown',
                     imageBase64: base64ToAnalyze,
                     prompt: `Analyze this image in the context of a ${selectedGenre} comic. Does it match the following narrative guidance: "${narrativeGuidance}"? Please describe its contents, style, and whether it aligns.`
                 })
@@ -246,7 +246,7 @@ export const AdminPromptSandbox: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
                 body: JSON.stringify({
-                    userEmail: 'admin-sandbox@example.com',
+                    userEmail: localStorage.getItem('admin_email') || 'unknown',
                     history: [], 
                     selectedGenre,
                     selectedLanguage,
@@ -294,7 +294,7 @@ export const AdminPromptSandbox: React.FC = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-gemini-key': geminiKey },
             body: JSON.stringify({
-                userEmail: 'admin-sandbox@example.com',
+                userEmail: localStorage.getItem('admin_email') || 'unknown',
                 beat: beatResult,
                 type: 'main',
                 styleEra,

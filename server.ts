@@ -36,7 +36,9 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { analytics } from './middleware/analytics';
+import { featureFlags } from './middleware/featureFlags';
+import { jobQueue } from './middleware/jobQueue';
+import { subscriptionService } from './middleware/subscription';
 
 try {
     admin.initializeApp({});
@@ -3261,46 +3263,89 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ tokens: matchUser?.tokens || 0 });
     });
 
-    // ─── Collaboration API (Task 3.5) ───────────────────────────────────
-    const { createSession, joinSession, updateCursor, leaveSession, saveContent } = require('./middleware/collaboration');
+    // ─── Phase 7: Feature Flags & Subscription Management ────────────────
 
-    app.post('/api/collab/create', async (req: any, res: any) => {
-        const { storyId, ownerId } = req.body;
-        if (!storyId || !ownerId) return res.status(400).json({ error: 'storyId and ownerId required' });
-        try {
-            await createSession(storyId, ownerId);
-            res.json({ success: true, sessionId: storyId });
-        } catch (err: any) { res.status(500).json({ error: err.message }); }
+    /**
+     * GET /api/feature-flags/:flagName — Check if a feature is enabled
+     */
+    app.get('/api/feature-flags/:flagName', async (req: any, res: any) => {
+        const { flagName } = req.params;
+        const email = req.query?.email || req.headers['x-user-email'];
+        const enabled = await featureFlags.isEnabled(flagName, {
+            email,
+            environment: process.env.NODE_ENV,
+        });
+        return res.json({ flag: flagName, enabled });
     });
 
-    app.post('/api/collab/join', async (req: any, res: any) => {
-        const { storyId, userId, displayName } = req.body;
-        if (!storyId || !userId || !displayName) return res.status(400).json({ error: 'Missing fields' });
-        try {
-            const presence = await joinSession(storyId, userId, displayName);
-            res.json({ success: true, presence });
-        } catch (err: any) { res.status(500).json({ error: err.message }); }
+    /**
+     * GET /api/feature-flags — List all flags (admin)
+     */
+    app.get('/api/feature-flags', async (_req: any, res: any) => {
+        const flags = await featureFlags.getAllFlags();
+        return res.json({ data: flags });
     });
 
-    app.post('/api/collab/cursor', async (req: any, res: any) => {
-        const { storyId, userId, position } = req.body;
-        try { await updateCursor(storyId, userId, position); res.json({ success: true }); }
-        catch (err: any) { res.status(500).json({ error: err.message }); }
+    /**
+     * POST /api/feature-flags — Create/update a flag (admin)
+     */
+    app.post('/api/feature-flags', async (req: any, res: any) => {
+        const { name, enabled, percentage, allowedUsers, excludedUsers, environments, description } = req.body;
+        if (!name) return res.status(400).json({ error: 'name required' });
+        await featureFlags.setFlag({ name, enabled, percentage, allowedUsers, excludedUsers, environments, description });
+        return res.json({ success: true });
     });
 
-    app.post('/api/collab/leave', async (req: any, res: any) => {
-        const { storyId, userId } = req.body;
-        try { await leaveSession(storyId, userId); res.json({ success: true }); }
-        catch (err: any) { res.status(500).json({ error: err.message }); }
+    /**
+     * GET /api/subscription/plans — List available plans
+     */
+    app.get('/api/subscription/plans', (_req: any, res: any) => {
+        return res.json({ data: subscriptionService.getPlans() });
     });
 
-    app.post('/api/collab/save', async (req: any, res: any) => {
-        const { storyId, userId, content, expectedVersion } = req.body;
-        try {
-            const result = await saveContent(storyId, userId, content, expectedVersion);
-            if (result.success) res.json({ success: true });
-            else res.status(409).json({ error: result.error });
-        } catch (err: any) { res.status(500).json({ error: err.message }); }
+    /**
+     * GET /api/subscription/:email — Get user subscription
+     */
+    app.get('/api/subscription/:email', async (req: any, res: any) => {
+        const sub = await subscriptionService.getUserSubscription(req.params.email);
+        return res.json({ data: sub });
+    });
+
+    /**
+     * POST /api/subscription/change-plan — Upgrade/downgrade
+     */
+    app.post('/api/subscription/change-plan', async (req: any, res: any) => {
+        const { email, planId } = req.body;
+        if (!email || !planId) return res.status(400).json({ error: 'email and planId required' });
+        const result = await subscriptionService.changePlan(email, planId);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * POST /api/subscription/cancel — Cancel subscription
+     */
+    app.post('/api/subscription/cancel', async (req: any, res: any) => {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
+        const result = await subscriptionService.cancelSubscription(email);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * POST /api/subscription/reactivate — Reactivate canceled subscription
+     */
+    app.post('/api/subscription/reactivate', async (req: any, res: any) => {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
+        const result = await subscriptionService.reactivateSubscription(email);
+        return result.success ? res.json(result) : res.status(400).json(result);
+    });
+
+    /**
+     * GET /api/jobs/status — Job queue status (admin)
+     */
+    app.get('/api/jobs/status', (_req: any, res: any) => {
+        return res.json(jobQueue.getStatus());
     });
 
     /**

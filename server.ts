@@ -1785,20 +1785,37 @@ async function startServer(app: express.Express) {
 
     // Bridge: pass memoryDb to extracted routers
     try {
-        const { setMemoryDb: setAdminDb } = require('./routes/admin');
-        const { setMemoryDb: setAiDb, setRouteResolver } = require('./routes/admin-ai');
-        const { setMemoryDb: setUsersDb } = require('./routes/admin-users');
-        const { setMemoryDb: setContentDb } = require('./routes/admin-content');
-        const { setMemoryDb: setCreativeDb } = require('./routes/admin-creative');
-        const { setMemoryDb: setModerationDb } = require('./routes/admin-moderation');
-        const { setMemoryDb: setSystemDb } = require('./routes/admin-system');
-        const { setMemoryDb: setAnalyticsDb } = require('./routes/admin-analytics');
-        const { setMemoryDb: setCharactersDb } = require('./routes/admin-characters');
+        const [
+            { setMemoryDb: setAdminDb },
+            { setMemoryDb: setAiDb, setRouteResolver },
+            { setMemoryDb: setUsersDb },
+            { setMemoryDb: setContentDb },
+            { setMemoryDb: setCreativeDb },
+            { setMemoryDb: setModerationDb },
+            { setMemoryDb: setSystemDb },
+            { setMemoryDb: setAnalyticsDb },
+            { setMemoryDb: setCharactersDb },
+            { setMemoryDb: setAdminHelpersDb }
+        ] = await Promise.all([
+            import('./routes/admin'),
+            import('./routes/admin-ai'),
+            import('./routes/admin-users'),
+            import('./routes/admin-content'),
+            import('./routes/admin-creative'),
+            import('./routes/admin-moderation'),
+            import('./routes/admin-system'),
+            import('./routes/admin-analytics'),
+            import('./routes/admin-characters'),
+            import('./admin-helpers')
+        ]);
+
         setAdminDb(memoryDb); setAiDb(memoryDb); setUsersDb(memoryDb); setContentDb(memoryDb);
         setCreativeDb(memoryDb); setModerationDb(memoryDb); setSystemDb(memoryDb); setAnalyticsDb(memoryDb); setCharactersDb(memoryDb);
         setAdminHelpersDb(memoryDb);
-        setRouteResolver(resolveAIRoute);
-    } catch (e) { console.warn('Route module bridge skipped:', e.message); }
+
+        // Bind AI resolver from helper module to admin-ai router so legacy routes stay consistent
+        setRouteResolver((workflowSlug: string, userTier?: string, env?: string) => resolveAIRoute(workflowSlug, userTier, env));
+    } catch (e: any) { console.warn('Route module bridge skipped:', e.message); }
 
     // Task 2.8: HSTS + HTTPS enforcement
     app.use((req: any, res: any, next: any) => {

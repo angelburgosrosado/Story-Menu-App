@@ -99,7 +99,7 @@ The application is deployed on Google Cloud Run. You can access it via the URL p
 We established two highly effective testing tools to prevent regression during future deployments:
 1. **`npm test` (`test-db-queries.cjs`):**
    * Establishes a raw network socket check to measure TCP latency.
-   * Logs on to the live PostgreSQL instance at `34.148.244.49:5432` using credentials, verifying authentication.
+   * Logs on to the live PostgreSQL instance at `your_db_ip:5432` using credentials, verifying authentication.
    * Automatically provisions the multi-tenant namespace schema `vault_app_angelburgosrosado`.
    * Performs an interactive write-through test—inserting a test creator and a temporary comic character—and safely purges the test data afterward during cleanup.
 2. **`npm run validate:deploy` (`validate-deployment.cjs`):**

@@ -35,3 +35,8 @@ coverage/
 .nyc_output/
 
 google-cloud-sdk/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

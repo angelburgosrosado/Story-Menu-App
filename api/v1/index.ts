@@ -135,7 +135,7 @@ router.get('/stories/:id', async (req: Request, res: Response) => {
         const usersSnap = await db.collection('users').limit(50).get();
 
         for (const userDoc of usersSnap.docs) {
-            const storySnap = await userDoc.ref.collection('projects').doc(id).get();
+            const storySnap = await userDoc.ref.collection('projects').doc(String(id)).get();
             if (storySnap.exists) {
                 return res.json({ id: storySnap.id, ...storySnap.data() });
             }
@@ -157,7 +157,7 @@ router.post('/stories/:id/export', async (req: Request, res: Response) => {
         const usersSnap = await db.collection('users').limit(50).get();
 
         for (const userDoc of usersSnap.docs) {
-            const storySnap = await userDoc.ref.collection('projects').doc(id).get();
+            const storySnap = await userDoc.ref.collection('projects').doc(String(id)).get();
             if (storySnap.exists) {
                 const data = storySnap.data();
                 res.setHeader('Content-Disposition', `attachment; filename="story-${id}.json"`);

@@ -1,8 +1,8 @@
 # HANDOFF.md — Story Menu App Development State
 
-> **Generated:** 2026-07-25
+> **Generated:** 2026-07-26
 > **Purpose:** Complete development state for AI assistants (Gemini CLI, Claude, etc.) to continue work
-> **Status:** 57/57 tasks delivered, all merged to main
+> **Status:** Frontend decomposition + server route cleanup in progress; all gates passing
 
 ---
 
@@ -31,10 +31,11 @@ MIDDLEWARE STACK:
   Rate Limiter → Input Validator → Auth (Firebase) → RBAC → Logger → Route Handler
     ↓
 ROUTE MODULES:
-  routes/admin.ts          — Admin CRUD (95 endpoints)
-  routes/admin-ai.ts       — AI configuration
+  routes/admin.ts          — Settings / plans / formats admin routes
+  routes/admin-ai.ts       — AI providers / models / workflows / routing rules (legacy paths)
   routes/admin-users.ts    — User/customer management
   routes/admin-content.ts  — Content management
+  routes/subscription.ts   — Stripe billing portal + subscription endpoints
   api/v1/index.ts          — Developer API v1
   api/classroom.ts         — Classroom/LMS integration
     ↓
@@ -58,42 +59,60 @@ DATA:
 ```
 Story-Menu-App/
 ├── api/
-│   ├── v1/index.ts              # Developer API v1 (262 lines)
-│   └── classroom.ts             # Classroom/LMS API (211 lines)
+│   ├── v1/index.ts              # Developer API v1
+│   └── classroom.ts             # Classroom/LMS API
 ├── db/
-│   └── migrate.ts               # Database migrations (171 lines)
+│   └── migrate.ts               # Database migrations
 ├── middleware/
-│   ├── rateLimit.ts             # Rate limiting + token budgets (122 lines)
-│   ├── security.ts              # CSP, headers, input validation (112 lines)
-│   ├── rbac.ts                  # 5-tier role hierarchy (99 lines)
-│   ├── logger.ts                # Structured JSON logging (90 lines)
-│   ├── errorTracker.ts          # Sentry integration (89 lines)
-│   ├── analytics.ts             # Event tracking (94 lines)
-│   ├── collaboration.ts         # Real-time collaboration (169 lines)
-│   ├── emailService.ts          # Transactional emails (93 lines)
-│   ├── accessibility.tsx        # A11y middleware (75 lines)
+│   ├── rateLimit.ts             # Rate limiting + token budgets
+│   ├── security.ts              # CSP, headers, input validation
+│   ├── rbac.ts                  # 5-tier role hierarchy
+│   ├── logger.ts                # Structured JSON logging
+│   ├── errorTracker.ts          # Sentry integration
+│   ├── analytics.ts             # Event tracking
+│   ├── collaboration.ts         # Real-time collaboration
+│   ├── emailService.ts          # Transactional emails
+│   ├── accessibility.tsx        # A11y middleware
 │   ├── featureFlags.ts          # Feature flag system
 │   ├── jobQueue.ts              # Background job queue
 │   └── subscription.ts          # Subscription management
 ├── routes/
-│   ├── admin.ts                 # Admin CRUD routes (196 lines)
-│   ├── admin-ai.ts              # AI admin routes (102 lines)
-│   ├── admin-users.ts           # User management routes (168 lines)
-│   └── admin-content.ts         # Content management routes (211 lines)
+│   ├── admin.ts                 # Settings / plans / formats
+│   ├── admin-ai.ts              # AI engine admin routes
+│   ├── admin-users.ts           # User management routes
+│   ├── admin-content.ts         # Content management routes
+│   └── subscription.ts          # Stripe billing portal
 ├── tests/
-│   ├── api.test.ts              # API route tests (179 lines)
-│   ├── auth.test.ts             # Auth flow tests (154 lines)
-│   ├── stripe-webhook.test.ts   # Stripe webhook tests (172 lines)
-│   ├── components.test.tsx      # Component tests (132 lines)
-│   └── migrations.test.ts       # Migration tests (106 lines)
-├── db.ts                        # Database connection + self-healing
-├── server.ts                    # Express entry point (slim, ~600 lines after decomposition)
-├── App.tsx                      # React main app
-├── AdminApp.tsx                 # Admin panel
-├── AdminDashboard.tsx           # Admin dashboard
-├── Home.tsx                     # Landing page
-├── Setup.tsx                    # Onboarding wizard
-├── *.tsx                        # 40+ React components
+│   ├── api.test.ts              # API route tests
+│   ├── auth.test.ts             # Auth flow tests
+│   ├── stripe-webhook.test.ts   # Stripe webhook tests
+│   ├── components.test.tsx      # Component tests
+│   ├── migrations.test.ts       # Migration tests
+│   └── setup.ts                 # Vitest setup (fetch stub)
+├── vitest.config.ts           # Vitest config (node env + setup file)
+├── db.ts                      # Database connection + self-healing
+├── server.ts                  # Express entry point (~6,660 lines; shrinking)
+├── App.tsx                    # React main app
+├── AdminApp.tsx               # Admin panel
+├── AdminDashboard.tsx         # Admin dashboard
+├── Home.tsx                   # Landing page
+├── Setup.tsx                  # Onboarding wizard
+├── components/                # Decomposed components
+│   └── admin/                   # Admin tab components
+│       ├── MembershipsTab.tsx
+│       ├── ModerationTab.tsx
+│       ├── PlansTab.tsx
+│       ├── IntegrationsTab.tsx
+│       ├── LandingTab.tsx
+│       ├── SecurityTab.tsx
+│       ├── DiagnosticsTab.tsx
+│       ├── AIEngineTab.tsx
+│       ├── AdminSidebarNav.tsx
+│       ├── AdminCostAnalyticsView.tsx
+│       └── AdminLogsView.tsx
+│   └── setup/                   # Onboarding step components
+│       ├── SetupStep1Format.tsx
+│       └── SetupStep8Review.tsx
 ├── .github/workflows/
 │   ├── deploy.yml               # CI/CD pipeline
 │   └── pr-check.yml             # PR validation
@@ -126,6 +145,7 @@ Story-Menu-App/
 - [x] Security headers (HSTS, CSP, X-Frame-Options)
 - [x] Upload validation (MIME type + size)
 - [x] Firebase Admin startup assertion
+- [x] `requireAdmin` middleware mounted consistently on all admin routers
 
 ### Phase 2 — Observability ✅
 - [x] Sentry error tracking
@@ -136,12 +156,11 @@ Story-Menu-App/
 - [x] Cloud Run health checks
 
 ### Phase 3 — Code Quality ✅
-- [x] Server route decomposition (154 routes → 6 modules)
-- [x] AdminDashboard decomposition
-- [x] AdminApp decomposition
-- [x] App.tsx decomposition
-- [x] Setup.tsx decomposition
-- [x] Home.tsx decomposition
+- [x] Server route decomposition (settings/plans/formats → `routes/admin.ts`; AI engine → `routes/admin-ai.ts`)
+- [x] AdminDashboard decomposition into tab components
+- [x] AdminApp decomposition into nav + view components
+- [x] Setup.tsx decomposition into step components
+- [x] App.tsx / Home.tsx decomposition (pre-existing)
 - [x] Code splitting (React.lazy + Suspense)
 - [x] ESLint + Prettier
 - [x] Pre-commit hooks (lint-staged + husky)
@@ -151,9 +170,9 @@ Story-Menu-App/
 - [x] API route tests
 - [x] Stripe webhook tests
 - [x] Auth flow tests
-- [x] Component tests
-- [x] E2E test suite
+- [x] Component tests (with jsdom environment + fetch stub)
 - [x] Database migration tests
+- [x] Vitest config + `tests/setup.ts` to stub external fetches
 
 ### Phase 5 — CI/CD ✅
 - [x] GitHub Actions pipeline (lint → test → build → deploy)
@@ -177,6 +196,7 @@ Story-Menu-App/
 - [x] Mobile responsive fixes
 - [x] Accessibility (ARIA, keyboard nav)
 - [x] Subscription management
+- [x] Stripe Customer Billing Portal (`POST /api/subscription/portal`)
 - [x] Background job queue
 - [x] CDN configuration docs
 - [x] Custom domain docs
@@ -191,17 +211,37 @@ Story-Menu-App/
 
 ---
 
-## 5. What Remains (Post-Launch)
+## 5. Current Work In Progress
 
-These items were documented but not yet implemented as code:
+### This session (2026-07-26)
+1. **Frontend component decomposition** — `AdminDashboard.tsx`, `AdminApp.tsx`, `Setup.tsx` split into focused components under `components/admin/` and `components/setup/`.
+2. **Test environment hardening** — Added `vitest.config.ts`, `tests/setup.ts`, jsdom directives, and `imageUtils` mock so the suite passes without external network calls.
+3. **Type/build fixes** — Added missing `isConnectionError` export, fixed Firestore `.doc(id)` typing, patched `ErrorContext.method`, removed duplicate router imports.
+4. **Stripe Customer Billing Portal** — New `routes/subscription.ts` with `POST /api/subscription/portal`.
+5. **Admin route cleanup** — Moved `requireAdmin` before router mounts, applied it to all admin routers, and removed unreachable inline duplicates:
+   - `/api/admin/settings` (GET, POST)
+   - `/api/admin/plans` (GET, POST, DELETE)
+   - `/api/admin/formats` (GET, POST, PUT, DELETE)
+   - `/api/admin/ai-providers|ai-models|ai-workflows|ai-routing-rules` (GET, POST, PUT, DELETE)
+   - `/api/admin/ai-fallback-configs`, `/api/admin/ai-routing/resolve`, `/api/admin/ai-engine/summary`
+
+### Verification (all passing)
+```bash
+npx tsc --noEmit        # 0 errors
+npm run test -- --run   # 6 files, 72 tests passed
+npm run build           # vite + esbuild success
+```
+
+---
+
+## 6. What Remains
 
 ### High Priority
 | Task | Effort | Notes |
 |---|---|---|
-| **Component decomposition (frontend)** | 3-5 days | AdminDashboard (250KB) and AdminApp (156KB) are still monolithic on the frontend. Route modules were extracted but React components need splitting. |
+| **Migrate remaining inline admin routes** | 2-3 days | Landing, cost-analytics, usage-modes, glossary, reference-images, personas, customers, system/users, moderation, health/stats/logs, voices, soundtracks, languages, styles, prompt-templates, categories. Many inline routes use legacy schemas or Firestore; align with extracted routers before removing. |
 | **E2E tests (Playwright)** | 3-5 days | Current tests are unit/integration. Need browser-based E2E for critical paths. |
 | **FirebaseMockPool replacement** | 2-3 days | SQL-to-Firestore regex translator is fragile. Replace with proper ORM or dual-DB adapter. |
-| **Stripe Billing portal** | 1-2 days | Users can't self-manage subscriptions yet. |
 | **Real analytics dashboard** | 2-3 days | Event tracking is wired, but no admin UI to view analytics. |
 
 ### Medium Priority
@@ -223,12 +263,12 @@ These items were documented but not yet implemented as code:
 
 ---
 
-## 6. Environment Variables
+## 7. Environment Variables
 
 ```env
 # Required
 PORT=3000
-DATABASE_URL=postgresql://user:pass@host:5432/dbname
+DATABASE_URL=postgresql://user:***@host:5432/dbname
 GEMINI_API_KEY=your_gemini_key
 FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 STRIPE_SECRET_KEY=sk_test_...
@@ -246,7 +286,7 @@ POSTHOG_API_KEY=your_posthog_key
 
 ---
 
-## 7. How to Continue Development
+## 8. How to Continue Development
 
 ### For AI Assistants (Gemini CLI, Claude, etc.)
 
@@ -265,12 +305,13 @@ POSTHOG_API_KEY=your_posthog_key
 
 3. **Check current state:**
    ```bash
+   git status
    git log --oneline -20  # recent commits
    git branch -a          # all branches
-   npm test               # run test suite
+   npm run test           # run test suite
    ```
 
-4. **Pick a task from Section 5** and create a branch:
+4. **Pick a task from Section 6** and create a branch:
    ```bash
    git checkout -b feature/your-feature-name
    # make changes
@@ -294,18 +335,17 @@ POSTHOG_API_KEY=your_posthog_key
 
 ---
 
-## 8. Known Issues & Technical Debt
+## 9. Known Issues & Technical Debt
 
-1. **Monolithic React components** — AdminDashboard (250KB) and AdminApp (156KB) still need decomposition
+1. **Remaining inline admin routes** — `server.ts` still contains many admin routes (landing, cost-analytics, usage-modes, glossary, reference-images, personas, customers, system/users, moderation, health/stats/logs, voices, soundtracks, languages, styles, prompt-templates, categories). Some use legacy schemas or Firestore and must be aligned with extracted routers before removal.
 2. **FirebaseMockPool** — SQL-to-Firestore regex translator is fragile; replace with proper adapter
-3. **Duplicate route registrations** — Some route modules may be registered multiple times in server.ts (clean during merge conflicts, but verify)
-4. **Test coverage gaps** — Unit tests exist but E2E browser tests are needed
-5. **No staging environment** — Only production on Cloud Run
-6. **Database IP in docs** — `34.148.244.49` is still in PROJECT_DOCUMENTATION.md (should be redacted)
+3. **Test coverage gaps** — Unit tests exist but E2E browser tests are needed
+4. **No staging environment** — Only production on Cloud Run
+5. **Database IP in docs** — `34.148.244.49` is still in PROJECT_DOCUMENTATION.md (should be redacted)
 
 ---
 
-## 9. Deployment
+## 10. Deployment
 
 ```bash
 # Build
@@ -324,7 +364,7 @@ gcloud run deploy myiad-comic-app \
 
 ---
 
-## 10. Contacts
+## 11. Contacts
 
 | Role | Name | GitHub |
 |---|---|---|

@@ -12,6 +12,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, X, Users, DollarSign, Activity, Trash2, RefreshCw, Edit2, Plus, Copy, FileText, Layout, Award } from 'lucide-react';
+import { MembershipsTab } from './components/admin/MembershipsTab';
+import { ModerationTab } from './components/admin/ModerationTab';
+import { PlansTab } from './components/admin/PlansTab';
+import { IntegrationsTab } from './components/admin/IntegrationsTab';
+import { LandingTab } from './components/admin/LandingTab';
+import { SecurityTab } from './components/admin/SecurityTab';
+import { AIEngineTab } from './components/admin/AIEngineTab';
+import { DiagnosticsTab } from './components/admin/DiagnosticsTab';
 
 interface Customer {
   id: string;
@@ -421,58 +429,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                 </div>
 
                 {activeTab === 'memberships' && (
-                    <div className="bg-slate-950 border border-slate-700">
-                        <div className="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-900">
-                            <span className="font-bold text-xs uppercase">Recent Registered Creators</span>
-                            <button onClick={fetchData} className="text-cyan-400 hover:text-cyan-300"><RefreshCw size={14} /></button>
-                        </div>
-                        <table className="w-full text-left text-[11px] font-mono">
-                            <thead className="bg-slate-900 text-gray-400 uppercase">
-                                <tr>
-                                    <th className="p-2">Email</th>
-                                    <th className="p-2">Tier</th>
-                                    <th className="p-2">Method</th>
-                                    <th className="p-2">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {customers.map(c => (
-                                <tr key={c.id} className="border-t border-slate-800 hover:bg-slate-900/50">
-                                    <td className="p-2 truncate">{c.email}</td>
-                                    <td className="p-2 text-yellow-400">{c.tier || 'Free'}</td>
-                                    <td className="p-2">{c.paymentMethod || '-'}</td>
-                                    <td className="p-2">
-                                        <button 
-                                            onClick={async () => {
-                                                const newTier = prompt("Enter new tier (Pro/Enterprise/Free):", c.tier || 'Free');
-                                                if (newTier) {
-                                                    await fetch(`/api/admin/customers/${c.email}`, { 
-                                                        method: 'PUT', 
-                                                        headers: {'Content-Type': 'application/json'},
-                                                        body: JSON.stringify({ tier: newTier }) 
-                                                    });
-                                                    fetchData();
-                                                }
-                                            }}
-                                            className="text-cyan-400 hover:text-cyan-300 mr-3">
-                                            Edit
-                                        </button>
-                                        <button 
-                                            onClick={async () => {
-                                                if(confirm(`Delete ${c.email}?`)) {
-                                                    await fetch(`/api/admin/customers/${c.email}`, { method: 'DELETE' });
-                                                    fetchData();
-                                                }
-                                            }}
-                                            className="text-red-500 hover:text-red-300">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <MembershipsTab customers={customers} fetchData={fetchData} />
                 )}
 
                 {activeTab === 'categories' && (
@@ -961,6 +918,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         </div>
                                     ))}
                                 </div>
+                            </div>
                         )}
 
                         {/* 7. Sub-tab: Style Library */}
@@ -1397,8 +1355,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 </div>
                             </div>
                         )}
-                    </div>
-                )}
 
                         {/* Format Modal */}
                         {showFormatModal && editingFormat && (
@@ -2247,806 +2203,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                 )}
 
                 {activeTab === 'moderation' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4">
-                        <h3 className="font-bold text-sm text-red-500 mb-4">Content Safety & Moderation Queue</h3>
-                        {flags.length === 0 ? (
-                            <div className="text-emerald-500 text-xs italic font-mono flex items-center gap-2">
-                                <Shield size={14} /> Queue is clear. All global content is safe.
-                            </div>
-                        ) : (
-                            <ul className="space-y-3">
-                                {flags.map((flag: any) => (
-                                    <li key={flag.id} className="p-3 bg-red-950/20 border border-red-900/50">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <div className="text-red-400 font-bold text-sm uppercase">[{flag.severity}] Violation Flag</div>
-                                                <div className="text-gray-400 text-xs mt-1">Reason: {flag.reason}</div>
-                                                <div className="text-gray-500 text-[10px] mt-1">Target ID: {flag.target_id} ({flag.target_type})</div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button className="bg-emerald-600/20 text-emerald-400 px-2 py-1 text-xs border border-emerald-600/50 hover:bg-emerald-600/40"
-                                                    onClick={async () => {
-                                                        await fetch(`/api/admin/moderation/${flag.id}/resolve`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'safe' }) });
-                                                        fetchData();
-                                                    }}>Mark Safe</button>
-                                                <button className="bg-red-600/20 text-red-400 px-2 py-1 text-xs border border-red-600/50 hover:bg-red-600/40"
-                                                    onClick={async () => {
-                                                        await fetch(`/api/admin/moderation/${flag.id}/resolve`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'remove' }) });
-                                                        fetchData();
-                                                    }}>Takedown Content</button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
+                    <ModerationTab flags={flags} fetchData={fetchData} />
                 )}
 
                 {activeTab === 'plans' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4 relative">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-sm text-cyan-400">Manage Subscription Tiers</h3>
-                            <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded text-xs font-bold" onClick={() => {
-                                setEditingPlan({ name: "", priceSubscription: 0, priceOneTime: 0, features: [] });
-                                setShowPlanModal(true);
-                            }}>+ Create Plan</button>
-                        </div>
-                        {plans.length === 0 ? (
-                            <div className="text-gray-500 text-xs italic">No plans configured yet. Using sandbox defaults.</div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {plans.map((p: any) => (
-                                    <div key={p.id} className="p-4 border border-slate-800 bg-slate-900 flex flex-col">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="text-lg font-black text-cyan-400 uppercase">{p.name}</div>
-                                            <div className="flex flex-col text-right">
-                                                <span className="text-green-400 font-mono font-bold">${p.priceSubscription}/mo</span>
-                                                <span className="text-emerald-500 font-mono text-[10px]">or ${p.priceOneTime} one-time</span>
-                                            </div>
-                                        </div>
-                                        <ul className="text-xs text-gray-400 mb-4 flex-1 space-y-1 font-mono">
-                                            {Array.isArray(p.features) ? p.features.map((f: string, i: number) => <li key={i}>✓ {f}</li>) : <li>{typeof p.features === 'string' ? p.features : 'No features listed'}</li>}
-                                        </ul>
-                                        <button className="text-red-500 hover:text-red-400 text-xs flex items-center justify-center gap-1 border border-red-900/50 py-1" onClick={async () => {
-                                            if (confirm(`Delete plan ${p.name}?`)) {
-                                                await fetch(`/api/admin/plans/${p.id}`, { method: 'DELETE' });
-                                                fetchData();
-                                            }
-                                        }}><Trash2 size={12}/> Delete Tier</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {showPlanModal && (
-                            <div className="absolute top-0 left-0 w-full h-full bg-slate-950/90 z-10 flex items-center justify-center p-4">
-                                <div className="bg-slate-900 border border-slate-700 p-6 rounded max-w-lg w-full max-h-full overflow-y-auto">
-                                    <h3 className="font-bold text-lg mb-4 text-white">Configure Plan</h3>
-                                    
-                                    <label className="block text-xs font-bold text-slate-400 mb-1">Plan Name</label>
-                                    <input type="text" className="w-full bg-slate-950 border border-slate-800 p-2 text-white mb-4" value={editingPlan.name} onChange={e => setEditingPlan({...editingPlan, name: e.target.value})} placeholder="e.g. Creator Pro" />
-
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 mb-1">Monthly Sub Price ($)</label>
-                                            <input type="number" className="w-full bg-slate-950 border border-slate-800 p-2 text-white" value={editingPlan.priceSubscription} onChange={e => setEditingPlan({...editingPlan, priceSubscription: e.target.value})} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 mb-1">One-Time Price ($)</label>
-                                            <input type="number" className="w-full bg-slate-950 border border-slate-800 p-2 text-white" value={editingPlan.priceOneTime} onChange={e => setEditingPlan({...editingPlan, priceOneTime: e.target.value})} />
-                                        </div>
-                                    </div>
-
-                                    <label className="block text-xs font-bold text-slate-400 mb-2">Monetizable Features</label>
-                                    <div className="space-y-2 mb-6 border border-slate-800 p-3 bg-slate-950 max-h-60 overflow-y-auto">
-                                        {MONETIZABLE_FEATURES.map((feature) => (
-                                            <label key={feature} className="flex items-center space-x-2 text-sm text-gray-300 cursor-pointer">
-                                                <input 
-                                                    type="checkbox" 
-                                                    className="accent-cyan-500"
-                                                    checked={editingPlan.features.includes(feature)}
-                                                    onChange={(e) => {
-                                                        const newFeatures = e.target.checked 
-                                                            ? [...editingPlan.features, feature] 
-                                                            : editingPlan.features.filter((f: string) => f !== feature);
-                                                        setEditingPlan({...editingPlan, features: newFeatures});
-                                                    }}
-                                                />
-                                                <span>{feature}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex justify-end gap-2">
-                                        <button className="px-4 py-2 bg-slate-800 text-white rounded text-sm hover:bg-slate-700" onClick={() => setShowPlanModal(false)}>Cancel</button>
-                                        <button className="px-4 py-2 bg-cyan-600 text-white rounded text-sm font-bold hover:bg-cyan-500" onClick={async () => {
-                                            await fetch('/api/admin/plans', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify(editingPlan)
-                                            });
-                                            setShowPlanModal(false);
-                                            fetchData();
-                                        }}>Save Plan</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <PlansTab plans={plans} fetchData={fetchData} />
                 )}
 
                 {activeTab === 'integrations' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-sm text-cyan-400">Payment Gateway Integrations</h3>
-                            <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded text-xs font-bold" onClick={() => fetchData()}>Refresh</button>
-                        </div>
-                        <div className="text-xs text-yellow-500 font-mono mb-6 bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
-                            * Tokens stored here override sandbox mocks. API keys are persisted securely in the database (`app_settings`) and synced to local environment variables.
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Stripe */}
-                            <div className="p-5 bg-slate-900 border border-slate-800 rounded">
-                                <h4 className="font-bold text-indigo-400 mb-4 flex items-center gap-2">Stripe Processor</h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Publishable Key</label>
-                                            {stripePub ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input type="text" value={stripePub} onChange={e => setStripePub(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="pk_live_..." />
-                                            <button onClick={() => { handleSaveSetting('stripe_publishable_key', stripePub, false); showToast('Stripe Publishable Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Secret Key (Restricted)</label>
-                                            {stripeSecret ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input type="password" value={stripeSecret} onChange={e => setStripeSecret(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-indigo-500 focus:outline-none" placeholder="sk_live_..." />
-                                            <button onClick={() => { handleSaveSetting('stripe_secret_key', stripeSecret, true); showToast('Stripe Secret Key saved', 'success'); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Save</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* PayPal */}
-                            <div className="p-5 bg-slate-900 border border-slate-800 rounded">
-                                <h4 className="font-bold text-blue-400 mb-4 flex items-center gap-2">PayPal Processor</h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <label className="block text-[10px] uppercase font-bold text-gray-500">Client ID</label>
-                                            {paypalClient ? <span className="text-[9px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">CONNECTED</span> : <span className="text-[9px] font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded">MISSING</span>}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input type="text" value={paypalClient} onChange={e => setPaypalClient(e.target.value)} className="w-full bg-slate-950 border border-slate-700 p-2 text-xs rounded text-white focus:border-blue-500 focus:outline-none" placeholder="Client ID from PayPal Developer Dashboard..." />
-                                            <button onClick={() => { handleSaveSetting('paypal_client_id', paypalClient, false); showToast('PayPal Client ID saved', 'success'); }} className="bg-blue-600 hover:bg-blue-500 text-white px-3 text-xs font-bold rounded shadow-lg shadow-blue-500/20 transition-all active:scale-95">Save</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <IntegrationsTab
+                        stripePub={stripePub}
+                        setStripePub={setStripePub}
+                        stripeSecret={stripeSecret}
+                        setStripeSecret={setStripeSecret}
+                        paypalClient={paypalClient}
+                        setPaypalClient={setPaypalClient}
+                        handleSaveSetting={handleSaveSetting}
+                        showToast={showToast}
+                        fetchData={fetchData}
+                    />
                 )}
 
                 {activeTab === 'landing' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-sm text-green-400">Dynamic Landing Page Configuration</h3>
-                            <button className="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded text-xs font-bold transition-colors shadow-lg" onClick={async () => {
-                                const payload = {
-                                    heroBadge: (document.getElementById('lp_hero_badge') as HTMLInputElement).value,
-                                    heroTitle: (document.getElementById('lp_hero_title') as HTMLInputElement).value,
-                                    heroTitleHighlight: (document.getElementById('lp_hero_highlight') as HTMLInputElement).value,
-                                    heroSubtitle: (document.getElementById('lp_hero_sub') as HTMLTextAreaElement).value,
-                                    pathComicTitle: (document.getElementById('lp_path_comic_title') as HTMLInputElement).value,
-                                    pathComicDesc: (document.getElementById('lp_path_comic_desc') as HTMLTextAreaElement).value,
-                                    pathComicBtn: (document.getElementById('lp_path_comic_btn') as HTMLInputElement).value,
-                                    pathKidTitle: (document.getElementById('lp_path_kid_title') as HTMLInputElement).value,
-                                    pathKidDesc: (document.getElementById('lp_path_kid_desc') as HTMLTextAreaElement).value,
-                                    pathKidBtn: (document.getElementById('lp_path_kid_btn') as HTMLInputElement).value,
-                                    pathWriterTitle: (document.getElementById('lp_path_writer_title') as HTMLInputElement).value,
-                                    pathWriterDesc: (document.getElementById('lp_path_writer_desc') as HTMLTextAreaElement).value,
-                                    pathWriterBtn: (document.getElementById('lp_path_writer_btn') as HTMLInputElement).value,
-                                };
-                                await fetch('/api/admin/landing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                                fetchData();
-                                alert("Landing Page Updated!");
-                            }}>Save Changes</button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-6">
-                            {/* Hero Section */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">🦸</span> Hero Section</h4>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Badge Text (e.g., The Ultimate AI Publishing Platform)</label>
-                                        <input id="lp_hero_badge" defaultValue={landingConfig?.heroBadge || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Main Title (e.g., Create the Stories You've...)</label>
-                                            <input id="lp_hero_title" defaultValue={landingConfig?.heroTitle || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Title Highlight (e.g., Always Imagined)</label>
-                                            <input id="lp_hero_highlight" defaultValue={landingConfig?.heroTitleHighlight || ''} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Subtitle Description</label>
-                                        <textarea id="lp_hero_sub" defaultValue={landingConfig?.heroSubtitle || ''} rows={3} placeholder="Leave empty for default" className="w-full bg-slate-950 border border-slate-700 p-2.5 rounded text-xs text-white" />
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-xl text-xs text-yellow-500 italic">
-                                Note: Additional sections like Features, Capabilities, and Visual Styles can be managed via the database directly or extended here in future updates. Currently, managing the Hero and Paths sections natively overrides the hardcoded text immediately.
-                            </div>
-                            
-                            {/* Paths Section */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">🛤️</span> The 3 Paths</h4>
-                                <div className="space-y-4">
-                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
-                                        <h5 className="text-xs font-bold text-indigo-400 mb-2">Comic Studio</h5>
-                                        <input id="lp_path_comic_title" defaultValue={landingConfig?.pathComicTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <textarea id="lp_path_comic_desc" defaultValue={landingConfig?.pathComicDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <input id="lp_path_comic_btn" defaultValue={landingConfig?.pathComicBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
-                                    </div>
-                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
-                                        <h5 className="text-xs font-bold text-emerald-400 mb-2">Kid Storymaker</h5>
-                                        <input id="lp_path_kid_title" defaultValue={landingConfig?.pathKidTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <textarea id="lp_path_kid_desc" defaultValue={landingConfig?.pathKidDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <input id="lp_path_kid_btn" defaultValue={landingConfig?.pathKidBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
-                                    </div>
-                                    <div className="p-3 border border-slate-700 rounded bg-slate-950">
-                                        <h5 className="text-xs font-bold text-amber-400 mb-2">Writer's Journal</h5>
-                                        <input id="lp_path_writer_title" defaultValue={landingConfig?.pathWriterTitle || ''} placeholder="Title" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <textarea id="lp_path_writer_desc" defaultValue={landingConfig?.pathWriterDesc || ''} rows={2} placeholder="Description" className="w-full bg-slate-900 border border-slate-700 p-2 mb-2 rounded text-xs text-white" />
-                                        <input id="lp_path_writer_btn" defaultValue={landingConfig?.pathWriterBtn || ''} placeholder="Button Label" className="w-full bg-slate-900 border border-slate-700 p-2 rounded text-xs text-white" />
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Advanced Capabilities & Styles JSON Section */}
-                            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                                <h4 className="font-bold text-white mb-2 flex items-center gap-2"><span className="text-xl">⚙️</span> Advanced JSON Configuration</h4>
-                                <p className="text-xs text-gray-400">Override the raw `capabilitiesBadge`, `capabilitiesTitle`, `capabilitiesDesc`, or the `stylePreviews` and `capabilities` objects by providing a valid JSON payload. This will be merged into the config.</p>
-                                <textarea id="lp_advanced_json" rows={6} placeholder={`{\n  "capabilitiesBadge": "Custom Badge",\n  "stylePreviews": { "custom": { "title": "...", "desc": "...", "cover": "...", "badge": "..." } }\n}`} className="w-full bg-slate-950 font-mono text-xs text-white p-3 rounded border border-slate-700"></textarea>
-                                <button className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-xs font-bold" onClick={async () => {
-                                    try {
-                                        const raw = (document.getElementById('lp_advanced_json') as HTMLTextAreaElement).value;
-                                        if (!raw.trim()) { alert("Please enter valid JSON"); return; }
-                                        const parsed = JSON.parse(raw);
-                                        await fetch('/api/admin/landing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(parsed) });
-                                        fetchData();
-                                        alert("Advanced Configuration Saved!");
-                                        (document.getElementById('lp_advanced_json') as HTMLTextAreaElement).value = '';
-                                    } catch (e: any) {
-                                        alert("Invalid JSON: " + e.message);
-                                    }
-                                }}>Save JSON Config</button>
-                            </div>
-                        </div>
-                    </div>
+                    <LandingTab landingConfig={landingConfig} fetchData={fetchData} />
                 )}
 
                 {activeTab === 'security' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 className="font-bold text-lg text-yellow-400 flex items-center gap-2">
-                                    <Shield size={20} /> Access Control Lists
-                                </h3>
-                                <p className="text-xs text-gray-400 mt-1">Manage users who have Super Admin clearance.</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h4 className="font-bold text-sm text-slate-300 mb-3 border-b border-slate-800 pb-2">Authorized Administrators</h4>
-                                {adminUsers.length === 0 ? (
-                                    <div className="text-gray-500 text-xs italic bg-slate-900 p-4 rounded text-center">No admins configured. Check default credentials.</div>
-                                ) : (
-                                    <ul className="space-y-2">
-                                        {adminUsers.map((user: any) => (
-                                            <li key={user.username} className="flex justify-between items-center p-3 bg-slate-900 border border-slate-800 rounded">
-                                                <div>
-                                                    <div className="font-bold text-sm text-slate-200">{user.username}</div>
-                                                    <div className="text-[10px] text-gray-500">Role: {user.role || 'Admin'} • Created: {new Date(user.created_at).toLocaleDateString()}</div>
-                                                </div>
-                                                <button 
-                                                    onClick={() => handleDeleteAdmin(user.username)}
-                                                    className="text-red-500 hover:text-red-400 p-2 rounded hover:bg-red-500/10 transition-colors"
-                                                    title="Revoke Access"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-
-                            <div className="bg-slate-900 p-4 rounded border border-slate-800">
-                                <h4 className="font-bold text-sm text-slate-300 mb-4">Grant Access</h4>
-                                <form onSubmit={handleCreateAdmin} className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-400 mb-1">Email Address</label>
-                                        <input 
-                                            type="email" 
-                                            value={newAdminEmail}
-                                            onChange={e => setNewAdminEmail(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white focus:border-yellow-400 outline-none"
-                                            placeholder="e.g. admin@story.menu"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-400 mb-1">Secure Password</label>
-                                        <input 
-                                            type="password" 
-                                            value={newAdminPassword}
-                                            onChange={e => setNewAdminPassword(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white focus:border-yellow-400 outline-none"
-                                            placeholder="••••••••"
-                                            required
-                                        />
-                                    </div>
-                                    <button 
-                                        type="submit"
-                                        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 rounded transition-colors text-sm"
-                                    >
-                                        Create Administrator
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                    <SecurityTab
+                        adminUsers={adminUsers}
+                        handleDeleteAdmin={handleDeleteAdmin}
+                        handleCreateAdmin={handleCreateAdmin}
+                        newAdminEmail={newAdminEmail}
+                        setNewAdminEmail={setNewAdminEmail}
+                        newAdminPassword={newAdminPassword}
+                        setNewAdminPassword={setNewAdminPassword}
+                    />
                 )}
 
-                {/* ================================================================
-                    AI ENGINE TAB
-                    ================================================================ */}
                 {activeTab === 'ai-engine' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4 space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-sm text-violet-400">⚡ AI Engine — Providers, Models &amp; Routing</h3>
-                            <button onClick={fetchData} className="text-violet-400 hover:text-violet-300 text-xs flex items-center gap-1"><RefreshCw size={12}/> Refresh</button>
-                        </div>
-
-                        {/* Sub-tab nav */}
-                        <div className="flex border-b border-slate-800 gap-2 flex-wrap">
-                            {(['providers','models','workflows','routing'] as const).map(st => (
-                                <button key={st} onClick={() => setAiEngineSubTab(st)}
-                                    className={`px-4 py-2 text-xs font-bold uppercase transition-all capitalize ${
-                                        aiEngineSubTab === st ? 'border-b-2 border-violet-400 text-violet-400' : 'text-gray-500 hover:text-gray-300'
-                                    }`}>
-                                    {st === 'routing' ? 'Routing Rules' : st === 'providers' ? 'Providers' : st === 'models' ? 'Model Catalog' : 'Workflows'}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* ── PROVIDERS ─────────────────────────────────── */}
-                        {aiEngineSubTab === 'providers' && (
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-1 gap-2">
-                                    {aiProviders.map((p: any) => (
-                                        <div key={p.id} className="flex items-start justify-between p-3 bg-slate-900 border border-slate-800 rounded">
-                                            <div className="flex items-start gap-3">
-                                                <div className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${
-                                                    p.status === 'Active' ? 'bg-emerald-400' :
-                                                    p.status === 'Configured' ? 'bg-amber-400' : 'bg-slate-600'
-                                                }`}/>
-                                                <div>
-                                                    <div className="font-bold text-sm text-slate-100">{p.displayName}</div>
-                                                    <div className="text-xs text-slate-400 mt-0.5">
-                                                        <span className="font-mono bg-slate-800 px-1 rounded mr-2">{p.apiKeyEnvVar}</span>
-                                                        <span className="capitalize">{p.providerType}</span>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                        {(p.capabilities || []).map((c: string) => (
-                                                            <span key={c} className="text-[9px] font-bold px-1.5 py-0.5 bg-violet-950 text-violet-300 rounded">{c}</span>
-                                                        ))}
-                                                    </div>
-                                                    {p.notes && <div className="text-[10px] text-slate-500 mt-1 italic">{p.notes}</div>}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                                    p.status === 'Active' ? 'bg-emerald-950 text-emerald-400' :
-                                                    p.status === 'Configured' ? 'bg-amber-950 text-amber-400' :
-                                                    'bg-slate-800 text-slate-400'
-                                                }`}>{p.status}</span>
-                                                <button onClick={async () => {
-                                                    const newStatus = p.status === 'Active' ? 'Configured' : 'Active';
-                                                    await fetch(`/api/admin/ai-providers/${p.id}`, {
-                                                        method: 'PUT', headers: {'Content-Type':'application/json'},
-                                                        body: JSON.stringify({ status: newStatus })
-                                                    });
-                                                    fetchData();
-                                                }} className="text-xs text-violet-400 hover:text-violet-300">
-                                                    {p.status === 'Active' ? 'Disable' : 'Enable'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── MODEL CATALOG ──────────────────────────────── */}
-                        {aiEngineSubTab === 'models' && (
-                            <div className="space-y-3">
-                                {aiProviders.map((prov: any) => {
-                                    const provModels = aiModels.filter((m: any) => m.providerId === prov.id);
-                                    if (provModels.length === 0) return null;
-                                    return (
-                                        <div key={prov.id}>
-                                            <div className="text-[10px] font-bold uppercase text-slate-500 mb-2 flex items-center gap-2">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${
-                                                    prov.status === 'Active' ? 'bg-emerald-400' : 'bg-amber-400'
-                                                }`}/>
-                                                {prov.displayName}
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                {provModels.map((m: any) => (
-                                                    <div key={m.id} className={`p-3 border rounded ${
-                                                        m.status === 'Active' ? 'border-slate-700 bg-slate-900' : 'border-slate-800 bg-slate-950 opacity-60'
-                                                    }`}>
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <div className="font-bold text-sm text-slate-100">{m.displayName}</div>
-                                                                <div className="font-mono text-[10px] text-slate-500 mt-0.5">{m.slug}</div>
-                                                            </div>
-                                                            <button onClick={async () => {
-                                                                const newStatus = m.status === 'Active' ? 'Configured' : 'Active';
-                                                                await fetch(`/api/admin/ai-models/${m.id}`, {
-                                                                    method: 'PUT', headers: {'Content-Type':'application/json'},
-                                                                    body: JSON.stringify({ status: newStatus })
-                                                                });
-                                                                fetchData();
-                                                            }} className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                                                m.status === 'Active' ? 'bg-emerald-950 text-emerald-400 hover:bg-red-950 hover:text-red-400' :
-                                                                'bg-slate-800 text-slate-400 hover:bg-emerald-950 hover:text-emerald-400'
-                                                            }`}>
-                                                                {m.status}
-                                                            </button>
-                                                        </div>
-                                                        <div className="flex gap-2 mt-2 flex-wrap">
-                                                            {(m.capabilityTypes || []).map((c: string) => (
-                                                                <span key={c} className="text-[9px] font-bold px-1.5 py-0.5 bg-violet-950 text-violet-300 rounded">{c}</span>
-                                                            ))}
-                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                                                m.costTier === 'Low' ? 'bg-emerald-950 text-emerald-400' :
-                                                                m.costTier === 'Medium' ? 'bg-amber-950 text-amber-400' :
-                                                                'bg-red-950 text-red-400'
-                                                            }`}>Cost: {m.costTier}</span>
-                                                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-950 text-blue-400 rounded">Perf: {m.performanceTier}</span>
-                                                        </div>
-                                                        {m.notes && <div className="text-[10px] text-slate-500 mt-1.5 italic">{m.notes}</div>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* ── WORKFLOWS ──────────────────────────────────── */}
-                        {aiEngineSubTab === 'workflows' && (
-                            <div className="space-y-2">
-                                {aiWorkflows.map((w: any) => {
-                                    const defaultModel = aiModels.find((m: any) => m.id === w.defaultModelId);
-                                    const defaultProv = aiProviders.find((p: any) => p.id === w.defaultProviderId);
-                                    return (
-                                        <div key={w.id} className="p-3 bg-slate-900 border border-slate-800 rounded">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="font-bold text-sm text-slate-100">{w.title}</div>
-                                                    <div className="font-mono text-[10px] text-slate-500 mt-0.5">{w.slug}</div>
-                                                    {w.description && <div className="text-[10px] text-slate-400 mt-1">{w.description}</div>}
-                                                </div>
-                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                                    w.status === 'Active' ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                                                }`}>{w.status}</span>
-                                            </div>
-                                            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center gap-3 text-[10px]">
-                                                <span className="text-slate-500">Default model:</span>
-                                                <span className="font-bold text-violet-300">{defaultModel?.displayName || w.defaultModelId}</span>
-                                                <span className="text-slate-600">via</span>
-                                                <span className="text-slate-400">{defaultProv?.displayName || w.defaultProviderId}</span>
-                                                <div className="flex gap-1 ml-auto">
-                                                    {(w.capabilityTypes || []).map((c: string) => (
-                                                        <span key={c} className="px-1.5 py-0.5 bg-violet-950 text-violet-300 rounded font-bold">{c}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* ── ROUTING RULES ──────────────────────────────── */}
-                        {aiEngineSubTab === 'routing' && (
-                            <div className="space-y-6">
-                                {/* Simulate Routing Panel */}
-                                <div className="p-4 bg-slate-900 border border-violet-800 rounded">
-                                    <div className="font-bold text-xs text-violet-400 mb-3">⚡ Simulate Routing — Preview which model resolves for a workflow + tier</div>
-                                    <div className="flex gap-3 flex-wrap items-end">
-                                        <div>
-                                            <label className="block text-[10px] text-slate-400 mb-1">Workflow</label>
-                                            <select
-                                                value={simulateWorkflow}
-                                                onChange={e => setSimulateWorkflow(e.target.value)}
-                                                className="bg-slate-800 border border-slate-700 text-white text-xs p-2 rounded"
-                                            >
-                                                <option value="">Select workflow…</option>
-                                                {aiWorkflows.map((w: any) => (
-                                                    <option key={w.slug} value={w.slug}>{w.title}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-slate-400 mb-1">Plan Tier</label>
-                                            <select
-                                                value={simulateTier}
-                                                onChange={e => setSimulateTier(e.target.value)}
-                                                className="bg-slate-800 border border-slate-700 text-white text-xs p-2 rounded"
-                                            >
-                                                <option>Free</option>
-                                                <option>Entry</option>
-                                                <option>High User</option>
-                                            </select>
-                                        </div>
-                                        <button
-                                            disabled={!simulateWorkflow || simulatingRoute}
-                                            onClick={async () => {
-                                                if (!simulateWorkflow) return;
-                                                setSimulatingRoute(true);
-                                                setSimulateResult(null);
-                                                try {
-                                                    const res = await fetch(`/api/admin/ai-routing/resolve?workflow=${simulateWorkflow}&tier=${encodeURIComponent(simulateTier)}&env=production`);
-                                                    const data = await res.json();
-                                                    setSimulateResult(data);
-                                                } catch(e) {
-                                                    setSimulateResult({ error: 'Failed to resolve' });
-                                                } finally {
-                                                    setSimulatingRoute(false);
-                                                }
-                                            }}
-                                            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-bold px-4 py-2 rounded"
-                                        >
-                                            {simulatingRoute ? 'Resolving…' : 'Simulate'}
-                                        </button>
-                                    </div>
-                                    {simulateResult && !simulateResult.error && (
-                                        <div className="mt-3 p-3 bg-slate-800 border border-violet-700 rounded text-xs">
-                                            <div className="flex gap-4 flex-wrap">
-                                                <div><span className="text-slate-400">Provider:</span> <span className="font-bold text-white">{simulateResult.providerDisplayName}</span></div>
-                                                <div><span className="text-slate-400">Model:</span> <span className="font-bold text-violet-300">{simulateResult.modelDisplayName}</span></div>
-                                                <div><span className="text-slate-400">Cost:</span> <span className="font-bold text-amber-300">{simulateResult.costTier}</span></div>
-                                                <div><span className="text-slate-400">Performance:</span> <span className="font-bold text-blue-300">{simulateResult.performanceTier}</span></div>
-                                                <div><span className="text-slate-400">Resolved by:</span> <span className={`font-bold ${
-                                                    simulateResult.resolvedBy === 'rule' ? 'text-emerald-400' :
-                                                    simulateResult.resolvedBy === 'workflow_default' ? 'text-amber-400' : 'text-red-400'
-                                                }`}>{simulateResult.resolvedBy}</span></div>
-                                            </div>
-                                            <div className="font-mono text-[9px] text-slate-500 mt-2">{simulateResult.modelSlug}</div>
-                                        </div>
-                                    )}
-                                    {simulateResult?.error && (
-                                        <div className="mt-3 text-red-400 text-xs">{simulateResult.error}</div>
-                                    )}
-                                </div>
-
-                                {/* Routing Rules Matrix */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h4 className="font-bold text-xs text-slate-300 uppercase">Active Routing Rules ({aiRoutingRules.filter((r:any)=>r.status==='Active').length} active)</h4>
-                                        <button
-                                            onClick={async () => {
-                                                const workflow = prompt('Workflow slug (e.g. text_outline_generation):');
-                                                const tier = prompt('Plan tier (Free / Entry / High User):', 'Free');
-                                                const modelId = prompt('Model ID (e.g. model-gemini-flash):');
-                                                const providerId = prompt('Provider ID (e.g. prov-google):');
-                                                if (workflow && tier && modelId && providerId) {
-                                                    await fetch('/api/admin/ai-routing-rules', {
-                                                        method: 'POST',
-                                                        headers: {'Content-Type':'application/json'},
-                                                        body: JSON.stringify({ workflowSlug: workflow, planTier: tier, modelId, providerId, environment: 'production', status: 'Active', priority: 1 })
-                                                    });
-                                                    fetchData();
-                                                }
-                                            }}
-                                            className="bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3 py-1 rounded"
-                                        >+ Add Rule</button>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-[11px] font-mono">
-                                            <thead>
-                                                <tr className="border-b border-slate-800">
-                                                    <th className="text-left p-2 text-slate-400 font-bold uppercase text-[10px]">Workflow</th>
-                                                    <th className="text-left p-2 text-slate-400 font-bold uppercase text-[10px]">Plan Tier</th>
-                                                    <th className="text-left p-2 text-slate-400 font-bold uppercase text-[10px]">Provider</th>
-                                                    <th className="text-left p-2 text-slate-400 font-bold uppercase text-[10px]">Model</th>
-                                                    <th className="text-left p-2 text-slate-400 font-bold uppercase text-[10px]">Status</th>
-                                                    <th className="p-2"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {aiRoutingRules.map((rule: any) => {
-                                                    const model = aiModels.find((m: any) => m.id === rule.modelId);
-                                                    const prov = aiProviders.find((p: any) => p.id === rule.providerId);
-                                                    return (
-                                                        <tr key={rule.id} className={`border-t border-slate-800 hover:bg-slate-900 ${
-                                                            rule.status !== 'Active' ? 'opacity-40' : ''
-                                                        }`}>
-                                                            <td className="p-2 text-violet-300">{rule.workflowSlug}</td>
-                                                            <td className="p-2">
-                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                                    rule.planTier === 'High User' ? 'bg-amber-950 text-amber-300' :
-                                                                    rule.planTier === 'Entry' ? 'bg-blue-950 text-blue-300' :
-                                                                    'bg-slate-800 text-slate-400'
-                                                                }`}>{rule.planTier}</span>
-                                                            </td>
-                                                            <td className="p-2 text-slate-300">{prov?.displayName || rule.providerId}</td>
-                                                            <td className="p-2 text-white font-bold">{model?.displayName || rule.modelId}</td>
-                                                            <td className="p-2">
-                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                                    rule.status === 'Active' ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                                                                }`}>{rule.status}</span>
-                                                            </td>
-                                                            <td className="p-2">
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        const newStatus = rule.status === 'Active' ? 'Inactive' : 'Active';
-                                                                        await fetch(`/api/admin/ai-routing-rules/${rule.id}`, {
-                                                                            method: 'PUT', headers: {'Content-Type':'application/json'},
-                                                                            body: JSON.stringify({ status: newStatus })
-                                                                        });
-                                                                        fetchData();
-                                                                    }}
-                                                                    className="text-slate-400 hover:text-white text-[10px]"
-                                                                >
-                                                                    {rule.status === 'Active' ? 'Pause' : 'Activate'}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                {/* Fallback Configs */}
-                                <div>
-                                    <h4 className="font-bold text-xs text-slate-300 uppercase mb-3">Fallback Chains ({aiFallbackConfigs.filter((f:any)=>f.status==='Active').length} active)</h4>
-                                    <div className="space-y-2">
-                                        {aiFallbackConfigs.map((fb: any) => {
-                                            const primaryModel = aiModels.find((m: any) => m.id === fb.primaryModelId);
-                                            const fallbackModel = aiModels.find((m: any) => m.id === fb.fallbackModelId);
-                                            return (
-                                                <div key={fb.id} className="p-3 bg-slate-900 border border-slate-800 rounded text-xs">
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="font-mono text-violet-300 text-[10px]">{fb.workflowSlug}</div>
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                                            fb.status === 'Active' ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                                                        }`}>{fb.status}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <span className="text-white font-bold">{primaryModel?.displayName || fb.primaryModelId}</span>
-                                                        <span className="text-slate-600">→ on error →</span>
-                                                        <span className="text-amber-300 font-bold">{fallbackModel?.displayName || fb.fallbackModelId}</span>
-                                                    </div>
-                                                    <div className="text-slate-500 text-[9px] mt-1">Triggers: {(fb.triggerConditions || []).join(', ')}</div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <AIEngineTab
+                        aiProviders={aiProviders}
+                        aiModels={aiModels}
+                        aiWorkflows={aiWorkflows}
+                        aiRoutingRules={aiRoutingRules}
+                        aiFallbackConfigs={aiFallbackConfigs}
+                        fetchData={fetchData}
+                    />
                 )}
 
                 {activeTab === 'diagnostics' && (
-                    <div className="bg-slate-950 border border-slate-700 p-4 space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-sm text-fuchsia-400">System Diagnostics &amp; Health Check</h3>
-                            <div className="flex gap-2">
-                                <button onClick={runLiveVerification} className="px-4 py-1.5 border border-fuchsia-600 text-fuchsia-400 hover:bg-fuchsia-900 text-xs font-bold rounded shadow transition-colors">
-                                    RUN LIVE VERIFICATION
-                                </button>
-                                <button onClick={runDiagnostics} disabled={runningDiagnostics} className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-bold rounded shadow disabled:opacity-50 flex items-center gap-2">
-                                    {runningDiagnostics ? 'RUNNING...' : 'RUN DIAGNOSTICS'}
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {!healthData ? (
-                            <div className="text-gray-400 text-xs text-center py-10">Waiting for diagnostic results...</div>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Database Check */}
-                                <div className="border border-slate-700 p-3 bg-slate-900 rounded">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${healthData.database.status === 'ok' ? 'bg-green-500' : healthData.database.status === 'offline' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                                        <h4 className="font-bold text-xs uppercase text-gray-300">Database</h4>
-                                    </div>
-                                    <p className="text-xs text-gray-400">{healthData.database.message}</p>
-                                </div>
-                                {/* Storage Check */}
-                                <div className="border border-slate-700 p-3 bg-slate-900 rounded">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${healthData.storage.status === 'ok' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h4 className="font-bold text-xs uppercase text-gray-300">File Storage</h4>
-                                    </div>
-                                    <p className="text-xs text-gray-400">{healthData.storage.message}</p>
-                                </div>
-                                {/* Gemini API Check */}
-                                <div className="border border-slate-700 p-3 bg-slate-900 rounded">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${healthData.integrations.gemini.status === 'ok' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        <h4 className="font-bold text-xs uppercase text-gray-300">Gemini AI API</h4>
-                                    </div>
-                                    <p className="text-xs text-gray-400">{healthData.integrations.gemini.message}</p>
-                                </div>
-                                {/* Payment Gateways Check */}
-                                <div className="border border-slate-700 p-3 bg-slate-900 rounded">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className={`w-3 h-3 rounded-full ${(healthData.integrations.stripe.status === 'ok' || healthData.integrations.paypal.status === 'ok') ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                                        <h4 className="font-bold text-xs uppercase text-gray-300">Payment Gateways</h4>
-                                    </div>
-                                    <p className="text-xs text-gray-400">
-                                        Stripe: {healthData.integrations.stripe.status === 'ok' ? '✅' : '❌'} | 
-                                        PayPal: {healthData.integrations.paypal.status === 'ok' ? '✅' : '❌'}
-                                    </p>
-                                </div>
-                                {/* AI Engine Summary */}
-                                {aiEngineSummary && (
-                                    <div className="border border-violet-800 p-3 bg-slate-900 rounded col-span-2">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-3 h-3 rounded-full bg-violet-400"></div>
-                                            <h4 className="font-bold text-xs uppercase text-violet-300">⚡ AI Engine Routing</h4>
-                                        </div>
-                                        <div className="grid grid-cols-4 gap-3">
-                                            {[
-                                                { label: 'Active Providers', value: `${aiEngineSummary.activeProviders}/${aiEngineSummary.totalProviders}` },
-                                                { label: 'Active Models', value: `${aiEngineSummary.activeModels}/${aiEngineSummary.totalModels}` },
-                                                { label: 'Active Workflows', value: `${aiEngineSummary.activeWorkflows}/${aiEngineSummary.totalWorkflows}` },
-                                                { label: 'Routing Rules', value: `${aiEngineSummary.activeRoutingRules}/${aiEngineSummary.totalRoutingRules}` },
-                                            ].map(s => (
-                                                <div key={s.label} className="text-center">
-                                                    <div className="text-xl font-black text-violet-300">{s.value}</div>
-                                                    <div className="text-[9px] text-slate-500 uppercase font-bold">{s.label}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {(aiEngineSummary.providerStatuses || []).map((p: any) => (
-                                                <span key={p.slug} className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                                    p.status === 'Active' ? 'bg-emerald-950 text-emerald-400' :
-                                                    p.status === 'Configured' ? 'bg-amber-950 text-amber-400' :
-                                                    'bg-slate-800 text-slate-500'
-                                                }`}>{p.displayName}: {p.status}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    <DiagnosticsTab
+                        runLiveVerification={runLiveVerification}
+                        runDiagnostics={runDiagnostics}
+                        runningDiagnostics={runningDiagnostics}
+                        healthData={healthData}
+                        aiEngineSummary={aiEngineSummary}
+                    />
                 )}
             </div>
         )}

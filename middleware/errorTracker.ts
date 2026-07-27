@@ -10,6 +10,7 @@ interface ErrorContext {
     requestId?: string;
     userId?: string;
     endpoint?: string;
+    method?: string;
     tags?: Record<string, string>;
     extra?: Record<string, any>;
 }

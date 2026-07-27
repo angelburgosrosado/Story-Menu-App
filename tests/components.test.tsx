@@ -3,6 +3,8 @@
  * Tests for React components: rendering, user interactions, state management.
  */
 
+// @vitest-environment jsdom
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -11,6 +13,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 vi.mock('../audio', () => ({
     playPageTurnSFX: vi.fn(),
     playSparkleSFX: vi.fn(),
+}));
+
+// Mock image utilities to prevent heic2any initialization error in jsdom
+vi.mock('../imageUtils', () => ({
+    fileToBase64: vi.fn().mockResolvedValue('mock-base64-string')
 }));
 
 // Mock lucide-react

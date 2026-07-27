@@ -5,6 +5,8 @@
  */
 
 import { Router, Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { getDbPool, isDatabaseConnected } from '../db';
 
 const router = Router();
@@ -43,6 +45,32 @@ router.get('/settings', async (req: Request, res: Response): Promise<any> => {
 
 router.post('/settings', async (req: Request, res: Response): Promise<any> => {
     const { keyName, keyValue, isSecret, description } = req.body;
+
+    // Keep process.env and .env in sync for keys that the server reads from env
+    process.env[keyName.toUpperCase()] = keyValue;
+    try {
+        const envPath = path.join(process.cwd(), '.env');
+        let envContent = '';
+        if (fs.existsSync(envPath)) {
+            envContent = fs.readFileSync(envPath, 'utf8');
+        }
+        const lines = envContent.split('\n');
+        let found = false;
+        const newLines = lines.map(line => {
+            if (line.trim().startsWith(keyName.toUpperCase() + '=')) {
+                found = true;
+                return `${keyName.toUpperCase()}=${keyValue}`;
+            }
+            return line;
+        });
+        if (!found) {
+            newLines.push(`${keyName.toUpperCase()}=${keyValue}`);
+        }
+        fs.writeFileSync(envPath, newLines.join('\n'));
+    } catch (e) {
+        console.error('[Settings] Could not write to .env file', e);
+    }
+
     if (!isDatabaseConnected()) {
         memoryDb.app_settings = memoryDb.app_settings || [];
         const existing = memoryDb.app_settings.find((s: any) => s.key_name === keyName);

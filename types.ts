@@ -135,6 +135,7 @@ export interface Persona {
   desc: string;
   hairText?: string;
   clothesText?: string;
+  [key: string]: any;
 }
 
 export interface CharacterIdentitySchema {

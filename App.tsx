@@ -11,7 +11,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from './types';
+import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona as CharacterPersona, CharacterIdentitySchema, ChapterGoal } from './types';
 import { Setup } from './Setup';
 import { KidStoryDashboard } from './KidStoryDashboard';
 import { PersonalizedDashboard } from './PersonalizedDashboard';
@@ -22,7 +22,7 @@ import { PublicStoryDetail } from './PublicStoryDetail';
 import { PublicCreatorProfile } from './PublicCreatorProfile';
 import { SavedLibrary } from './SavedLibrary';
 import { RemixModal } from './RemixModal';
-import { ModerationDashboard, MOCK_REPORTS } from './ModerationDashboard';
+import { ModerationDashboard, MOCK_REPORTS, ReportItem } from './ModerationDashboard';
 import { AccountSettings } from './AccountSettings';
 import { AutomationHub } from './AutomationHub';
 import { EducationDashboard } from './EducationDashboard';
@@ -124,9 +124,9 @@ const App: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutTier, setCheckoutTier] = useState<'Pro' | 'Enterprise'>('Pro');
 
-  const [hero, setHeroState] = useState<Persona | null>(null);
-  const [friend, setFriendState] = useState<Persona | null>(null);
-  const [villain, setVillainState] = useState<Persona | null>(null);
+  const [hero, setHeroState] = useState<CharacterPersona | null>(null);
+  const [friend, setFriendState] = useState<CharacterPersona | null>(null);
+  const [villain, setVillainState] = useState<CharacterPersona | null>(null);
   const [selectedGenre, setSelectedGenre] = useState(GENRES[0]);
 
   // --- Trust & Moderation States ---
@@ -149,13 +149,13 @@ const App: React.FC = () => {
   const [friendVisuals, setFriendVisuals] = useState("wearing a leather bomber jacket, auburn ponytail");
   const [villainVisuals, setVillainVisuals] = useState("wearing a regal high-collared obsidian armor mantle, slicked-back dark hair");
 
-  const heroRef = useRef<Persona | null>(null);
-  const friendRef = useRef<Persona | null>(null);
-  const villainRef = useRef<Persona | null>(null);
+  const heroRef = useRef<CharacterPersona | null>(null);
+  const friendRef = useRef<CharacterPersona | null>(null);
+  const villainRef = useRef<CharacterPersona | null>(null);
 
-  const setHero = (p: Persona | null) => { setHeroState(p); heroRef.current = p; };
-  const setFriend = (p: Persona | null) => { setFriendState(p); friendRef.current = p; };
-  const setVillain = (p: Persona | null) => { setVillainState(p); villainRef.current = p; };
+  const setHero = (p: CharacterPersona | null) => { setHeroState(p); heroRef.current = p; };
+  const setFriend = (p: CharacterPersona | null) => { setFriendState(p); friendRef.current = p; };
+  const setVillain = (p: CharacterPersona | null) => { setVillainState(p); villainRef.current = p; };
 
   const [comicFaces, setComicFaces] = useState<ComicFace[]>([]);
   const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
@@ -767,7 +767,7 @@ const App: React.FC = () => {
     }
   };
 
-  const generatePersona = async (desc: string): Promise<Persona> => {
+  const generatePersona = async (desc: string): Promise<CharacterPersona> => {
     try {
       await handleTokenDeduction('gemini-3.5-flash', 1000);
       const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
@@ -781,7 +781,7 @@ const App: React.FC = () => {
         throw new Error(errData.error || `Server persona failure: ${response.status}`);
       }
       const data = await response.json();
-      if (data.base64) return { base64: data.base64, desc };
+      if (data.base64) return { base64: data.base64, desc } as CharacterPersona;
       throw new Error("Failed");
     } catch (e) {
       handleAPIError(e);
@@ -1146,7 +1146,7 @@ const handleHeroUpload = async (file: File) => {
        if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           const newHero = { base64, desc: "The Main Hero" };
+           const newHero = { base64, desc: "The Main Hero" } as CharacterPersona;
            setHero(newHero); 
            localStorage.setItem('offline_hero', JSON.stringify(newHero));
            await syncCharacterToDb("Main Avatar", "Hero", "The Main Hero", base64);
@@ -1157,7 +1157,7 @@ const handleFriendUpload = async (file: File) => {
        if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           const newFriend = { base64, desc: "The Sidekick/Rival" };
+           const newFriend = { base64, desc: "The Sidekick/Rival" } as CharacterPersona;
            setFriend(newFriend); 
            localStorage.setItem('offline_friend', JSON.stringify(newFriend));
            await syncCharacterToDb("Socius", "Co-Star", "The Sidekick/Rival", base64);
@@ -1168,7 +1168,7 @@ const handleVillainUpload = async (file: File) => {
        if (!validateUpload(file)) return;
        try { 
            const base64 = await fileToBase64(file); 
-           const newVillain = { base64, desc: "The Arch Nemesis Villain" };
+           const newVillain = { base64, desc: "The Arch Nemesis Villain" } as CharacterPersona;
            setVillain(newVillain); 
            localStorage.setItem('offline_villain', JSON.stringify(newVillain));
            await syncCharacterToDb("Rival Rival", "Villain", "The Arch Nemesis Villain", base64);

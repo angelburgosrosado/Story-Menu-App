@@ -161,6 +161,8 @@ async function rollbackMigration(targetVersion: number) {
     }
 }
 
+export default { runMigrations, rollbackMigration };
+
 // CLI
 const args = process.argv.slice(2);
 if (args[0] === 'rollback') {

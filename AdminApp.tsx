@@ -1,5 +1,8 @@
 import heic2any from "heic2any";
 import React, { useState, useEffect } from "react";
+import { AdminSidebarNav } from "./components/admin/AdminSidebarNav";
+import { AdminCostAnalyticsView } from "./components/admin/AdminCostAnalyticsView";
+import { AdminLogsView } from "./components/admin/AdminLogsView";
 import {
   Users,
   AlertTriangle,
@@ -262,6 +265,8 @@ export const AdminApp: React.FC = () => {
         costsRes,
         adminUsersRes,
         bypassesRes,
+        languagesRes,
+        glossaryRes,
       ] = await Promise.all([
         adminFetch("/api/admin/stats")
           .then((r) => (r.ok ? r.json() : null))
@@ -556,86 +561,13 @@ export const AdminApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 selection:bg-blue-200">
       {/* Premium Sidebar Navigation */}
-      <div className="w-64 bg-slate-950 flex flex-col shadow-2xl z-20 transition-all border-r border-slate-800/50">
-        <div className="p-6 border-b border-slate-800/50">
-          <h2 className="text-xl font-black text-white flex items-center gap-3 tracking-tight">
-            <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-lg shadow-blue-900/20">
-              <Shield size={20} className="text-white" />
-            </div>
-            Command Center
-          </h2>
-        </div>
-
-        <div className="flex-1 overflow-y-auto py-6 space-y-1">
-          <div className="px-6 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-            Core Engine
-          </div>
-          <NavItem tab="dashboard" icon={Activity} label="Dashboard" />
-          <NavItem tab="memberships" icon={Users} label="Memberships" />
-          <NavItem tab="plans" icon={DollarSign} label="Subscription Plans" />
-          <NavItem tab="categories" icon={Layers} label="Taxonomy" />
-          <NavItem tab="languages" icon={Globe} label="Languages & Glossary" />
-          <NavItem
-            tab="moderation"
-            icon={AlertTriangle}
-            label="Moderation Queue"
-            alertCount={flags.length}
-          />
-          <NavItem
-            tab="global_characters"
-            icon={Users}
-            label="Global Characters"
-          />
-          <NavItem tab="logs" icon={Activity} label="Webhook & Errors" />
-
-          <div className="px-6 mt-8 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-            System Configurations
-          </div>
-          <NavItem tab="integrations" icon={CreditCard} label="Payment APIs" />
-          <NavItem tab="features" icon={Layout} label="GUI Toggles" />
-          <NavItem tab="ai_config" icon={Cpu} label="AI Settings" />
-          <NavItem tab="ai_costs" icon={TrendingUp} label="AI Cost Analytics" />
-
-          <div className="px-6 mt-8 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
-            Security & Testing
-          </div>
-          <NavItem tab="administrators" icon={Shield} label="Administrators" />
-          <NavItem tab="diagnostics" icon={Activity} label="Diagnostics" />
-          <NavItem tab="ai_sandbox" icon={Play} label="Prompt Sandbox" />
-        </div>
-
-        <div className="p-5 border-t border-slate-800/50 bg-slate-900/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-              <span className="text-slate-300 font-bold text-xs">
-                {authEmail.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <div className="text-xs font-bold text-slate-300 truncate">
-                {authEmail}
-              </div>
-              <div className="text-[10px] text-slate-500 uppercase">
-                Super Admin
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => (window.location.href = "/")}
-              className="w-full bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 py-2 rounded-lg text-xs font-bold border border-indigo-500/30 transition-all flex items-center justify-center gap-2"
-            >
-              <Globe size={14} /> LIVE APP / DASHBOARD
-            </button>
-            <button
-              onClick={() => signOut(auth)}
-              className="w-full bg-slate-800 hover:bg-red-500/10 text-slate-300 hover:text-red-400 py-2 rounded-lg text-xs font-bold border border-slate-700 hover:border-red-500/30 transition-all flex items-center justify-center gap-2"
-            >
-              <X size={14} /> TERMINATE SESSION
-            </button>
-          </div>
-        </div>
-      </div>
+      <AdminSidebarNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        flagsCount={flags.length}
+        authEmail={authEmail}
+        auth={auth}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
@@ -2424,342 +2356,15 @@ export const AdminApp: React.FC = () => {
 
               {/* AI Costs */}
               {activeTab === "ai_costs" && (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-                      AI Cost Analytics
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Track actual fiat USD costs incurred by user generations
-                      across Gemini, Leonardo, and ElevenLabs.
-                    </p>
-                  </div>
-
-                  {!analyticsData ? (
-                    <div className="text-center p-12 text-slate-400">
-                      Loading analytics...
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Total Cost */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Total Operating Cost
-                          </h3>
-                          <div className="text-4xl font-black text-slate-800">
-                            $
-                            {(
-                              (analyticsData.total_cost_cents || 0) / 100
-                            ).toFixed(4)}
-                          </div>
-                          <p className="text-xs text-slate-500 mt-2">
-                            Cumulative API spend across all integrated models
-                          </p>
-                        </div>
-
-                        {/* Provider Breakdown */}
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 col-span-2">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                            Cost by Provider
-                          </h3>
-                          <div className="flex gap-4">
-                            {analyticsData.by_provider?.map((p: any) => (
-                              <div
-                                key={p.provider}
-                                className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100"
-                              >
-                                <div className="text-sm font-bold capitalize text-slate-700 mb-1">
-                                  {p.provider}
-                                </div>
-                                <div className="text-xl font-black text-indigo-600">
-                                  ${(parseFloat(p.total) / 100).toFixed(4)}
-                                </div>
-                              </div>
-                            ))}
-                            {(!analyticsData.by_provider ||
-                              analyticsData.by_provider.length === 0) && (
-                              <div className="text-sm text-slate-400">
-                                No usage data recorded yet.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* User Leaderboard */}
-                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 bg-slate-50">
-                          <h3 className="text-sm font-bold text-slate-800">
-                            Highest Consuming Users
-                          </h3>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                          {analyticsData.by_user?.map((u: any, idx: number) => (
-                            <div
-                              key={u.user_email}
-                              className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs">
-                                  {idx + 1}
-                                </div>
-                                <div>
-                                  <div className="font-bold text-slate-800">
-                                    {u.user_email}
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {u.calls} total API calls
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-black text-rose-500">
-                                  ${(parseFloat(u.total) / 100).toFixed(4)}
-                                </div>
-                                <div className="text-xs text-slate-400">
-                                  Total Cost
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {(!analyticsData.by_user ||
-                            analyticsData.by_user.length === 0) && (
-                            <div className="p-8 text-center text-slate-400">
-                              No user usage data recorded yet.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <AdminCostAnalyticsView analyticsData={costAnalytics} />
               )}
 
               {activeTab === "logs" && (
-                <div className="p-8 space-y-8 bg-slate-50 relative animate-in fade-in duration-200">
-                  
-                  {/* Operational Bypasses Panel */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
-                    <div className="bg-rose-50 px-6 py-4 border-b border-rose-100 flex items-center gap-3">
-                      <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
-                        <Activity size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-rose-900">Active Operational Bypasses</h3>
-                        <p className="text-sm text-rose-700">Structural overrides and development fallbacks currently overriding security or standard flow.</p>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      {bypasses.length === 0 ? (
-                        <div className="text-sm text-slate-500 italic">No structural bypasses detected. System is running in full production security mode.</div>
-                      ) : (
-                        <div className="space-y-4">
-                          {bypasses.map((bp, i) => (
-                            <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-rose-50/50 rounded-xl border border-rose-100/50">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-200 text-rose-800">{bp.severity}</span>
-                                  <span className="font-bold text-rose-900">{bp.type}</span>
-                                </div>
-                                <p className="text-sm text-rose-700">{bp.description}</p>
-                                <div className="mt-2 text-xs text-rose-600 font-medium">Affected: {bp.affected_components.join(", ")}</div>
-                              </div>
-                              <div className="mt-4 md:mt-0 text-sm font-bold text-rose-500 uppercase tracking-wider px-4 py-2 bg-white rounded-lg shadow-sm border border-rose-100">
-                                {bp.status}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Webhook Allocations */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100">
-                      <h3 className="font-bold text-slate-800">Allocated Webhook Endpoints</h3>
-                      <p className="text-sm text-slate-500">URLs for external integrations to send data to.</p>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <div>
-                          <h4 className="font-bold text-slate-700 text-sm">Stripe Payments Webhook</h4>
-                          <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">POST /api/webhooks/stripe</code>
-                        </div>
-                        <button onClick={() => navigator.clipboard.writeText(window.location.origin + "/api/webhooks/stripe")} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 text-slate-600 transition-colors">
-                          Copy Full URL
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Error Stream Console */}
-                  <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-100">Webhook & Error Logs Stream</h3>
-                        <p className="text-sm text-slate-400">Live feed of internal errors and webhook processing failures.</p>
-                      </div>
-                      <button onClick={fetchData} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700 transition-colors flex items-center gap-2">
-                        <Activity size={14} /> Refresh Feed
-                      </button>
-                    </div>
-                    <div className="p-0 overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                          <tr className="bg-slate-950/50">
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Timestamp</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Source</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Event</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Error</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/50 text-sm">
-                          {systemLogs.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-mono text-sm">
-                                [System initialized] No logged errors or webhook failures.
-                              </td>
-                            </tr>
-                          ) : (
-                            systemLogs.map((log: any) => (
-                              <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
-                                <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
-                                  {new Date(log.created_at).toLocaleString()}
-                                </td>
-                                <td className="px-6 py-4 text-slate-300 font-medium">
-                                  {log.source || "System"}
-                                </td>
-                                <td className="px-6 py-4 text-blue-400 font-mono text-xs">
-                                  {log.event_type}
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="text-rose-400 font-mono text-xs truncate max-w-md" title={log.error_message}>
-                                    {log.error_message}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "logs" && (
-                <div className="p-8 space-y-8 bg-slate-50 relative animate-in fade-in duration-200">
-                  
-                  {/* Operational Bypasses Panel */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-rose-100 overflow-hidden">
-                    <div className="bg-rose-50 px-6 py-4 border-b border-rose-100 flex items-center gap-3">
-                      <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
-                        <Activity size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-rose-900">Active Operational Bypasses</h3>
-                        <p className="text-sm text-rose-700">Structural overrides and development fallbacks currently overriding security or standard flow.</p>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      {bypasses.length === 0 ? (
-                        <div className="text-sm text-slate-500 italic">No structural bypasses detected. System is running in full production security mode.</div>
-                      ) : (
-                        <div className="space-y-4">
-                          {bypasses.map((bp, i) => (
-                            <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-rose-50/50 rounded-xl border border-rose-100/50">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-200 text-rose-800">{bp.severity}</span>
-                                  <span className="font-bold text-rose-900">{bp.type}</span>
-                                </div>
-                                <p className="text-sm text-rose-700">{bp.description}</p>
-                                <div className="mt-2 text-xs text-rose-600 font-medium">Affected: {bp.affected_components.join(", ")}</div>
-                              </div>
-                              <div className="mt-4 md:mt-0 text-sm font-bold text-rose-500 uppercase tracking-wider px-4 py-2 bg-white rounded-lg shadow-sm border border-rose-100">
-                                {bp.status}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Webhook Allocations */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100">
-                      <h3 className="font-bold text-slate-800">Allocated Webhook Endpoints</h3>
-                      <p className="text-sm text-slate-500">URLs for external integrations to send data to.</p>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <div>
-                          <h4 className="font-bold text-slate-700 text-sm">Stripe Payments Webhook</h4>
-                          <code className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mt-1 inline-block">POST /api/webhooks/stripe</code>
-                        </div>
-                        <button onClick={() => navigator.clipboard.writeText(window.location.origin + "/api/webhooks/stripe")} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 text-slate-600 transition-colors">
-                          Copy Full URL
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Error Stream Console */}
-                  <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-100">Webhook & Error Logs Stream</h3>
-                        <p className="text-sm text-slate-400">Live feed of internal errors and webhook processing failures.</p>
-                      </div>
-                      <button onClick={fetchData} className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700 transition-colors flex items-center gap-2">
-                        <Activity size={14} /> Refresh Feed
-                      </button>
-                    </div>
-                    <div className="p-0 overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                          <tr className="bg-slate-950/50">
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Timestamp</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Source</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Event</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">Error</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/50 text-sm">
-                          {systemLogs.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-mono text-sm">
-                                [System initialized] No logged errors or webhook failures.
-                              </td>
-                            </tr>
-                          ) : (
-                            systemLogs.map((log: any) => (
-                              <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
-                                <td className="px-6 py-4 font-mono text-xs text-slate-400 whitespace-nowrap">
-                                  {new Date(log.created_at).toLocaleString()}
-                                </td>
-                                <td className="px-6 py-4 text-slate-300 font-medium">
-                                  {log.source || "System"}
-                                </td>
-                                <td className="px-6 py-4 text-blue-400 font-mono text-xs">
-                                  {log.event_type}
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="text-rose-400 font-mono text-xs truncate max-w-md" title={log.error_message}>
-                                    {log.error_message}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                <AdminLogsView
+                  bypasses={bypasses}
+                  systemLogs={systemLogs}
+                  fetchData={fetchData}
+                />
               )}
 
               {activeTab === "administrators" && (

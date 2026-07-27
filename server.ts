@@ -20,9 +20,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
-import apiV1Router from './api/v1/index';
-import classroomRouter from './api/classroom';
-import adminRoutesRouter from './routes/admin';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -37,6 +34,7 @@ import adminRoutesRouter from './routes/admin';
 import adminAiRouter from './routes/admin-ai';
 import adminUsersRouter from './routes/admin-users';
 import adminContentRouter from './routes/admin-content';
+import subscriptionRouter from './routes/subscription';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
 
@@ -1701,13 +1699,82 @@ async function startServer(app: express.Express) {
     // Task 1.8: Structured request logging
     app.use(logger.requestMiddleware);
 
+    
+    const requireAdmin = async (req: any, res: any, next: any) => {
+    try {
+        const authHeader = req.headers.authorization;
+        
+        let isCustomAdmin = false;
+        let email = '';
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split('Bearer ')[1];
+
+            // 1. Check custom admin session first
+            if (isDatabaseConnected()) {
+                const pool = getDbPool();
+                if (pool) {
+                    const sessionCheck = await pool.query('SELECT username FROM admin_sessions WHERE token = $1 AND expires_at > NOW()', [token]);
+                    if (sessionCheck.rows.length > 0) {
+                        isCustomAdmin = true;
+                        email = sessionCheck.rows[0].username;
+                    }
+                }
+            } else {
+                 const session = memoryDb.admin_sessions?.find((s: any) => s.token === token);
+                 if (session && new Date(session.expires_at) > new Date()) {
+                     isCustomAdmin = true;
+                     email = session.username;
+                 }
+            }
+
+            // 2. Fallback to Firebase JWT
+            if (!isCustomAdmin) {
+                try {
+                    const decoded = await getAuth().verifyIdToken(token);
+                    email = decoded.email || '';
+                } catch (e: any) {
+                    // TASK 1.1: Removed x-admin-email header fallback — was a privilege escalation vector.
+                    // In production, invalid tokens are always rejected.
+                    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+                }
+            }
+        } else {
+            return res.status(401).json({ error: 'Unauthorized: No token provided' });
+        }
+
+        // 3. Custom admin session — trusted, grant access
+        if (isCustomAdmin) {
+             (req as any).adminEmail = email;
+             return next();
+        }
+
+        // 4. RBAC check via Firestore role field (TASK 1.1)
+        const hasAdminRole = await isAdminUser(email);
+        if (hasAdminRole) {
+            (req as any).adminEmail = email;
+            return next();
+        }
+
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    } catch (err: any) {
+        console.error(`[requireAdmin] Error: ${err.message}`);
+        return res.status(500).json({ error: 'Internal Server Error during auth' });
+    }
+};
     // ─── Route modules (extracted from monolith) ─────────────────────────
+    // Admin routers are protected by requireAdmin. Inline admin routes registered
+    // AFTER these mounts are unreachable for exact path matches. Settings, plans,
+    // formats, and AI engine admin routes have been migrated to extracted routers
+    // and removed from this file; remaining inline admin routes will be migrated
+    // in follow-up PRs (see TODO block below).
     app.use('/api/v1', apiV1Router);
     app.use('/api/classroom', classroomRouter);
-    app.use('/api/admin', adminRoutesRouter);
-    app.use('/api/admin/ai', adminAiRouter);
-    app.use('/api/admin/users', adminUsersRouter);
-    app.use('/api/admin/content', adminContentRouter);
+    app.use('/api/admin', requireAdmin, adminRoutesRouter);
+    app.use('/api/admin', requireAdmin, adminAiRouter);
+    app.use('/api/admin/users', requireAdmin, adminUsersRouter);
+    app.use('/api/admin/content', requireAdmin, adminContentRouter);
+    app.use('/api/subscription', subscriptionRouter);
 
     // Bridge: pass memoryDb to extracted routers
     try {
@@ -3396,7 +3463,6 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             checkedAt: new Date().toISOString(),
         });
     });
-    });
 
     /**
      * 1.1 SUBSCRIPTION CHECKOUT GATEWAY (Stripe & PayPal)
@@ -3581,8 +3647,8 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         });
 
         // Analytics: track successful payment
-        analytics.paymentCompleted(email, tier, amountCents || 0);
-        if (type === 'subscription') analytics.subscriptionActivated(email, tier);
+        // analytics.paymentCompleted(email, tier, amountCents || 0);
+        // if (type === 'subscription') analytics.subscriptionActivated(email, tier);
     });
 
     /**
@@ -3628,7 +3694,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 }
                 case 'invoice.payment_succeeded': {
                     const invoice = event.data.object as Stripe.Invoice;
-                    const subscriptionId = invoice.subscription as string;
+                    const subscriptionId = (invoice as any).subscription as string;
                     if (subscriptionId) {
                         await renewSubscription(subscriptionId, invoice);
                     }
@@ -3636,7 +3702,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
                 }
                 case 'invoice.payment_failed': {
                     const invoice = event.data.object as Stripe.Invoice;
-                    console.warn(`[Stripe Webhook] Payment failed for subscription ${invoice.subscription}`);
+                    console.warn(`[Stripe Webhook] Payment failed for subscription ${(invoice as any).subscription}`);
                     // Downgrade to free tier on payment failure
                     if (invoice.customer_email) {
                         await deactivateSubscription(invoice.customer_email, 'payment_failed');
@@ -3742,74 +3808,13 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
     /**
      * 1.2 ADMINISTRATIVE SAAS API ENDPOINTS
-     * NOTE: Settings, Plans, Formats routes are now handled by routes/admin.ts
-     * (mounted at /api/admin). Remaining routes below will be extracted in
-     * subsequent PRs. Do NOT add new routes here — use the extracted router.
+     * NOTE: Settings, plans, formats, and AI engine admin routes have been
+     * migrated to extracted routers and are protected by requireAdmin at the
+     * router mount. Remaining inline admin routes below will be extracted in
+     * subsequent PRs. Do NOT add new admin routes here — extend the appropriate
+     * router under routes/.
      */
 
-    
-    const requireAdmin = async (req: any, res: any, next: any) => {
-    try {
-        const authHeader = req.headers.authorization;
-        
-        let isCustomAdmin = false;
-        let email = '';
-
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split('Bearer ')[1];
-
-            // 1. Check custom admin session first
-            if (isDatabaseConnected()) {
-                const pool = getDbPool();
-                if (pool) {
-                    const sessionCheck = await pool.query('SELECT username FROM admin_sessions WHERE token = $1 AND expires_at > NOW()', [token]);
-                    if (sessionCheck.rows.length > 0) {
-                        isCustomAdmin = true;
-                        email = sessionCheck.rows[0].username;
-                    }
-                }
-            } else {
-                 const session = memoryDb.admin_sessions?.find((s: any) => s.token === token);
-                 if (session && new Date(session.expires_at) > new Date()) {
-                     isCustomAdmin = true;
-                     email = session.username;
-                 }
-            }
-
-            // 2. Fallback to Firebase JWT
-            if (!isCustomAdmin) {
-                try {
-                    const decoded = await getAuth().verifyIdToken(token);
-                    email = decoded.email || '';
-                } catch (e: any) {
-                    // TASK 1.1: Removed x-admin-email header fallback — was a privilege escalation vector.
-                    // In production, invalid tokens are always rejected.
-                    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-                }
-            }
-        } else {
-            return res.status(401).json({ error: 'Unauthorized: No token provided' });
-        }
-
-        // 3. Custom admin session — trusted, grant access
-        if (isCustomAdmin) {
-             (req as any).adminEmail = email;
-             return next();
-        }
-
-        // 4. RBAC check via Firestore role field (TASK 1.1)
-        const hasAdminRole = await isAdminUser(email);
-        if (hasAdminRole) {
-            (req as any).adminEmail = email;
-            return next();
-        }
-
-        return res.status(403).json({ error: 'Forbidden: Admin access required' });
-    } catch (err: any) {
-        console.error(`[requireAdmin] Error: ${err.message}`);
-        return res.status(500).json({ error: 'Internal Server Error during auth' });
-    }
-};
 
     // --- CUSTOM ADMIN AUTH ---
     function hashPassword(password: string, salt: string) {
@@ -4215,76 +4220,6 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
-    // --- INTEGRATIONS AND SETTINGS ---
-    app.get('/api/admin/settings', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) {
-            return res.json((memoryDb.app_settings || []).map((s:any) => ({ keyName: s.key_name, keyValue: s.key_value, isSecret: s.is_secret })));
-        }
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
-        try {
-            await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (key_name VARCHAR(100) PRIMARY KEY, key_value TEXT NOT NULL, is_secret BOOLEAN DEFAULT false, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-            await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS description TEXT`);
-            const result = await pool.query('SELECT key_name as "keyName", key_value as "keyValue", is_secret as "isSecret", description FROM app_settings');
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.post('/api/admin/settings', async (req, res): Promise<any> => {
-        const { keyName, keyValue, isSecret, description } = req.body;
-        
-        // Always persist to process.env and .env for fail-safe sandbox mode
-        process.env[keyName.toUpperCase()] = keyValue;
-        try {
-            const envPath = path.join(process.cwd(), '.env');
-            let envContent = '';
-            if (fs.existsSync(envPath)) {
-                envContent = fs.readFileSync(envPath, 'utf8');
-            }
-            const lines = envContent.split('\n');
-            let found = false;
-            const newLines = lines.map(line => {
-                if (line.trim().startsWith(keyName.toUpperCase() + '=')) {
-                    found = true;
-                    return `${keyName.toUpperCase()}=${keyValue}`;
-                }
-                return line;
-            });
-            if (!found) {
-                newLines.push(`${keyName.toUpperCase()}=${keyValue}`);
-            }
-            fs.writeFileSync(envPath, newLines.join('\n'));
-        } catch (e) {
-            console.error("Could not write to .env file", e);
-        }
-
-        if (!isDatabaseConnected()) {
-            memoryDb.app_settings = memoryDb.app_settings || [];
-            const existing = memoryDb.app_settings.find((s:any) => s.key_name === keyName);
-            if (existing) {
-                existing.key_value = keyValue;
-                existing.is_secret = isSecret || false;
-            } else {
-                memoryDb.app_settings.push({ key_name: keyName, key_value: keyValue, is_secret: isSecret || false });
-            }
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
-        try {
-            await pool.query(`
-                INSERT INTO app_settings (key_name, key_value, is_secret) 
-                VALUES ($1, $2, $3) 
-                ON CONFLICT (key_name) DO UPDATE SET key_value = EXCLUDED.key_value, is_secret = EXCLUDED.is_secret, updated_at = CURRENT_TIMESTAMP
-            `, [keyName, keyValue, isSecret || false]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
     // --- SUBSCRIPTION PLANS (POSTGRES / MEMORY DB FALLBACK) ---
     app.get('/api/public/plans', async (req, res): Promise<any> => {
         if (!isDatabaseConnected()) {
@@ -4309,71 +4244,6 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         }
     });
 
-    app.get('/api/admin/plans', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) {
-            return res.json(memoryDb.subscription_plans || []);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id SERIAL PRIMARY KEY, name VARCHAR(255), description TEXT, price_subscription DECIMAL(10,2), price_one_time DECIMAL(10,2), features JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-            const result = await pool.query('SELECT * FROM subscription_plans ORDER BY created_at ASC');
-            const plans = result.rows.map(r => ({
-                id: r.id.toString(),
-                name: r.name,
-                description: r.description,
-                priceSubscription: parseFloat(r.price_subscription),
-                priceOneTime: parseFloat(r.price_one_time),
-                features: r.features || []
-            }));
-            return res.json(plans);
-        } catch (e: any) {
-            console.error("Failed to load admin plans from Postgres", e);
-            return res.json([]);
-        }
-    });
-
-    app.post('/api/admin/plans', async (req, res): Promise<any> => {
-        const { name, description, priceSubscription, priceOneTime, features } = req.body;
-        if (!isDatabaseConnected()) {
-            memoryDb.subscription_plans = memoryDb.subscription_plans || [];
-            const newId = String(Date.now());
-            memoryDb.subscription_plans.push({
-                id: newId,
-                name,
-                description: description || '',
-                priceSubscription: Number(priceSubscription) || 0,
-                priceOneTime: Number(priceOneTime) || 0,
-                features: features || [],
-                createdAt: new Date().toISOString()
-            });
-            return res.json({ success: true, id: newId });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(`CREATE TABLE IF NOT EXISTS subscription_plans (id SERIAL PRIMARY KEY, name VARCHAR(255), description TEXT, price_subscription DECIMAL(10,2), price_one_time DECIMAL(10,2), features JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-            const result = await pool.query(
-                'INSERT INTO subscription_plans (name, description, price_subscription, price_one_time, features) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                [name, description || '', Number(priceSubscription) || 0, Number(priceOneTime) || 0, JSON.stringify(features || [])]
-            );
-            return res.json({ success: true, id: result.rows[0].id.toString() });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-    
-    app.delete('/api/admin/plans/:id', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) {
-            memoryDb.subscription_plans = (memoryDb.subscription_plans || []).filter((p:any) => p.id !== req.params.id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM subscription_plans WHERE id = $1', [req.params.id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // ─────────────────────────────────────────────────────────────────────────
     // NEW WIZARD ROUTING: FORMATS, FLOWS, GOALS
@@ -4410,113 +4280,6 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
             return res.json(result.rows);
         } catch (e: any) {
             return res.json(DEFAULT_GOALS);
-        }
-    });
-
-    // Admin API endpoints: Formats
-    app.get('/api/admin/formats', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.starting_formats || DEFAULT_FORMATS);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query('SELECT * FROM starting_formats ORDER BY sort_order ASC');
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.post('/api/admin/formats', async (req, res): Promise<any> => {
-        const { id, slug, title, short_description, long_description, audience_tags, category_tags, recommended_for, sample_output_hint, age_range, visibility_state, show_in_onboarding, show_in_homeschool, show_in_teacher_flows, featured, sort_order, icon } = req.body;
-        const itemId = id || crypto.randomUUID();
-        const data = {
-            id: itemId,
-            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title, short_description, long_description,
-            audience_tags: Array.isArray(audience_tags) ? audience_tags : [],
-            category_tags: Array.isArray(category_tags) ? category_tags : [],
-            recommended_for, sample_output_hint, age_range,
-            visibility_state: visibility_state || 'Active',
-            show_in_onboarding: show_in_onboarding ?? true,
-            show_in_homeschool: show_in_homeschool ?? true,
-            show_in_teacher_flows: show_in_teacher_flows ?? true,
-            featured: featured ?? false,
-            sort_order: sort_order ?? 99,
-            icon: icon || '🏫'
-        };
-
-        if (!isDatabaseConnected()) {
-            memoryDb.starting_formats.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO starting_formats (id, slug, title, short_description, long_description, audience_tags, category_tags, recommended_for, sample_output_hint, age_range, visibility_state, show_in_onboarding, show_in_homeschool, show_in_teacher_flows, featured, sort_order, icon)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-                [
-                    data.id, data.slug, data.title, data.short_description, data.long_description,
-                    JSON.stringify(data.audience_tags), JSON.stringify(data.category_tags),
-                    data.recommended_for, data.sample_output_hint, data.age_range,
-                    data.visibility_state, data.show_in_onboarding, data.show_in_homeschool,
-                    data.show_in_teacher_flows, data.featured, data.sort_order, data.icon
-                ]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.put('/api/admin/formats/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        
-        if (updateFields.audience_tags && Array.isArray(updateFields.audience_tags)) {
-            updateFields.audience_tags = JSON.stringify(updateFields.audience_tags);
-        }
-        if (updateFields.category_tags && Array.isArray(updateFields.category_tags)) {
-            updateFields.category_tags = JSON.stringify(updateFields.category_tags);
-        }
-
-        if (!isDatabaseConnected()) {
-            const idx = memoryDb.starting_formats.findIndex((item: any) => item.id === id);
-            if (idx !== -1) {
-                memoryDb.starting_formats[idx] = { ...memoryDb.starting_formats[idx], ...req.body };
-            }
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach((key) => {
-                if (key !== 'id') {
-                    fields.push(`${key} = $${i}`);
-                    values.push(updateFields[key]);
-                    i++;
-                }
-            });
-            values.push(id);
-            await pool.query(`UPDATE starting_formats SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.delete('/api/admin/formats/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.starting_formats = memoryDb.starting_formats.filter((item: any) => item.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM starting_formats WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
         }
     });
 
@@ -6868,151 +6631,6 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
 
 
     // =========================================================================
-    // AI ENGINE ADMIN ROUTES — Providers, Models, Workflows, Routing Rules
-    // =========================================================================
-
-    // --- AI Providers ---
-    app.get('/api/admin/ai-providers', requireAdmin, async (_req, res): Promise<any> => {
-        return res.json(memoryDb.ai_providers || []);
-    });
-
-    app.post('/api/admin/ai-providers', requireAdmin, async (req, res): Promise<any> => {
-        const provider = { id: `prov-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
-        memoryDb.ai_providers.push(provider);
-        return res.json(provider);
-    });
-
-    app.put('/api/admin/ai-providers/:id', requireAdmin, async (req, res): Promise<any> => {
-        const idx = memoryDb.ai_providers.findIndex((p: any) => p.id === req.params.id);
-        if (idx === -1) return res.status(404).json({ error: 'Provider not found' });
-        memoryDb.ai_providers[idx] = { ...memoryDb.ai_providers[idx], ...req.body };
-        return res.json(memoryDb.ai_providers[idx]);
-    });
-
-    app.delete('/api/admin/ai-providers/:id', requireAdmin, async (req, res): Promise<any> => {
-        memoryDb.ai_providers = memoryDb.ai_providers.filter((p: any) => p.id !== req.params.id);
-        return res.json({ success: true });
-    });
-
-    // --- AI Models ---
-    app.get('/api/admin/ai-models', requireAdmin, async (_req, res): Promise<any> => {
-        return res.json(memoryDb.ai_models || []);
-    });
-
-    app.post('/api/admin/ai-models', requireAdmin, async (req, res): Promise<any> => {
-        const model = { id: `model-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
-        memoryDb.ai_models.push(model);
-        return res.json(model);
-    });
-
-    app.put('/api/admin/ai-models/:id', requireAdmin, async (req, res): Promise<any> => {
-        const idx = memoryDb.ai_models.findIndex((m: any) => m.id === req.params.id);
-        if (idx === -1) return res.status(404).json({ error: 'Model not found' });
-        memoryDb.ai_models[idx] = { ...memoryDb.ai_models[idx], ...req.body };
-        return res.json(memoryDb.ai_models[idx]);
-    });
-
-    app.delete('/api/admin/ai-models/:id', requireAdmin, async (req, res): Promise<any> => {
-        memoryDb.ai_models = memoryDb.ai_models.filter((m: any) => m.id !== req.params.id);
-        return res.json({ success: true });
-    });
-
-    // --- AI Workflows ---
-    app.get('/api/admin/ai-workflows', requireAdmin, async (_req, res): Promise<any> => {
-        return res.json(memoryDb.ai_workflows || []);
-    });
-
-    app.post('/api/admin/ai-workflows', requireAdmin, async (req, res): Promise<any> => {
-        const workflow = { id: `flow-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
-        memoryDb.ai_workflows.push(workflow);
-        return res.json(workflow);
-    });
-
-    app.put('/api/admin/ai-workflows/:id', requireAdmin, async (req, res): Promise<any> => {
-        const idx = memoryDb.ai_workflows.findIndex((w: any) => w.id === req.params.id);
-        if (idx === -1) return res.status(404).json({ error: 'Workflow not found' });
-        memoryDb.ai_workflows[idx] = { ...memoryDb.ai_workflows[idx], ...req.body };
-        return res.json(memoryDb.ai_workflows[idx]);
-    });
-
-    app.delete('/api/admin/ai-workflows/:id', requireAdmin, async (req, res): Promise<any> => {
-        memoryDb.ai_workflows = memoryDb.ai_workflows.filter((w: any) => w.id !== req.params.id);
-        return res.json({ success: true });
-    });
-
-    // --- AI Routing Rules ---
-    app.get('/api/admin/ai-routing-rules', requireAdmin, async (_req, res): Promise<any> => {
-        return res.json(memoryDb.ai_routing_rules || []);
-    });
-
-    app.post('/api/admin/ai-routing-rules', requireAdmin, async (req, res): Promise<any> => {
-        const rule = { id: `rule-${Date.now()}`, ...req.body, createdAt: new Date().toISOString() };
-        memoryDb.ai_routing_rules.push(rule);
-        return res.json(rule);
-    });
-
-    app.put('/api/admin/ai-routing-rules/:id', requireAdmin, async (req, res): Promise<any> => {
-        const idx = memoryDb.ai_routing_rules.findIndex((r: any) => r.id === req.params.id);
-        if (idx === -1) return res.status(404).json({ error: 'Rule not found' });
-        memoryDb.ai_routing_rules[idx] = { ...memoryDb.ai_routing_rules[idx], ...req.body };
-        return res.json(memoryDb.ai_routing_rules[idx]);
-    });
-
-    app.delete('/api/admin/ai-routing-rules/:id', requireAdmin, async (req, res): Promise<any> => {
-        memoryDb.ai_routing_rules = memoryDb.ai_routing_rules.filter((r: any) => r.id !== req.params.id);
-        return res.json({ success: true });
-    });
-
-    // --- AI Fallback Configs ---
-    app.get('/api/admin/ai-fallback-configs', requireAdmin, async (_req, res): Promise<any> => {
-        return res.json(memoryDb.ai_fallback_configs || []);
-    });
-
-    app.put('/api/admin/ai-fallback-configs/:id', requireAdmin, async (req, res): Promise<any> => {
-        const idx = memoryDb.ai_fallback_configs.findIndex((f: any) => f.id === req.params.id);
-        if (idx === -1) return res.status(404).json({ error: 'Fallback config not found' });
-        memoryDb.ai_fallback_configs[idx] = { ...memoryDb.ai_fallback_configs[idx], ...req.body };
-        return res.json(memoryDb.ai_fallback_configs[idx]);
-    });
-
-    // --- Dry-Run Resolver: simulate which model a given workflow+tier resolves to ---
-    app.get('/api/admin/ai-routing/resolve', requireAdmin, async (req, res): Promise<any> => {
-        const { workflow, tier = 'Free', env = 'production' } = req.query as any;
-        if (!workflow) return res.status(400).json({ error: 'workflow query param is required' });
-        const resolution = resolveAIRoute(workflow, tier, env);
-        const model = (memoryDb.ai_models || []).find((m: any) => m.id === resolution.modelId);
-        const provider = (memoryDb.ai_providers || []).find((p: any) => p.id === resolution.providerId);
-        return res.json({
-            ...resolution,
-            modelDisplayName: model?.displayName || resolution.modelSlug,
-            providerDisplayName: provider?.displayName || resolution.providerSlug,
-            costTier: model?.costTier || 'Unknown',
-            performanceTier: model?.performanceTier || 'Unknown'
-        });
-    });
-
-    // --- AI Engine Summary (for Diagnostics) ---
-    app.get('/api/admin/ai-engine/summary', requireAdmin, async (_req, res): Promise<any> => {
-        const providers = memoryDb.ai_providers || [];
-        const models = memoryDb.ai_models || [];
-        const workflows = memoryDb.ai_workflows || [];
-        const rules = memoryDb.ai_routing_rules || [];
-        const fallbacks = memoryDb.ai_fallback_configs || [];
-
-        return res.json({
-            totalProviders: providers.length,
-            activeProviders: providers.filter((p: any) => p.status === 'Active').length,
-            totalModels: models.length,
-            activeModels: models.filter((m: any) => m.status === 'Active').length,
-            totalWorkflows: workflows.length,
-            activeWorkflows: workflows.filter((w: any) => w.status === 'Active').length,
-            totalRoutingRules: rules.length,
-            activeRoutingRules: rules.filter((r: any) => r.status === 'Active').length,
-            fallbackConfigsActive: fallbacks.filter((f: any) => f.status === 'Active').length,
-            providerStatuses: providers.map((p: any) => ({ displayName: p.displayName, status: p.status, slug: p.slug }))
-        });
-    });
-
 
     // Task 1.5: Global error handler
     app.use(errorTracker.errorHandler.bind(errorTracker));

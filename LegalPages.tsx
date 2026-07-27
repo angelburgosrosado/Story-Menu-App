@@ -82,3 +82,10 @@ export const DMCA = () => {
         </LegalPageLayout>
     );
 };
+
+export const LegalPages = {
+    PrivacyPolicy,
+    TermsOfService,
+    CookiePolicy,
+    DMCA
+};

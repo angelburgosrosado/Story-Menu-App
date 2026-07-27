@@ -17,8 +17,10 @@ export interface PublishedStory {
   creatorId: string;
   creatorName: string;
   coverUrl: string;
+  coverImage?: string;
   description: string;
   category: string;
+  genre?: string;
   formatTags: string[];
   languageTag: string;
   audienceTag: string;

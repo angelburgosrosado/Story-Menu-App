@@ -110,7 +110,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     try {
         const db = getFirestore();
-        const classSnap = await db.collection('classrooms').doc(id).get();
+        const classSnap = await db.collection('classrooms').doc(String(id)).get();
 
         if (!classSnap.exists) {
             return res.status(404).json({ error: 'Class not found' });
@@ -132,7 +132,7 @@ router.get('/:id/students', async (req: Request, res: Response) => {
 
     try {
         const db = getFirestore();
-        const membersSnap = await db.collection('classrooms').doc(id)
+        const membersSnap = await db.collection('classrooms').doc(String(id))
             .collection('members')
             .where('role', '==', 'student')
             .get();
@@ -178,7 +178,7 @@ router.post('/:id/assign', async (req: Request, res: Response) => {
 
     try {
         const db = getFirestore();
-        const classSnap = await db.collection('classrooms').doc(id).get();
+        const classSnap = await db.collection('classrooms').doc(String(id)).get();
 
         if (!classSnap.exists) return res.status(404).json({ error: 'Class not found' });
         if (classSnap.data()?.teacherId !== teacherId) {

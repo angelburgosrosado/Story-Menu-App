@@ -34,6 +34,12 @@ import adminRoutesRouter from './routes/admin';
 import adminAiRouter from './routes/admin-ai';
 import adminUsersRouter from './routes/admin-users';
 import adminContentRouter from './routes/admin-content';
+import adminCreativeRouter from './routes/admin-creative';
+import adminModerationRouter from './routes/admin-moderation';
+import adminSystemRouter from './routes/admin-system';
+import adminAnalyticsRouter from './routes/admin-analytics';
+import adminCharactersRouter from './routes/admin-characters';
+import { setMemoryDb as setAdminHelpersDb } from './admin-helpers';
 import subscriptionRouter from './routes/subscription';
 import { GENRES, STYLE_KEYWORDS, ART_STYLES, StartingFormat, CreatorFlow, StoryGoal } from './types';
 import Stripe from 'stripe';
@@ -1763,18 +1769,19 @@ async function startServer(app: express.Express) {
     }
 };
     // ─── Route modules (extracted from monolith) ─────────────────────────
-    // Admin routers are protected by requireAdmin. Inline admin routes registered
-    // AFTER these mounts are unreachable for exact path matches. Settings, plans,
-    // formats, and AI engine admin routes have been migrated to extracted routers
-    // and removed from this file; remaining inline admin routes will be migrated
-    // in follow-up PRs (see TODO block below).
+    // Admin routers are protected by requireAdmin. All admin route groups have
+    // been migrated to extracted routers and removed from this file.
     app.use('/api/v1', apiV1Router);
     app.use('/api/classroom', classroomRouter);
     app.use('/api/admin', requireAdmin, adminRoutesRouter);
     app.use('/api/admin', requireAdmin, adminAiRouter);
-    app.use('/api/admin/users', requireAdmin, adminUsersRouter);
-    app.use('/api/admin/content', requireAdmin, adminContentRouter);
-    app.use('/api/subscription', subscriptionRouter);
+    app.use('/api/admin', requireAdmin, adminUsersRouter);
+    app.use('/api/admin', requireAdmin, adminContentRouter);
+    app.use('/api/admin', requireAdmin, adminCreativeRouter);
+    app.use('/api/admin', requireAdmin, adminModerationRouter);
+    app.use('/api/admin', requireAdmin, adminSystemRouter);
+    app.use('/api/admin', requireAdmin, adminAnalyticsRouter);
+    app.use('/api/admin', requireAdmin, adminCharactersRouter);
 
     // Bridge: pass memoryDb to extracted routers
     try {
@@ -1782,7 +1789,14 @@ async function startServer(app: express.Express) {
         const { setMemoryDb: setAiDb, setRouteResolver } = require('./routes/admin-ai');
         const { setMemoryDb: setUsersDb } = require('./routes/admin-users');
         const { setMemoryDb: setContentDb } = require('./routes/admin-content');
+        const { setMemoryDb: setCreativeDb } = require('./routes/admin-creative');
+        const { setMemoryDb: setModerationDb } = require('./routes/admin-moderation');
+        const { setMemoryDb: setSystemDb } = require('./routes/admin-system');
+        const { setMemoryDb: setAnalyticsDb } = require('./routes/admin-analytics');
+        const { setMemoryDb: setCharactersDb } = require('./routes/admin-characters');
         setAdminDb(memoryDb); setAiDb(memoryDb); setUsersDb(memoryDb); setContentDb(memoryDb);
+        setCreativeDb(memoryDb); setModerationDb(memoryDb); setSystemDb(memoryDb); setAnalyticsDb(memoryDb); setCharactersDb(memoryDb);
+        setAdminHelpersDb(memoryDb);
         setRouteResolver(resolveAIRoute);
     } catch (e) { console.warn('Route module bridge skipped:', e.message); }
 
@@ -3879,291 +3893,20 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         }
     });
 
-    app.get('/api/admin/system/users', requireAdmin, async (req, res) => {
-        try {
-            if (isDatabaseConnected()) {
-                const pool = getDbPool();
-                if (pool) {
-                    
-                    await pool.query(`
-                        CREATE TABLE IF NOT EXISTS admin_users (
-                            username VARCHAR(255) PRIMARY KEY,
-                            password_hash TEXT NOT NULL,
-                            salt TEXT NOT NULL,
-                            role VARCHAR(50) DEFAULT 'admin',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    `);
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_hash TEXT');
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS salt TEXT');
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'admin\'');
 
 
-                    const { rows } = await pool.query('SELECT username, role, created_at FROM admin_users');
-                    return res.json(rows);
-                }
-            } else {
-                return res.json((memoryDb.admin_users || []).map((u:any) => ({ username: u.username, role: u.role, created_at: u.created_at })));
-            }
-            res.json([]);
-        } catch(e) {
-            res.status(500).json({ error: 'Server error' });
-        }
-    });
 
-    app.post('/api/admin/system/users', requireAdmin, async (req, res) => {
-        const { username, password } = req.body;
-        if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-        
-        try {
-            const salt = crypto.randomBytes(16).toString('hex');
-            const hash = hashPassword(password, salt);
-            
-            if (isDatabaseConnected()) {
-                const pool = getDbPool();
-                if (pool) {
-                    
-                    await pool.query(`
-                        CREATE TABLE IF NOT EXISTS admin_users (
-                            username VARCHAR(255) PRIMARY KEY,
-                            password_hash TEXT NOT NULL,
-                            salt TEXT NOT NULL,
-                            role VARCHAR(50) DEFAULT 'admin',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                    `);
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS password_hash TEXT');
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS salt TEXT');
-                    await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT \'admin\'');
-
-
-                    await pool.query('INSERT INTO admin_users (username, password_hash, salt) VALUES ($1, $2, $3)', [username, hash, salt]);
-                }
-            } else {
-                memoryDb.admin_users = memoryDb.admin_users || [];
-                memoryDb.admin_users.push({ username, password_hash: hash, salt, role: 'admin', created_at: new Date().toISOString() });
-            }
-            res.json({ success: true });
-        } catch(e) {
-            console.error(e);
-            res.status(500).json({ error: 'Server error or user exists' });
-        }
-    });
-
-    app.delete('/api/admin/system/users/:username', requireAdmin, async (req, res) => {
-        const { username } = req.params;
-        try {
-            if (isDatabaseConnected()) {
-                const pool = getDbPool();
-                if (pool) {
-                    await pool.query('DELETE FROM admin_users WHERE username = $1', [username]);
-                }
-            } else {
-                memoryDb.admin_users = (memoryDb.admin_users || []).filter((u:any) => u.username !== username);
-            }
-            res.json({ success: true });
-        } catch(e) {
-            console.error(e);
-            res.status(500).json({ error: 'Server error' });
-        }
-    });
-
-    // --- REQUIRE ADMIN MIDDLEWARE ---
-
-
-    app.use('/api/admin', requireAdmin);
 
     // View SaaS Customers and checkout tracking
     
-    app.post('/api/admin/customers', async (req, res): Promise<any> => {
-        try {
-            const { email, tier, firstName, lastName, phone, company, internalNotes } = req.body;
-            if (!email) return res.status(400).json({ error: 'Email required' });
-            
-            const db = getFirestore();
-            const newCustomer = {
-                email,
-                subscriptionTier: tier || 'Free',
-                tokens: 0,
-                created_at: new Date().toISOString(),
-                firstName: firstName || '',
-                lastName: lastName || '',
-                phone: phone || '',
-                company: company || '',
-                internalNotes: internalNotes || ''
-            };
-            
-            try {
-                await db.collection('users').doc(email).set(newCustomer, { merge: true });
-            } catch (err: any) {
-                // Fallback to memory
-                const existingIdx = memoryDb.users.findIndex((u:any) => u.email === email);
-                if (existingIdx >= 0) {
-                    memoryDb.users[existingIdx] = { ...memoryDb.users[existingIdx], ...newCustomer };
-                } else {
-                    memoryDb.users.push(newCustomer);
-                }
-            }
-            
-            return res.json({ success: true, customer: newCustomer });
-        } catch (error: any) {
-            console.error("Admin API Error - Add Customer:", error);
-            return res.status(500).json({ error: error.message });
-        }
-    });
-app.get('/api/admin/customers', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                // Ensure columns exist first
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);');
-                
-                const result = await pool.query('SELECT id, email, tier, subscription_id as "subscriptionId", payment_method as "paymentMethod", created_at as "createdAt" FROM users ORDER BY created_at DESC');
-                return res.json(result.rows);
-            } catch (err: any) {
-                console.warn("Database admin customers fallback:", err.message);
-                if (isConnectionError(err)) {
-                    markDatabaseOffline();
-                }
-            }
-        }
-        
-        // Fallback to memory DB
-        const mappedMemory = memoryDb.users.map(u => ({
-            id: u.id,
-            email: u.email,
-            tier: u.tier || null,
-            subscriptionId: u.subscriptionId || null,
-            paymentMethod: u.paymentMethod || null,
-            createdAt: u.created_at || new Date()
-        }));
-        return res.json(mappedMemory);
-    });
 
     // Update Customer subscription status manually
-    app.put('/api/admin/customers/:email', async (req, res): Promise<any> => {
-        const { email } = req.params;
-        const { tier, subscriptionId, paymentMethod } = req.body;
-        
-        console.info(`🔧 [Admin Action] Overriding subscription details for ${email} to tier: ${tier}`);
-
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);');
-
-                await pool.query(
-                    'UPDATE users SET tier = $1, subscription_id = $2, payment_method = $3 WHERE email = $4',
-                    [tier || null, subscriptionId || null, paymentMethod || null, email]
-                );
-            } catch (err: any) {
-                console.warn("Database admin put fallback:", err.message);
-                if (isConnectionError(err)) {
-                    markDatabaseOffline();
-                }
-            }
-        }
-
-        // Update memory DB
-        const matchUser = memoryDb.users.find(u => u.email === email);
-        if (matchUser) {
-            matchUser.tier = tier || undefined;
-            matchUser.subscriptionId = subscriptionId || undefined;
-            matchUser.paymentMethod = paymentMethod || undefined;
-        } else {
-            // Check if user should be created
-            memoryDb.users.push({
-                id: '00000000-0000-0000-0000-000000000000',
-                email,
-                tier: tier || undefined,
-                subscriptionId: subscriptionId || undefined,
-                paymentMethod: paymentMethod || undefined,
-                created_at: new Date()
-            });
-        }
-
-        return res.json({ success: true, message: `Successfully updated user "${email}" in administration records.` });
-    });
 
     // Delete customer profile manually
-    app.delete('/api/admin/customers/:email', async (req, res): Promise<any> => {
-        const { email } = req.params;
-        console.info(`🟥 [Admin Action] Deleting user profile and credentials for ${email}`);
-        
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query('DELETE FROM users WHERE email = $1', [email]);
-            } catch (err: any) {
-                console.warn("Database admin delete fallback:", err.message);
-                if (isConnectionError(err)) {
-                    markDatabaseOffline();
-                }
-            }
-        }
-
-                        // Memory delete
-        memoryDb.users = memoryDb.users.filter(u => u.email !== email);
-        return res.json({ success: true, message: `Successfully deleted user "${email}" from Saas registration.` });
-    });
 
     // Grant or Set Tokens for a specific user (Tier Economies)
-    app.post('/api/admin/customers/:email/tokens', async (req, res): Promise<any> => {
-        const { email } = req.params;
-        const { amount, action } = req.body; // action: 'add', 'set'
-
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
-
-        try {
-            const userRes = await pool.query('SELECT tokens FROM users WHERE email = $1', [email]);
-            if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-
-            let newBalance = userRes.rows[0].tokens;
-            if (action === 'set') {
-                newBalance = parseInt(amount);
-            } else {
-                newBalance += parseInt(amount);
-            }
-
-            await pool.query('UPDATE users SET tokens = $1 WHERE email = $2', [newBalance, email]);
-            return res.json({ success: true, tokens: newBalance, message: `Successfully updated token balance to ${newBalance}` });
-        } catch (e: any) {
-            console.error("Token update error:", e);
-            return res.status(500).json({ error: 'Database error' });
-        }
-    });
 
     // View AI Cost Analytics
-    app.get('/api/admin/analytics/costs', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (!pool) return res.status(500).json({ error: 'DB not connected' });
-
-        try {
-            // Aggregate totals
-            const totalsRes = await pool.query('SELECT SUM(tokens_in) as total_in, SUM(tokens_out) as total_out, SUM(cost_usd) as total_cost FROM ai_usage_logs');
-            const totals = totalsRes.rows[0];
-
-            // Recent logs
-            const logsRes = await pool.query('SELECT user_email, operation, model, tokens_in, tokens_out, cost_usd, created_at FROM ai_usage_logs ORDER BY created_at DESC LIMIT 100');
-
-            return res.json({
-                totals: {
-                    tokensIn: parseInt(totals.total_in || '0'),
-                    tokensOut: parseInt(totals.total_out || '0'),
-                    totalCostUsd: parseFloat(totals.total_cost || '0')
-                },
-                logs: logsRes.rows
-            });
-        } catch (e: any) {
-            console.error("Analytics fetch error:", e);
-            return res.status(500).json({ error: 'Database error' });
-        }
-    });
 
     // --- DIAGNOSTIC ENDPOINT (PUBLIC) ---
     app.get('/api/public/debug-env', (req, res) => {
@@ -4188,37 +3931,8 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         return res.json({});
     });
 
-    app.post('/api/admin/landing', requireAdmin, async (req, res): Promise<any> => {
-        try {
-            const db = getFirestore();
-            await db.collection('app_settings').doc('landing_page_config').set(req.body, { merge: true });
-            return res.json({ success: true });
-        } catch (e: any) {
-            console.error("Failed to update landing config:", e);
-            return res.status(500).json({ error: 'Database error' });
-        }
-    });
 
 
-    app.get('/api/admin/cost-analytics', async (req, res): Promise<any> => {
-        try {
-            const pool = getDbPool();
-            if (!pool) return res.status(500).json({ error: 'DB not connected' });
-            
-            const totalCostRes = await pool.query('SELECT SUM(cost_usd_cents) as total FROM ai_cost_analytics');
-            const providerCostRes = await pool.query('SELECT provider, SUM(cost_usd_cents) as total FROM ai_cost_analytics GROUP BY provider');
-            const userCostRes = await pool.query('SELECT user_email, SUM(cost_usd_cents) as total, COUNT(*) as calls FROM ai_cost_analytics GROUP BY user_email ORDER BY total DESC LIMIT 50');
-            
-            return res.json({
-                total_cost_cents: totalCostRes.rows[0].total || 0,
-                by_provider: providerCostRes.rows,
-                by_user: userCostRes.rows
-            });
-        } catch (e: any) {
-            console.error("Cost analytics API error:", e.message);
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // --- SUBSCRIPTION PLANS (POSTGRES / MEMORY DB FALLBACK) ---
     app.get('/api/public/plans', async (req, res): Promise<any> => {
@@ -4284,211 +3998,14 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     // Admin API endpoints: Flows
-    app.get('/api/admin/flows', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.creator_flows || DEFAULT_FLOWS);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query('SELECT * FROM creator_flows ORDER BY sort_order ASC');
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/flows', async (req, res): Promise<any> => {
-        const { id, slug, title, short_description, best_for, output_hint, related_formats, visibility_state, show_in_onboarding, featured, sort_order } = req.body;
-        const itemId = id || crypto.randomUUID();
-        const data = {
-            id: itemId,
-            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title, short_description, best_for, output_hint,
-            related_formats: Array.isArray(related_formats) ? related_formats : [],
-            visibility_state: visibility_state || 'Active',
-            show_in_onboarding: show_in_onboarding ?? true,
-            featured: featured ?? false,
-            sort_order: sort_order ?? 99
-        };
 
-        if (!isDatabaseConnected()) {
-            memoryDb.creator_flows.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO creator_flows (id, slug, title, short_description, best_for, output_hint, related_formats, visibility_state, show_in_onboarding, featured, sort_order)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-                [
-                    data.id, data.slug, data.title, data.short_description, data.best_for, data.output_hint,
-                    JSON.stringify(data.related_formats), data.visibility_state, data.show_in_onboarding,
-                    data.featured, data.sort_order
-                ]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/flows/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-
-        if (updateFields.related_formats && Array.isArray(updateFields.related_formats)) {
-            updateFields.related_formats = JSON.stringify(updateFields.related_formats);
-        }
-
-        if (!isDatabaseConnected()) {
-            const idx = memoryDb.creator_flows.findIndex((item: any) => item.id === id);
-            if (idx !== -1) {
-                memoryDb.creator_flows[idx] = { ...memoryDb.creator_flows[idx], ...req.body };
-            }
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach((key) => {
-                if (key !== 'id') {
-                    fields.push(`${key} = $${i}`);
-                    values.push(updateFields[key]);
-                    i++;
-                }
-            });
-            values.push(id);
-            await pool.query(`UPDATE creator_flows SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.delete('/api/admin/flows/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.creator_flows = memoryDb.creator_flows.filter((item: any) => item.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM creator_flows WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Admin API endpoints: Goals
-    app.get('/api/admin/goals', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.story_goals || DEFAULT_GOALS);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query('SELECT * FROM story_goals ORDER BY sort_order ASC');
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/goals', async (req, res): Promise<any> => {
-        const { id, slug, title, short_description, category, tags, related_formats, related_creator_flows, importance, visibility_state, show_in_wizard, show_in_homeschool, show_in_teacher_flows, featured, sort_order } = req.body;
-        const itemId = id || crypto.randomUUID();
-        const data = {
-            id: itemId,
-            slug: slug || title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title, short_description,
-            category: category || 'General',
-            tags: Array.isArray(tags) ? tags : [],
-            related_formats: Array.isArray(related_formats) ? related_formats : [],
-            related_creator_flows: Array.isArray(related_creator_flows) ? related_creator_flows : [],
-            importance: importance || 'Primary',
-            visibility_state: visibility_state || 'Active',
-            show_in_wizard: show_in_wizard ?? true,
-            show_in_homeschool: show_in_homeschool ?? true,
-            show_in_teacher_flows: show_in_teacher_flows ?? true,
-            featured: featured ?? false,
-            sort_order: sort_order ?? 99
-        };
 
-        if (!isDatabaseConnected()) {
-            memoryDb.story_goals.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO story_goals (id, slug, title, short_description, category, tags, related_formats, related_creator_flows, importance, visibility_state, show_in_wizard, show_in_homeschool, show_in_teacher_flows, featured, sort_order)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-                [
-                    data.id, data.slug, data.title, data.short_description, data.category,
-                    JSON.stringify(data.tags), JSON.stringify(data.related_formats), JSON.stringify(data.related_creator_flows),
-                    data.importance, data.visibility_state, data.show_in_wizard, data.show_in_homeschool,
-                    data.show_in_teacher_flows, data.featured, data.sort_order
-                ]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/goals/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-
-        if (updateFields.tags && Array.isArray(updateFields.tags)) {
-            updateFields.tags = JSON.stringify(updateFields.tags);
-        }
-        if (updateFields.related_formats && Array.isArray(updateFields.related_formats)) {
-            updateFields.related_formats = JSON.stringify(updateFields.related_formats);
-        }
-        if (updateFields.related_creator_flows && Array.isArray(updateFields.related_creator_flows)) {
-            updateFields.related_creator_flows = JSON.stringify(updateFields.related_creator_flows);
-        }
-
-        if (!isDatabaseConnected()) {
-            const idx = memoryDb.story_goals.findIndex((item: any) => item.id === id);
-            if (idx !== -1) {
-                memoryDb.story_goals[idx] = { ...memoryDb.story_goals[idx], ...req.body };
-            }
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach((key) => {
-                if (key !== 'id') {
-                    fields.push(`${key} = $${i}`);
-                    values.push(updateFields[key]);
-                    i++;
-                }
-            });
-            values.push(id);
-            await pool.query(`UPDATE story_goals SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
-
-    app.delete('/api/admin/goals/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.story_goals = memoryDb.story_goals.filter((item: any) => item.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM story_goals WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // ─────────────────────────────────────────────────────────────────────────
     // PERSONAS, USAGE MODES, REFERENCE IMAGES, ROLE ASSIGNMENTS API
@@ -4662,86 +4179,9 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     // Admin API endpoints: Usage Modes
-    app.get('/api/admin/usage-modes', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.usage_modes || DEFAULT_USAGE_MODES);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM usage_modes ORDER BY sortOrder ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/usage-modes', async (req, res): Promise<any> => {
-        const { label, slug, shortDescription, generationBehaviorHint, safetyNotes, visibleInWizard, sortOrder, status } = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id,
-            slug: slug || label.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            label, shortDescription, generationBehaviorHint, safetyNotes,
-            visibleInWizard: visibleInWizard ?? true,
-            sortOrder: sortOrder ?? 99,
-            status: status || 'Active'
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.usage_modes = memoryDb.usage_modes || [];
-            memoryDb.usage_modes.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO usage_modes (id, slug, label, shortDescription, generationBehaviorHint, safetyNotes, visibleInWizard, sortOrder, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [data.id, data.slug, data.label, data.shortDescription, data.generationBehaviorHint, data.safetyNotes, data.visibleInWizard, data.sortOrder, data.status]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/usage-modes/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            memoryDb.usage_modes = memoryDb.usage_modes || [];
-            const index = memoryDb.usage_modes.findIndex((m: any) => m.id === id);
-            if (index !== -1) {
-                memoryDb.usage_modes[index] = { ...memoryDb.usage_modes[index], ...updateFields };
-                return res.json(memoryDb.usage_modes[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE usage_modes SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.get('/api/admin/reference-images', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.reference_images || []);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM reference_images ORDER BY createdAt DESC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Public / User Styles APIs
     app.get('/api/styles', async (req, res): Promise<any> => {
@@ -4979,358 +4419,24 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     // Admin CRUD endpoints for Voices
-    app.get('/api/admin/voices', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.voices || DEFAULT_VOICES);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM voices ORDER BY sortOrder ASC");
-            const rows = result.rows.map(r => ({
-                ...r,
-                languageCodes: typeof r.languageCodes === 'string' ? JSON.parse(r.languageCodes) : r.languageCodes
-            }));
-            return res.json(rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/voices', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, slug: body.slug || body.displayName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            displayName: body.displayName, providerId: body.providerId || 'elevenlabs-voice-sim',
-            modelId: body.modelId || 'eleven_monolingual_v1',
-            languageCodes: Array.isArray(body.languageCodes) ? body.languageCodes : [body.primaryLanguageCode],
-            primaryLanguageCode: body.primaryLanguageCode || 'en-US',
-            accentLabel: body.accentLabel || '', toneLabel: body.toneLabel || '',
-            ageDescriptor: body.ageDescriptor || 'Adult', narratorSuitability: body.narratorSuitability ?? true,
-            childSafe: body.childSafe ?? true, classroomSafe: body.classroomSafe ?? true,
-            supportsBilingualWorkflows: body.supportsBilingualWorkflows ?? false,
-            visibleInStudio: body.visibleInStudio ?? true, visibleInKidStory: body.visibleInKidStory ?? true,
-            visibleInComicStudio: body.visibleInComicStudio ?? true, visibleInTeacherFlow: body.visibleInTeacherFlow ?? true,
-            visibleInHomeschool: body.visibleInHomeschool ?? true, internalTestingOnly: body.internalTestingOnly ?? false,
-            status: body.status || 'Active', featured: body.featured ?? false, sortOrder: body.sortOrder ?? 99
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.voices.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO voices (id, slug, displayName, providerId, modelId, languageCodes, primaryLanguageCode, accentLabel, toneLabel, ageDescriptor, narratorSuitability, childSafe, classroomSafe, supportsBilingualWorkflows, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, internalTestingOnly, status, featured, sortOrder)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
-                [data.id, data.slug, data.displayName, data.providerId, data.modelId, JSON.stringify(data.languageCodes), data.primaryLanguageCode, data.accentLabel, data.toneLabel, data.ageDescriptor, data.narratorSuitability, data.childSafe, data.classroomSafe, data.supportsBilingualWorkflows, data.visibleInStudio, data.visibleInKidStory, data.visibleInComicStudio, data.visibleInTeacherFlow, data.visibleInHomeschool, data.internalTestingOnly, data.status, data.featured, data.sortOrder]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/voices/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.voices.findIndex((v: any) => v.id === id);
-            if (index !== -1) {
-                memoryDb.voices[index] = { ...memoryDb.voices[index], ...updateFields };
-                return res.json(memoryDb.voices[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                if (key === 'languageCodes') {
-                    fields.push(`languageCodes = $${i++}`);
-                    values.push(JSON.stringify(updateFields[key]));
-                } else {
-                    fields.push(`${key} = $${i++}`);
-                    values.push(updateFields[key]);
-                }
-            });
-            values.push(id);
-            await pool.query(`UPDATE voices SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/voices/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.voices = memoryDb.voices.filter((v: any) => v.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM voices WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Admin CRUD endpoints for Soundtracks
-    app.get('/api/admin/soundtracks', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.soundtrack_items || DEFAULT_SOUNDTRACKS);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM soundtrack_items ORDER BY sortOrder ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/soundtracks', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title: body.title, category: body.category || 'Soundtrack', mood: body.mood || '',
-            educationalSuitability: body.educationalSuitability ?? true,
-            familySuitability: body.familySuitability ?? true, classroomSuitability: body.classroomSuitability ?? true,
-            languageNeutral: body.languageNeutral ?? true, status: body.status || 'Active',
-            internalTestingOnly: body.internalTestingOnly ?? false, sortOrder: body.sortOrder ?? 99
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.soundtrack_items.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO soundtrack_items (id, slug, title, category, mood, educationalSuitability, familySuitability, classroomSuitability, languageNeutral, status, internalTestingOnly, sortOrder)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-                [data.id, data.slug, data.title, data.category, data.mood, data.educationalSuitability, data.familySuitability, data.classroomSuitability, data.languageNeutral, data.status, data.internalTestingOnly, data.sortOrder]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/soundtracks/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.soundtrack_items.findIndex((s: any) => s.id === id);
-            if (index !== -1) {
-                memoryDb.soundtrack_items[index] = { ...memoryDb.soundtrack_items[index], ...updateFields };
-                return res.json(memoryDb.soundtrack_items[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE soundtrack_items SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/soundtracks/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.soundtrack_items = memoryDb.soundtrack_items.filter((s: any) => s.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM soundtrack_items WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Admin CRUD endpoints for Languages
-    app.get('/api/admin/languages', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.languages || DEFAULT_LANGUAGES);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM languages ORDER BY sortOrder ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/languages', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, code: body.code, slug: body.slug || body.displayName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            displayName: body.displayName, nativeName: body.nativeName, direction: body.direction || 'ltr',
-            status: body.status || 'Active', visibleInStudio: body.visibleInStudio ?? true,
-            visibleInKidStory: body.visibleInKidStory ?? true, visibleInComicStudio: body.visibleInComicStudio ?? true,
-            visibleInTeacherFlow: body.visibleInTeacherFlow ?? true, visibleInHomeschool: body.visibleInHomeschool ?? true,
-            supportsBilingual: body.supportsBilingual ?? true, supportsNarration: body.supportsNarration ?? true,
-            supportsTranslation: body.supportsTranslation ?? true, internalTestingOnly: body.internalTestingOnly ?? false,
-            educationalNotes: body.educationalNotes || '', sortOrder: body.sortOrder ?? 99, featured: body.featured ?? false
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.languages.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO languages (id, code, slug, displayName, nativeName, direction, status, visibleInStudio, visibleInKidStory, visibleInComicStudio, visibleInTeacherFlow, visibleInHomeschool, supportsBilingual, supportsNarration, supportsTranslation, internalTestingOnly, educationalNotes, sortOrder, featured)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-                [data.id, data.code, data.slug, data.displayName, data.nativeName, data.direction, data.status, data.visibleInStudio, data.visibleInKidStory, data.visibleInComicStudio, data.visibleInTeacherFlow, data.visibleInHomeschool, data.supportsBilingual, data.supportsNarration, data.supportsTranslation, data.internalTestingOnly, data.educationalNotes, data.sortOrder, data.featured]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/languages/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.languages.findIndex((l: any) => l.id === id);
-            if (index !== -1) {
-                memoryDb.languages[index] = { ...memoryDb.languages[index], ...updateFields };
-                return res.json(memoryDb.languages[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE languages SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/languages/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.languages = memoryDb.languages.filter((l: any) => l.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM languages WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Admin CRUD endpoints for Glossary entries
-    app.get('/api/admin/glossary', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.glossary_entries || DEFAULT_GLOSSARY);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM glossary_entries ORDER BY sortOrder ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/glossary', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, slug: body.slug || body.sourceTerm.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            sourceTerm: body.sourceTerm, preferredTranslation: body.preferredTranslation,
-            sourceLanguageCode: body.sourceLanguageCode, targetLanguageCode: body.targetLanguageCode,
-            termType: body.termType || 'Name', preserveTerm: body.preserveTerm ?? true,
-            scopeType: body.scopeType || 'Global', internalTestingOnly: body.internalTestingOnly ?? false,
-            status: body.status || 'Active', sortOrder: body.sortOrder ?? 99
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.glossary_entries.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO glossary_entries (id, slug, sourceTerm, preferredTranslation, sourceLanguageCode, targetLanguageCode, termType, preserveTerm, scopeType, internalTestingOnly, status, sortOrder)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-                [data.id, data.slug, data.sourceTerm, data.preferredTranslation, data.sourceLanguageCode, data.targetLanguageCode, data.termType, data.preserveTerm, data.scopeType, data.internalTestingOnly, data.status, data.sortOrder]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/glossary/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.glossary_entries.findIndex((g: any) => g.id === id);
-            if (index !== -1) {
-                memoryDb.glossary_entries[index] = { ...memoryDb.glossary_entries[index], ...updateFields };
-                return res.json(memoryDb.glossary_entries[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE glossary_entries SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/glossary/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.glossary_entries = memoryDb.glossary_entries.filter((g: any) => g.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM glossary_entries WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
     app.get('/api/prompt-templates', async (req, res): Promise<any> => {
         if (!isDatabaseConnected()) return res.json(memoryDb.prompt_templates || DEFAULT_PROMPT_TEMPLATES);
         const pool = getDbPool();
@@ -5528,303 +4634,20 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     });
 
     // Admin CRUD endpoints for Styles
-    app.get('/api/admin/styles', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.styles || DEFAULT_STYLES);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM styles ORDER BY sortOrder ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/styles', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title: body.title, shortDescription: body.shortDescription, longDescription: body.longDescription,
-            visualMood: body.visualMood, audienceTags: body.audienceTags || [], useCaseTags: body.useCaseTags || [],
-            styleFamily: body.styleFamily, recommendationTags: body.recommendationTags || [], visibleInStudio: body.visibleInStudio ?? true,
-            visibleInHomeschool: body.visibleInHomeschool ?? true, visibleInTeacherFlow: body.visibleInTeacherFlow ?? true,
-            visibilityState: body.visibilityState || 'Active', featured: body.featured ?? false, sortOrder: body.sortOrder ?? 99,
-            internalTestingOnly: body.internalTestingOnly ?? false, artworkReference: body.artworkReference || ''
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.styles.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO styles (id, slug, title, shortDescription, longDescription, visualMood, audienceTags, useCaseTags, styleFamily, recommendationTags, visibleInStudio, visibleInHomeschool, visibleInTeacherFlow, visibilityState, featured, sortOrder, internalTestingOnly, artworkReference)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-                [data.id, data.slug, data.title, data.shortDescription, data.longDescription, data.visualMood, JSON.stringify(data.audienceTags), JSON.stringify(data.useCaseTags), data.styleFamily, JSON.stringify(data.recommendationTags), data.visibleInStudio, data.visibleInHomeschool, data.visibleInTeacherFlow, data.visibilityState, data.featured, data.sortOrder, data.internalTestingOnly, data.artworkReference]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/styles/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.styles.findIndex((s: any) => s.id === id);
-            if (index !== -1) {
-                memoryDb.styles[index] = { ...memoryDb.styles[index], ...updateFields };
-                return res.json(memoryDb.styles[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                let val = updateFields[key];
-                if (Array.isArray(val)) val = JSON.stringify(val);
-                fields.push(`${key} = $${i++}`);
-                values.push(val);
-            });
-            values.push(id);
-            await pool.query(`UPDATE styles SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/styles/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.styles = memoryDb.styles.filter((s: any) => s.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM styles WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
     // Admin CRUD endpoints for Prompt Templates
-    app.get('/api/admin/prompt-templates', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.prompt_templates || DEFAULT_PROMPT_TEMPLATES);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM prompt_templates ORDER BY title ASC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.post('/api/admin/prompt-templates', async (req, res): Promise<any> => {
-        const body = req.body;
-        const id = crypto.randomUUID();
-        const data = {
-            id, slug: body.slug || body.title.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-            title: body.title, workflowType: body.workflowType, formatMappings: body.formatMappings,
-            creatorFlowMappings: body.creatorFlowMappings, styleModifiers: body.styleModifiers,
-            educationalMode: body.educationalMode, bilingualHandlingHint: body.bilingualHandlingHint,
-            personaConsistencyHint: body.personaConsistencyHint, status: body.status || 'Active',
-            visibleInAdmin: body.visibleInAdmin ?? true, internalTestingOnly: body.internalTestingOnly ?? false
-        };
-        if (!isDatabaseConnected()) {
-            memoryDb.prompt_templates.push(data);
-            return res.json(data);
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query(
-                `INSERT INTO prompt_templates (id, slug, title, workflowType, formatMappings, creatorFlowMappings, styleModifiers, educationalMode, bilingualHandlingHint, personaConsistencyHint, status, visibleInAdmin, internalTestingOnly)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-                [data.id, data.slug, data.title, data.workflowType, data.formatMappings, data.creatorFlowMappings, data.styleModifiers, data.educationalMode, data.bilingualHandlingHint, data.personaConsistencyHint, data.status, data.visibleInAdmin, data.internalTestingOnly]
-            );
-            return res.json(data);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/prompt-templates/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            const index = memoryDb.prompt_templates.findIndex((pt: any) => pt.id === id);
-            if (index !== -1) {
-                memoryDb.prompt_templates[index] = { ...memoryDb.prompt_templates[index], ...updateFields };
-                return res.json(memoryDb.prompt_templates[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE prompt_templates SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.delete('/api/admin/prompt-templates/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.prompt_templates = memoryDb.prompt_templates.filter((pt: any) => pt.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        try {
-            await pool.query('DELETE FROM prompt_templates WHERE id = $1', [id]);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.get('/api/admin/reference-images', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) return res.json(memoryDb.reference_images || []);
-        const pool = getDbPool();
-        try {
-            const result = await pool.query("SELECT * FROM reference_images ORDER BY createdAt DESC");
-            return res.json(result.rows);
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.put('/api/admin/reference-images/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const updateFields = req.body;
-        if (!isDatabaseConnected()) {
-            memoryDb.reference_images = memoryDb.reference_images || [];
-            const index = memoryDb.reference_images.findIndex((img: any) => img.id === id);
-            if (index !== -1) {
-                memoryDb.reference_images[index] = { ...memoryDb.reference_images[index], ...updateFields };
-                return res.json(memoryDb.reference_images[index]);
-            }
-            return res.status(404).json({ error: 'Not found' });
-        }
-        const pool = getDbPool();
-        try {
-            const fields: string[] = [];
-            const values: any[] = [];
-            let i = 1;
-            Object.keys(updateFields).forEach(key => {
-                if (key === 'id') return;
-                fields.push(`${key} = $${i++}`);
-                values.push(updateFields[key]);
-            });
-            values.push(id);
-            await pool.query(`UPDATE reference_images SET ${fields.join(', ')} WHERE id = $${i}`, values);
-            return res.json({ success: true });
-        } catch (e: any) {
-            return res.status(500).json({ error: e.message });
-        }
-    });
 
-    app.get('/api/admin/categories', async (req, res): Promise<any> => {
-        if (!isDatabaseConnected()) {
-            return res.json(memoryDb.content_categories || DEFAULT_CATEGORIES);
-        }
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const result = await pool.query(`SELECT * FROM content_categories ORDER BY created_at DESC`);
-                if (result.rows && result.rows.length > 0) {
-                    return res.json(result.rows);
-                }
-            } catch(e) { }
-        }
-        return res.json(DEFAULT_CATEGORIES);
-    });
 
-    app.post('/api/admin/categories', async (req, res): Promise<any> => {
-        const { name, category_type, emoji, prompt_instruction, is_featured } = req.body;
-        if (!isDatabaseConnected()) {
-            const newItem = {
-                id: crypto.randomUUID(),
-                name,
-                category_type,
-                emoji: emoji || '📖',
-                prompt_instruction: prompt_instruction || 'clean illustration, modern aesthetic',
-                is_featured: is_featured || false,
-                is_active: true,
-                created_at: new Date().toISOString()
-            };
-            memoryDb.content_categories = memoryDb.content_categories || [];
-            memoryDb.content_categories.push(newItem);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`INSERT INTO content_categories (name, category_type, emoji, prompt_instruction, is_featured) VALUES ($1, $2, $3, $4, $5)`, [name, category_type, emoji || null, prompt_instruction || null, is_featured || false]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
 
     
-    app.put('/api/admin/categories/:id', async (req, res): Promise<any> => {
-        try {
-            const id = req.params.id;
-            const { name, category_type, emoji, prompt_instruction, is_featured, is_active } = req.body;
-            
-            if (!isDatabaseConnected()) {
-                memoryDb.content_categories = memoryDb.content_categories || [];
-                const cat = memoryDb.content_categories.find((c: any) => c.id === id);
-                if (cat) {
-                    if (name !== undefined) cat.name = name;
-                    if (category_type !== undefined) cat.category_type = category_type;
-                    if (emoji !== undefined) cat.emoji = emoji;
-                    if (prompt_instruction !== undefined) cat.prompt_instruction = prompt_instruction;
-                    if (is_featured !== undefined) cat.is_featured = is_featured;
-                    if (is_active !== undefined) cat.is_active = is_active;
-                }
-                return res.json({ success: true });
-            }
-
-            const pool = getDbPool();
-            if (pool) {
-                // Determine fields to update dynamically or just update all
-                const fields = [];
-                const values = [];
-                let i = 1;
-                
-                if (name !== undefined) { fields.push(`name = $${i++}`); values.push(name); }
-                if (category_type !== undefined) { fields.push(`category_type = $${i++}`); values.push(category_type); }
-                if (emoji !== undefined) { fields.push(`emoji = $${i++}`); values.push(emoji); }
-                if (prompt_instruction !== undefined) { fields.push(`prompt_instruction = $${i++}`); values.push(prompt_instruction); }
-                if (is_featured !== undefined) { fields.push(`is_featured = $${i++}`); values.push(is_featured); }
-                if (is_active !== undefined) { fields.push(`is_active = $${i++}`); values.push(is_active); }
-                
-                if (fields.length > 0) {
-                    values.push(id);
-                    await pool.query(`UPDATE content_categories SET ${fields.join(', ')} WHERE id = $${i}`, values);
-                }
-            }
-            return res.json({ success: true });
-        } catch (error: any) {
-            return res.status(500).json({ error: error.message });
-        }
-    });
 
     app.get('/api/categories', async (req, res): Promise<any> => {
         if (!isDatabaseConnected()) {
@@ -5842,215 +4665,12 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
         return res.json(DEFAULT_CATEGORIES.filter(c => c.is_active !== false));
     });
 
-    app.post('/api/admin/categories/suggest', async (req, res): Promise<any> => {
-        try {
-            const { currentCategories } = req.body;
-            const ai = getAIClient();
-            const route = resolveAIRoute('beat', 'High User', process.env.NODE_ENV);
-            const prompt = `Analyze these current categories and suggest 5 new relevant tags or genres to expand the catalog. Return ONLY a JSON array of strings. Current: ${JSON.stringify(currentCategories)}`;
-            const response = await ai.models.generateContent({
-                model: route.modelSlug,
-                contents: prompt
-            });
-            let text = response.text || "[]";
-            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            const suggestions = JSON.parse(text);
-            return res.json({ suggestions });
-        } catch (error: any) {
-            return res.status(500).json({ error: error.message, suggestions: [] });
-        }
-    });
     
-    app.delete('/api/admin/categories/:id', async (req, res): Promise<any> => {
-        const id = req.params.id;
-        if (!isDatabaseConnected()) {
-            memoryDb.content_categories = (memoryDb.content_categories || []).filter((c: any) => c.id !== id);
-            return res.json({ success: true });
-        }
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`DELETE FROM content_categories WHERE id = $1`, [id]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
 
-    app.get('/api/admin/moderation', async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const result = await pool.query(`SELECT * FROM moderation_flags WHERE status = 'pending' ORDER BY created_at DESC`);
-                return res.json(result.rows);
-            } catch(e) { }
-        }
-        return res.json([
-            { id: 'flag-1', severity: 'high', reason: 'Automated NSFW detection triggered on image.', target_id: 'proj-123', target_type: 'published_work' }
-        ]);
-    });
 
-    app.post('/api/admin/moderation/:id/resolve', async (req, res): Promise<any> => {
-        const { action } = req.body; // 'safe' or 'remove'
-        const status = action === 'safe' ? 'resolved_safe' : 'resolved_removed';
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`UPDATE moderation_flags SET status = $1 WHERE id = $2`, [status, req.params.id]);
-            } catch(e) { }
-        }
-        return res.json({ success: true });
-    });
 
     // SaaS Analytics stats
-    app.get('/api/admin/health', async (req, res): Promise<any> => {
-        const start = Date.now();
-        const health: any = {
-            status: 'ok',
-            database: { status: 'offline', message: 'Sandbox Mode' },
-            storage: { status: 'unknown' },
-            integrations: {
-                gemini: { status: 'missing', message: 'API Key not configured in .env' },
-                stripe: { status: 'missing', message: 'Not configured' },
-                paypal: { status: 'missing', message: 'Not configured' }
-            },
-            environment: {
-                port: port,
-                nodeEnv: process.env.NODE_ENV || 'development',
-                memoryUsage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB'
-            }
-        };
 
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const client = await pool.connect();
-                await client.query('SELECT 1');
-                client.release();
-                health.database = { status: 'ok', message: 'Connected to PostgreSQL' };
-            } catch (e: any) {
-                health.database = { status: 'error', message: e.message };
-                health.status = 'warning';
-            }
-        } else {
-            health.status = 'warning';
-        }
-
-        if (process.env.GEMINI_API_KEY || process.env.API_KEY) health.integrations.gemini = { status: 'ok', message: 'Configured in .env' };
-        if (process.env.STRIPE_SECRET_KEY) health.integrations.stripe = { status: 'ok', message: 'Configured in .env' };
-        if (process.env.PAYPAL_CLIENT_ID) health.integrations.paypal = { status: 'ok', message: 'Configured in .env' };
-
-        if (pool && health.database.status === 'ok') {
-            try {
-               const settingsRes = await pool.query("SELECT key_name, key_value FROM app_settings WHERE key_name IN ('stripe_secret_key', 'paypal_client_id', 'gemini_api_key')");
-               settingsRes.rows.forEach(r => {
-                   if (r.key_value && r.key_value.trim() !== '') {
-                       const key = r.key_name.replace('_secret_key', '').replace('_client_id', '').replace('_access_token', '').replace('_api_key', '');
-                       if (health.integrations[key]) {
-                           health.integrations[key] = { status: 'ok', message: 'Configured in DB' };
-                       }
-                   }
-               });
-            } catch(e) {}
-        } else if (!isDatabaseConnected() && memoryDb.app_settings) {
-            memoryDb.app_settings.forEach((s:any) => {
-                if (s.key_value && s.key_value.trim() !== '') {
-                    const key = s.key_name.replace('_secret_key', '').replace('_client_id', '').replace('_access_token', '').replace('_api_key', '');
-                    if (health.integrations[key]) {
-                        health.integrations[key] = { status: 'ok', message: 'Configured in MemoryDb' };
-                    }
-                }
-            });
-        }
-
-        try {
-            const geminiKey = await getSettingValue('gemini_api_key');
-            if (geminiKey) {
-                const ai = new GoogleGenAI({ apiKey: geminiKey });
-                await ai.models.generateContent({ model: 'gemini-flash-latest', contents: 'test' });
-                health.integrations.gemini = { status: 'ok', message: 'API connection successful' };
-            }
-        } catch (e: any) {
-            health.integrations.gemini = { status: 'error', message: `Gemini API Error: ${e.message}` };
-            health.status = 'warning';
-        }
-
-        try {
-            const stripeSecret = await getSettingValue('stripe_secret_key');
-            if (stripeSecret) {
-                const stripe = new Stripe(stripeSecret, { apiVersion: '2024-06-20' as any });
-                await stripe.balance.retrieve();
-                health.integrations.stripe = { status: 'ok', message: 'API connection successful' };
-            }
-        } catch (e: any) {
-            health.integrations.stripe = { status: 'error', message: `Stripe API Error: ${e.message}` };
-            health.status = 'warning';
-        }
-
-        try {
-            const fs = await import('fs/promises');
-            const path = await import('path');
-            const testFile = path.join(process.cwd(), 'health_check.tmp');
-            await fs.writeFile(testFile, 'ok');
-            await fs.unlink(testFile);
-            health.storage = { status: 'ok', message: 'Read/Write access verified' };
-        } catch (e: any) {
-            health.storage = { status: 'error', message: e.message };
-            health.status = 'error';
-        }
-
-        health.uptime = Math.round(process.uptime()) + 's';
-        health.responseTimeMs = Date.now() - start;
-
-        res.json(health);
-    });
-
-    app.get('/api/admin/stats', async (req, res): Promise<any> => {
-        let customersList: any[] = [];
-        const pool = getDbPool();
-        
-        if (pool) {
-            try {
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tier VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id VARCHAR(100);');
-                await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);');
-                
-                const result = await pool.query('SELECT id, email, tier, subscription_id, payment_method FROM users');
-                customersList = result.rows.map(r => ({
-                    email: r.email,
-                    tier: r.tier,
-                    paymentMethod: r.payment_method
-                }));
-            } catch (err: any) {
-                console.warn("Database admin stats fallback:", err.message);
-                if (isConnectionError(err)) {
-                    markDatabaseOffline();
-                }
-            }
-        }
-        
-        if (customersList.length === 0) {
-            customersList = memoryDb.users.map(u => ({
-                email: u.email,
-                tier: u.tier,
-                paymentMethod: u.paymentMethod
-            }));
-        }
-
-        const stats = {
-            totalUsers: customersList.length,
-            proUsers: customersList.filter(u => u.tier && u.tier.includes('Pro')).length,
-            enterpriseUsers: customersList.filter(u => u.tier && u.tier.includes('Enterprise')).length,
-            freeUsers: customersList.filter(u => !u.tier || (!u.tier.includes('Pro') && !u.tier.includes('Enterprise'))).length,
-            mrrEstimate: 0,
-            stripePayments: customersList.filter(u => u.paymentMethod === 'Stripe').length,
-            paypalPayments: customersList.filter(u => u.paymentMethod === 'PayPal').length,
-            manualPayments: customersList.filter(u => u.paymentMethod === 'Manual Admin').length,
-        };
-
-        stats.mrrEstimate = (stats.proUsers * 19) + (stats.enterpriseUsers * 79);
-
-        return res.json(stats);
-    });
 
     /**
      * 2. SEARCH & LIST CHARACTER VAULT
@@ -6463,171 +5083,16 @@ app.get('/api/admin/customers', async (req, res): Promise<any> => {
     // --- ADMIN SUPERCHARGE ROUTES ---
 
     // Token Management API
-    app.put('/api/admin/customers/:email/tokens', requireAdmin, async (req, res): Promise<any> => {
-        const email = req.params.email;
-        const { amount, reason } = req.body;
-        if (!amount || isNaN(Number(amount))) return res.status(400).json({ error: 'Valid amount required' });
-
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                // Check if user exists in Postgres
-                const pgUser = await pool.query('SELECT id, token_balance FROM subscriptions WHERE user_id = (SELECT id FROM users WHERE email = $1)', [email]);
-                if (pgUser.rows.length > 0) {
-                    await pool.query('UPDATE subscriptions SET token_balance = token_balance + $1 WHERE user_id = (SELECT id FROM users WHERE email = $2)', [amount, email]);
-                    return res.json({ success: true, message: `Tokens updated successfully by ${amount}.` });
-                }
-            } catch (e: any) {
-                console.error("PG token update error:", e);
-            }
-        }
-
-        // Fallback to Firestore
-        try {
-            const db = getFirestore();
-            const snapshot = await db.collection('users').where('email', '==', email).get();
-            if (!snapshot.empty) {
-                const userRef = snapshot.docs[0].ref;
-                const current = snapshot.docs[0].data()?.tokens || 0;
-                await userRef.update({ tokens: current + Number(amount) });
-                return res.json({ success: true, message: `Tokens updated in Firestore by ${amount}.` });
-            }
-        } catch (e: any) {
-            console.error("Firestore token update error:", e);
-        }
-
-        return res.status(404).json({ error: 'User not found' });
-    });
 
     // Content Moderation API - Resolve
-    app.put('/api/admin/moderation/:id/safe', requireAdmin, async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query("UPDATE moderation_flags SET status = 'resolved_safe' WHERE id = $1", [id]);
-                return res.json({ success: true });
-            } catch(e) {}
-        }
-        return res.status(500).json({ error: 'Failed to update flag' });
-    });
 
     // Content Moderation API - Delete Content
-    app.delete('/api/admin/moderation/:id', requireAdmin, async (req, res): Promise<any> => {
-        const id = req.params.id;
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const flagReq = await pool.query("SELECT target_type, target_id FROM moderation_flags WHERE id = $1", [id]);
-                if (flagReq.rows.length > 0) {
-                    const { target_type, target_id } = flagReq.rows[0];
-                    if (target_type === 'published_work') {
-                        await pool.query("DELETE FROM published_works WHERE id = $1", [target_id]);
-                    } else if (target_type === 'character_vault') {
-                        await pool.query("DELETE FROM character_vault WHERE id = $1", [target_id]);
-                    }
-                    await pool.query("UPDATE moderation_flags SET status = 'resolved_removed' WHERE id = $1", [id]);
-                    return res.json({ success: true });
-                }
-            } catch(e) {}
-        }
-        return res.status(500).json({ error: 'Failed to delete content' });
-    });
 
     // Webhook & Error Logs API
-    app.get('/api/admin/logs', requireAdmin, async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                await pool.query(`
-                    CREATE TABLE IF NOT EXISTS webhook_logs (
-                        id SERIAL PRIMARY KEY,
-                        source VARCHAR(255),
-                        event_type VARCHAR(255),
-                        payload TEXT,
-                        error_message TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                `);
-                const logsReq = await pool.query("SELECT * FROM webhook_logs ORDER BY created_at DESC LIMIT 100");
-                return res.json(logsReq.rows);
-            } catch(e) {
-                return res.json([]);
-            }
-        }
-        return res.json(memoryDb.webhook_logs || []);
-    });
 
-    app.get('/api/admin/system/bypasses', requireAdmin, async (req, res): Promise<any> => {
-        // Expose critical operational bypasses currently active in the system
-        const bypasses = [];
-        
-        // Check for Auth Bypass
-        try {
-            const adminEmails = process.env.SUPER_ADMIN_EMAILS ? process.env.SUPER_ADMIN_EMAILS.split(',') : [];
-            if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && adminEmails.length > 0) {
-                bypasses.push({
-                    type: "Authentication Fallback",
-                    status: "Active",
-                    description: "Firebase Admin is not initialized. Using standard email headers for local development admin authentication.",
-                    severity: "Warning",
-                    affected_components: ["requireAdmin middleware"]
-                });
-            }
-        } catch(e) {}
-
-        // Check for DB Bypass
-        if (!isDatabaseConnected()) {
-            bypasses.push({
-                type: "Database Fallback",
-                status: "Active",
-                description: "Postgres database is not connected. The application is running entirely on volatile in-memory storage (memoryDb).",
-                severity: "Critical",
-                affected_components: ["All Stateful Endpoints", "Stripe Data", "User Accounts"]
-            });
-        }
-
-        return res.json(bypasses);
-    });
 
     // Global Characters API
-    app.get('/api/admin/characters/global', requireAdmin, async (req, res): Promise<any> => {
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                const result = await pool.query('SELECT * FROM character_vault WHERE is_global = true ORDER BY created_at DESC');
-                return res.json(result.rows);
-            } catch(e: any) {
-                console.error("Global Character GET Error:", e);
-                return res.status(500).json({ error: e.message });
-            }
-        }
-        return res.json(memoryDb.character_vault.filter(c => c.is_global === true));
-    });
 
-    app.post('/api/admin/characters/global', requireAdmin, async (req, res): Promise<any> => {
-        const { character_name, role_type, description, image_url, generation_prompt, reference_images } = req.body;
-        const pool = getDbPool();
-        if (pool) {
-            try {
-                // Insert as global character. Since user_id is NOT NULL, we link it to the admin's user ID or a system user ID.
-                // We'll find the first admin user ID
-                const adminRes = await pool.query("SELECT id FROM users LIMIT 1");
-                const systemUserId = adminRes.rows[0]?.id;
-                
-                if (systemUserId) {
-                    await pool.query(`
-                        INSERT INTO character_vault (user_id, character_name, role_type, description, image_url, generation_prompt, reference_images, is_global)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-                    `, [systemUserId, character_name, role_type, description, image_url]);
-                    return res.json({ success: true });
-                }
-            } catch(e: any) {
-                console.error("Global Character Error:", e);
-            }
-        }
-        return res.status(500).json({ error: 'Failed to create global character' });
-    });
 
 
     // =========================================================================

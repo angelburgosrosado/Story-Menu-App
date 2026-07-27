@@ -2,7 +2,7 @@
 
 > **Generated:** 2026-07-26
 > **Purpose:** Complete development state for AI assistants (Gemini CLI, Claude, etc.) to continue work
-> **Status:** Frontend decomposition + server route cleanup in progress; all gates passing
+> **Status:** All admin routes migrated to extracted routers; server.ts reduced by ~1,535 lines. All gates passing.
 
 ---
 
@@ -213,17 +213,18 @@ Story-Menu-App/
 
 ## 5. Current Work In Progress
 
-### This session (2026-07-26)
-1. **Frontend component decomposition** — `AdminDashboard.tsx`, `AdminApp.tsx`, `Setup.tsx` split into focused components under `components/admin/` and `components/setup/`.
-2. **Test environment hardening** — Added `vitest.config.ts`, `tests/setup.ts`, jsdom directives, and `imageUtils` mock so the suite passes without external network calls.
-3. **Type/build fixes** — Added missing `isConnectionError` export, fixed Firestore `.doc(id)` typing, patched `ErrorContext.method`, removed duplicate router imports.
-4. **Stripe Customer Billing Portal** — New `routes/subscription.ts` with `POST /api/subscription/portal`.
-5. **Admin route cleanup** — Moved `requireAdmin` before router mounts, applied it to all admin routers, and removed unreachable inline duplicates:
-   - `/api/admin/settings` (GET, POST)
-   - `/api/admin/plans` (GET, POST, DELETE)
-   - `/api/admin/formats` (GET, POST, PUT, DELETE)
-   - `/api/admin/ai-providers|ai-models|ai-workflows|ai-routing-rules` (GET, POST, PUT, DELETE)
-   - `/api/admin/ai-fallback-configs`, `/api/admin/ai-routing/resolve`, `/api/admin/ai-engine/summary`
+### This session (2026-07-27)
+1. **Migrated all remaining inline admin routes** from `server.ts` to extracted routers:
+   - `routes/admin-users.ts` — system users, `/auth/users` alias, customers, token ops
+   - `routes/admin-content.ts` — personas, landing, flows, goals, usage modes, glossary, reference images
+   - `routes/admin-creative.ts` — voices, soundtracks, languages, styles, prompt templates, categories
+   - `routes/admin-moderation.ts` — moderation flags
+   - `routes/admin-system.ts` — health, stats, logs, system bypasses
+   - `routes/admin-analytics.ts` — cost analytics
+   - `routes/admin-characters.ts` — global characters
+2. **Shared admin constants/helpers** extracted to `admin-constants.ts` and `admin-helpers.ts` to avoid circular imports.
+3. **Preserved `/api/admin/login`** in `server.ts` (public admin login).
+4. **Updated mounts** so all admin routers attach at `/api/admin` behind `requireAdmin`.
 
 ### Verification (all passing)
 ```bash
@@ -239,7 +240,7 @@ npm run build           # vite + esbuild success
 ### High Priority
 | Task | Effort | Notes |
 |---|---|---|
-| **Migrate remaining inline admin routes** | 2-3 days | Landing, cost-analytics, usage-modes, glossary, reference-images, personas, customers, system/users, moderation, health/stats/logs, voices, soundtracks, languages, styles, prompt-templates, categories. Many inline routes use legacy schemas or Firestore; align with extracted routers before removing. |
+| ~~Migrate remaining inline admin routes~~ | ✔ Done | All admin routes extracted to `routes/admin-*.ts`. |
 | **E2E tests (Playwright)** | 3-5 days | Current tests are unit/integration. Need browser-based E2E for critical paths. |
 | **FirebaseMockPool replacement** | 2-3 days | SQL-to-Firestore regex translator is fragile. Replace with proper ORM or dual-DB adapter. |
 | **Real analytics dashboard** | 2-3 days | Event tracking is wired, but no admin UI to view analytics. |
@@ -337,7 +338,7 @@ POSTHOG_API_KEY=your_posthog_key
 
 ## 9. Known Issues & Technical Debt
 
-1. **Remaining inline admin routes** — `server.ts` still contains many admin routes (landing, cost-analytics, usage-modes, glossary, reference-images, personas, customers, system/users, moderation, health/stats/logs, voices, soundtracks, languages, styles, prompt-templates, categories). Some use legacy schemas or Firestore and must be aligned with extracted routers before removal.
+1. **~~Remaining inline admin routes~~** — Resolved: all `/api/admin/*` routes (except public `/api/admin/login`) now live in `routes/admin-*.ts`.
 2. **FirebaseMockPool** — SQL-to-Firestore regex translator is fragile; replace with proper adapter
 3. **Test coverage gaps** — Unit tests exist but E2E browser tests are needed
 4. **No staging environment** — Only production on Cloud Run

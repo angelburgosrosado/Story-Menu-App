@@ -2,7 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const { Client } = require('pg');
 
-const rawUrl = process.env.DATABASE_URL || "postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1";
+const rawUrl = process.env.DATABASE_URL || "postgresql://angelburgosrosado:75727572Ab%21@your_host:5432/comics-v1";
 
 async function runMigration() {
     console.log("Starting DB Migration...");

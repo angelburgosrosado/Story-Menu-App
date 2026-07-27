@@ -122,6 +122,13 @@ class JobQueue {
     }
 
     /**
+     * Get all jobs in queue (for status lookups).
+     */
+    getJobs(): Job[] {
+        return [...this.queue];
+    }
+
+    /**
      * Get queue status (for admin dashboard).
      */
     getStatus(): { pending: number; processing: number; completed: number; failed: number; total: number } {

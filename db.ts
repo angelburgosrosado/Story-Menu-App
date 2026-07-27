@@ -228,6 +228,39 @@ class FirebaseMockPool {
                 return { rows, rowCount: rows.length };
             }
 
+            if (sql.match(/SELECT\s+model,\s+SUM\(cost_usd\).*?FROM\s+ai_usage_logs.*?GROUP\s+BY\s+model/i)) {
+                const snapshot = await db.collection('ai_usage_logs').get();
+                const modelMap: Record<string, number> = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const model = data.model || 'unknown';
+                    modelMap[model] = (modelMap[model] || 0) + (data.cost_usd || 0);
+                });
+                const rows = Object.entries(modelMap).map(([model, total_cost]) => ({
+                    model,
+                    total_cost
+                }));
+                return { rows, rowCount: rows.length };
+            }
+
+            if (sql.match(/SELECT\s+user_email,\s+COUNT\(\*\).*?FROM\s+ai_usage_logs.*?GROUP\s+BY\s+user_email/i)) {
+                const snapshot = await db.collection('ai_usage_logs').get();
+                const userMap: Record<string, { calls: number, total_cost: number }> = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const email = data.user_email || 'anonymous';
+                    if (!userMap[email]) userMap[email] = { calls: 0, total_cost: 0 };
+                    userMap[email].calls++;
+                    userMap[email].total_cost += (data.cost_usd || 0);
+                });
+                const rows = Object.entries(userMap).map(([user_email, stats]) => ({
+                    user_email,
+                    calls: stats.calls,
+                    total_cost: stats.total_cost
+                }));
+                return { rows, rowCount: rows.length };
+            }
+
             if (sql.match(/SELECT\s+\*\s+FROM\s+content_categories/i)) {
                 const snapshot = await db.collection('content_categories').get();
                 let rows = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));

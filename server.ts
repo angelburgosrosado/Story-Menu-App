@@ -54,6 +54,7 @@ import { errorTracker } from './middleware/errorTracker';
 import { requireRole } from './middleware/rbac';
 import { featureFlags } from './middleware/featureFlags';
 import { jobQueue } from './middleware/jobQueue';
+import { enqueueGenerationJob, getGenerationJobStatus, startGenerationWorker, closeGenerationQueue, GenerationJobData } from './jobs/queue';
 import { subscriptionService } from './middleware/subscription';
 
 try {
@@ -1214,6 +1215,71 @@ memoryDb.users.push({
 
 // Seed fallback configs into memoryDb
 memoryDb.ai_fallback_configs.push(...DEFAULT_AI_FALLBACK_CONFIGS);
+
+// ─── In-memory fallback handlers for async generation jobs ──────────────────
+jobQueue.on('generate-image', async (data: GenerationJobData) => {
+    const { kind, jobId, requestId, assetId, payload } = data;
+    const previewUrls = [
+        'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=300',
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=300',
+        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&q=80&w=300'
+    ];
+    const previewUrl = kind === 'cover'
+        ? 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400'
+        : previewUrls[Math.floor(Math.random() * previewUrls.length)];
+
+    const job = memoryDb.image_generation_jobs.find((j: any) => j.id === jobId);
+    if (job) {
+        job.status = 'Completed';
+        job.outputAssetIds = [assetId];
+        job.completedAt = new Date().toISOString();
+    }
+    if (kind === 'panel') {
+        const request = memoryDb.panel_generation_requests.find((r: any) => r.id === requestId);
+        if (request) {
+            request.generationState = 'Completed';
+            request.selectedAssetId = assetId;
+            request.variantAssetIds = [assetId];
+        }
+    } else if (kind === 'cover') {
+        const request = memoryDb.cover_generation_requests.find((r: any) => r.id === requestId);
+        if (request) {
+            request.generationState = 'Completed';
+            request.selectedAssetId = assetId;
+            request.variantAssetIds = [assetId];
+        }
+    }
+    memoryDb.generated_assets.push({
+        id: assetId, assetType: kind === 'cover' ? 'Cover' : 'Panel', sourceJobId: jobId, sourceRequestId: requestId,
+        previewUrl, status: 'Completed', selected: true, approved: true, archived: false,
+        moderationState: 'Approved', createdAt: new Date().toISOString()
+    });
+});
+
+jobQueue.on('generate-audio', async (data: GenerationJobData) => {
+    const { jobId, requestId, assetId, payload } = data;
+    const { text, voiceId, projectId, parentContentId } = payload;
+    const unitId = requestId || crypto.randomUUID();
+    const job = memoryDb.narration_jobs.find((j: any) => j.id === jobId);
+    if (job) {
+        job.status = 'Completed';
+        job.resultBindingIds = [assetId];
+        job.completedAt = new Date().toISOString();
+    }
+    memoryDb.narration_units.push({
+        id: unitId, projectId: projectId || 'current-project', parentContentType: 'Panel',
+        parentContentId: parentContentId || 'current-panel', textBindingId: 'caption-text',
+        sourceText: text, languageCode: 'en-US', assignedVoiceId: voiceId || 'voice-narrator-1',
+        narrationMode: 'narrator-only', pacingMode: 'standard', status: 'Completed',
+        reviewStatus: 'Approved', outputAssetId: assetId, overrideApplied: false
+    });
+    memoryDb.audio_assets.push({
+        id: assetId, assetType: 'Panel', sourceJobId: jobId, sourceUnitId: unitId,
+        previewUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+        status: 'Completed', selected: true, approved: true, archived: false,
+        moderationState: 'Approved', durationMs: 4500, createdAt: new Date().toISOString()
+    });
+});
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidUuid(val: string): boolean {
@@ -4650,6 +4716,146 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         return res.json({ success: true, asset, coverRequest });
     });
 
+    // ─── Async generation job endpoints (BullMQ-backed) ────────────────────
+    app.post('/api/image/generate-panel/async', async (req, res): Promise<any> => {
+        const { projectId, panelTitle, beatSummary, styleId, personaIds, languageHandlingMode } = req.body;
+        if (!projectId || !panelTitle) {
+            return res.status(400).json({ error: 'Missing projectId or panelTitle' });
+        }
+        const jobId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+        const job = {
+            id: jobId, projectId, workflowType: 'Panel', providerId: 'gemini-imagen-sim', modelId: 'imagen-3',
+            status: 'Pending', requestType: 'Panel', promptTemplateId: 'template-panel-standard',
+            styleId, personaIds: personaIds || [], coverMode: false, retryCount: 0,
+            outputAssetIds: [], createdAt: new Date().toISOString()
+        };
+        const panelRequest = {
+            id: requestId, projectId, panelTitle, beatSummary, educationalFocus: 'Science Vocabulary Integration',
+            visualSummary: 'Detailed illustrated scene supporting the story beat.', settingDescription: 'Classroom / Outdoor setting',
+            personaIds: personaIds || [], styleId, languageHandlingMode: languageHandlingMode || 'original',
+            promptSafeDescription: `Generated scene for ${panelTitle}`, generationState: 'Pending',
+            selectedAssetId: null, variantAssetIds: [], createdAt: new Date().toISOString()
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.image_generation_jobs.push(job);
+            memoryDb.panel_generation_requests.push(panelRequest);
+        } else {
+            try {
+                const pool = getDbPool();
+                await pool.query(
+                    `INSERT INTO image_generation_jobs (id, projectId, workflowType, providerId, modelId, status, requestType, promptTemplateId, styleId, personaIds, coverMode, retryCount, outputAssetIds)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                    [job.id, job.projectId, job.workflowType, job.providerId, job.modelId, job.status, job.requestType, job.promptTemplateId, job.styleId, JSON.stringify(job.personaIds), job.coverMode, job.retryCount, JSON.stringify(job.outputAssetIds)]
+                );
+                await pool.query(
+                    `INSERT INTO panel_generation_requests (id, projectId, panelTitle, beatSummary, educationalFocus, visualSummary, settingDescription, personaIds, styleId, languageHandlingMode, promptSafeDescription, generationState, selectedAssetId, variantAssetIds)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                    [panelRequest.id, panelRequest.projectId, panelRequest.panelTitle, panelRequest.beatSummary, panelRequest.educationalFocus, panelRequest.visualSummary, panelRequest.settingDescription, JSON.stringify(panelRequest.personaIds), panelRequest.styleId, panelRequest.languageHandlingMode, panelRequest.promptSafeDescription, panelRequest.generationState, panelRequest.selectedAssetId, JSON.stringify(panelRequest.variantAssetIds)]
+                );
+            } catch (e: any) {
+                console.warn('[generate-panel/async] DB insert failed; falling back to memoryDb:', e.message);
+                memoryDb.image_generation_jobs.push(job);
+                memoryDb.panel_generation_requests.push(panelRequest);
+            }
+        }
+        const id = await enqueueGenerationJob({ kind: 'panel', jobId, requestId, assetId, projectId, payload: { panelTitle, beatSummary, styleId, personaIds, languageHandlingMode } });
+        return res.json({ success: true, jobId, requestId, assetId, status: 'pending', queueJobId: id });
+    });
+
+    app.post('/api/image/generate-cover/async', async (req, res): Promise<any> => {
+        const { projectId, title, subtitle, styleId, personaIds } = req.body;
+        if (!projectId || !title) {
+            return res.status(400).json({ error: 'Missing projectId or title' });
+        }
+        const jobId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+        const job = {
+            id: jobId, projectId, workflowType: 'Cover', providerId: 'gemini-imagen-sim', modelId: 'imagen-3',
+            status: 'Pending', requestType: 'Cover', promptTemplateId: 'template-cover-standard',
+            styleId, personaIds: personaIds || [], coverMode: true, retryCount: 0,
+            outputAssetIds: [], createdAt: new Date().toISOString()
+        };
+        const coverRequest = {
+            id: requestId, projectId, title, subtitle, educationalFocus: 'Science Cover Topic',
+            personaIds: personaIds || [], styleId, visualSummary: 'Atmospheric front cover layout.',
+            promptSafeDescription: `Generated cover artwork for ${title}`, generationState: 'Pending',
+            selectedAssetId: null, variantAssetIds: [], createdAt: new Date().toISOString()
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.image_generation_jobs.push(job);
+            memoryDb.cover_generation_requests.push(coverRequest);
+        } else {
+            try {
+                const pool = getDbPool();
+                await pool.query(
+                    `INSERT INTO image_generation_jobs (id, projectId, workflowType, providerId, modelId, status, requestType, promptTemplateId, styleId, personaIds, coverMode, retryCount, outputAssetIds)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                    [job.id, job.projectId, job.workflowType, job.providerId, job.modelId, job.status, job.requestType, job.promptTemplateId, job.styleId, JSON.stringify(job.personaIds), job.coverMode, job.retryCount, JSON.stringify(job.outputAssetIds)]
+                );
+                await pool.query(
+                    `INSERT INTO cover_generation_requests (id, projectId, title, subtitle, educationalFocus, personaIds, styleId, visualSummary, promptSafeDescription, generationState, selectedAssetId, variantAssetIds)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    [coverRequest.id, coverRequest.projectId, coverRequest.title, coverRequest.subtitle, coverRequest.educationalFocus, JSON.stringify(coverRequest.personaIds), coverRequest.styleId, coverRequest.visualSummary, coverRequest.promptSafeDescription, coverRequest.generationState, coverRequest.selectedAssetId, JSON.stringify(coverRequest.variantAssetIds)]
+                );
+            } catch (e: any) {
+                console.warn('[generate-cover/async] DB insert failed; falling back to memoryDb:', e.message);
+                memoryDb.image_generation_jobs.push(job);
+                memoryDb.cover_generation_requests.push(coverRequest);
+            }
+        }
+        const id = await enqueueGenerationJob({ kind: 'cover', jobId, requestId, assetId, projectId, payload: { title, subtitle, styleId, personaIds } });
+        return res.json({ success: true, jobId, requestId, assetId, status: 'pending', queueJobId: id });
+    });
+
+    app.post('/api/narration/generate-audio/async', async (req, res): Promise<any> => {
+        const { text, voiceId, projectId, parentContentId } = req.body;
+        if (!text) {
+            return res.status(400).json({ error: 'Missing text' });
+        }
+        const jobId = crypto.randomUUID();
+        const unitId = crypto.randomUUID();
+        const assetId = crypto.randomUUID();
+        const job = {
+            id: jobId, projectId: projectId || 'current-project', providerId: 'elevenlabs-voice-sim',
+            modelId: 'eleven_monolingual_v1', workflowId: 'workflow-audio-standard', voiceId: voiceId || 'voice-narrator-1',
+            languageCode: 'en-US', narrationMode: 'narrator-only', pacingMode: 'standard',
+            status: 'Pending', retryCount: 0, resultBindingIds: [], createdAt: new Date().toISOString()
+        };
+        if (!isDatabaseConnected()) {
+            memoryDb.narration_jobs.push(job);
+        } else {
+            try {
+                const pool = getDbPool();
+                await pool.query(
+                    `INSERT INTO narration_jobs (id, projectId, providerId, modelId, workflowId, voiceId, languageCode, narrationMode, pacingMode, status, retryCount, resultBindingIds)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                    [job.id, job.projectId, job.providerId, job.modelId, job.workflowId, job.voiceId, job.languageCode, job.narrationMode, job.pacingMode, job.status, job.retryCount, JSON.stringify(job.resultBindingIds)]
+                );
+            } catch (e: any) {
+                console.warn('[generate-audio/async] DB insert failed; falling back to memoryDb:', e.message);
+                memoryDb.narration_jobs.push(job);
+            }
+        }
+        const id = await enqueueGenerationJob({ kind: 'audio', jobId, requestId: unitId, assetId, projectId, payload: { text, voiceId, projectId, parentContentId } });
+        return res.json({ success: true, jobId, unitId, assetId, status: 'pending', queueJobId: id });
+    });
+
+    app.get('/api/image/jobs/:id', async (req, res): Promise<any> => {
+        const status = await getGenerationJobStatus(req.params.id);
+        if (!status) return res.status(404).json({ error: 'Job not found' });
+        return res.json(status);
+    });
+
+    app.get('/api/narration/jobs/:id', async (req, res): Promise<any> => {
+        const status = await getGenerationJobStatus(req.params.id);
+        if (!status) return res.status(404).json({ error: 'Job not found' });
+        return res.json(status);
+    });
+
+    
     // Admin CRUD endpoints for Styles
 
 
@@ -5117,6 +5323,9 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     // Task 1.5: Global error handler
     app.use(errorTracker.errorHandler.bind(errorTracker));
 
+    // Start generation worker (BullMQ if REDIS_URL is set, otherwise in-memory handlers are already registered)
+    await startGenerationWorker();
+
     // Start listening on port only when all API endpoints and static assets are fully configured
 
 
@@ -5132,6 +5341,17 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             if (err.code === 'EADDRINUSE') {
                 console.error(`💡 HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
             }
+        });
+
+        process.on('SIGTERM', async () => {
+            console.log('[Server] SIGTERM received; closing generation worker/queue...');
+            await closeGenerationQueue();
+            serverInstance.close(() => process.exit(0));
+        });
+        process.on('SIGINT', async () => {
+            console.log('[Server] SIGINT received; closing generation worker/queue...');
+            await closeGenerationQueue();
+            serverInstance.close(() => process.exit(0));
         });
     } catch (listenError: any) {
         console.error("🚨 CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);

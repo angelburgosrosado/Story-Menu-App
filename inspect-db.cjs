@@ -1,7 +1,7 @@
 const pg = require('pg');
 const { Pool } = pg;
 
-const connectionString = "postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1";
+const connectionString = "postgresql://angelburgosrosado:75727572Ab%21@your_host:5432/comics-v1";
 
 async function inspectAllSchemas() {
     const pool = new Pool({

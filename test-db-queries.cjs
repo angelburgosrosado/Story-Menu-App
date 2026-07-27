@@ -9,7 +9,7 @@
 const pg = require('pg');
 const { Pool } = pg;
 
-const urlVal = process.env.DATABASE_URL || "postgresql://angelburgosrosado:75727572Ab%21@34.148.244.49:5432/comics-v1";
+const urlVal = process.env.DATABASE_URL || "postgresql://angelburgosrosado:75727572Ab%21@your_host:5432/comics-v1";
 
 console.log("\x1b[35m%s\x1b[0m", "======================================================================");
 console.log("\x1b[1m\x1b[32m%s\x1b[0m", "📋 DATABASE TRANSACTIONAL TEST ENGINE: live data tracer");

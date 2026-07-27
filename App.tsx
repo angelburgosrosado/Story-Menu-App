@@ -1192,7 +1192,7 @@ const handleVillainUpload = async (file: File) => {
       <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700`}>
 
         {/* Left Sidebar / Controls (conditionally rendered) */}
-        {!showSetup && skin !== 'kid-story' && (
+        {!showSetup && skin !== 'kid-story' && !isStarted && (
           <aside className={`w-72 flex-shrink-0 p-6 pt-4 border-r ${isLightMode ? 'bg-white border-amber-200' : 'bg-black/50 border-orange-500/30'} transition-all duration-700`}>
             {/* User Account Info */}
             <div className="flex items-center mb-6 justify-between">

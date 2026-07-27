@@ -117,7 +117,7 @@ const NAV_ITEMS: {
   active: boolean;
   badge?: string;
 }[] = [
-  { id: 'overview',    label: 'Project Overview',  icon: <BookOpen size={15} />,       active: true },
+  { id: 'overview',    label: 'Project Overview',  icon: <Compass size={15} />,       active: true },
   { id: 'outline',     label: 'Story Outline',      icon: <List size={15} />,          active: true },
   { id: 'characters',  label: 'Characters',         icon: <Users size={15} />,         active: true },
   { id: 'scenes',      label: 'Scene Library',      icon: <Layers size={15} />,        active: false, badge: 'Soon' },
@@ -898,7 +898,7 @@ export const StoryWorkspace: React.FC<StoryWorkspaceProps> = (props) => {
                     `}
                     title={nav.label}
                   >
-                    <nav.icon size={18} className={isActive ? 'text-indigo-400' : ''} />
+                    {React.cloneElement(nav.icon as React.ReactElement, { size: 18, className: isActive ? 'text-indigo-400' : '' })}
                     <span className="text-[9px] font-bold tracking-tight truncate w-full text-center px-1">{nav.label}</span>
                   </button>
                 );

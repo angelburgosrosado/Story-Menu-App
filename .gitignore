@@ -33,3 +33,5 @@ tmp/
 *.swp
 coverage/
 .nyc_output/
+
+google-cloud-sdk/

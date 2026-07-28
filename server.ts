@@ -1213,6 +1213,22 @@ memoryDb.users.push({
     created_at: new Date()
 });
 
+// Preseed local memoryDb admins with password 'AdminUser123!'
+function preseedAdmin(username: string) {
+    const defaultPassword = "AdminUser123!";
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(defaultPassword, salt, 1000, 64, 'sha512').toString('hex');
+    memoryDb.admin_users.push({
+        id: memoryDb.admin_users.length + 1,
+        username,
+        password_hash: hash,
+        salt,
+        role: 'super_admin'
+    });
+}
+preseedAdmin('abglco@protonmail.com');
+preseedAdmin('angelburgosrosado@gmail.com');
+
 // Seed fallback configs into memoryDb
 memoryDb.ai_fallback_configs.push(...DEFAULT_AI_FALLBACK_CONFIGS);
 

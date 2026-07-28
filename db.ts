@@ -313,5 +313,5 @@ export function getDbPool(force = false): any {
 export function isConnectionError(err: any): boolean {
     if (!err) return false;
     const msg = String(err.message || err).toLowerCase();
-    return msg.includes('econrefused') || msg.includes('connection') || msg.includes('timeout') || msg.includes('offline');
+    return msg.includes('econnrefused') || msg.includes('connection') || msg.includes('timeout') || msg.includes('offline');
 }

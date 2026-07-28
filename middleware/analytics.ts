@@ -4,6 +4,8 @@
  * Tracks: signups, story creations, format selections, payment events.
  */
 
+import https from 'https';
+
 interface AnalyticsEvent {
     event: string;
     userId?: string;
@@ -15,6 +17,7 @@ interface AnalyticsEvent {
 class Analytics {
     private queue: AnalyticsEvent[] = [];
     private flushTimer: ReturnType<typeof setInterval> | null = null;
+    private posthogApiKey = process.env.POSTHOG_API_KEY || '';
 
     constructor() {
         this.flushTimer = setInterval(() => this.flush(), 10000);
@@ -25,27 +28,62 @@ class Analytics {
             event,
             userId: data.userId,
             email: data.email,
-            properties: data,
+            properties: { ...data },
             timestamp: new Date().toISOString(),
         };
 
         // Remove PII from properties
-        delete entry.properties.userId;
-        delete entry.properties.email;
+        if (entry.properties) {
+            delete entry.properties.userId;
+            delete entry.properties.email;
+        }
 
         this.queue.push(entry);
 
-        // Log for now — swap with PostHog/Amplitude when ready:
-        // import PostHog from 'posthog-node'; const client = new PostHog('phc_xxx');
-        // client.capture({ event, distinctId: data.userId || data.email, properties: data });
+        // Native PostHog Capture Integration (direct HTTPS API)
+        if (this.posthogApiKey) {
+            this.sendToPostHog(entry);
+        }
+
         console.log(JSON.stringify({ level: 'info', type: 'analytics', ...entry }));
+    }
+
+    private sendToPostHog(entry: AnalyticsEvent) {
+        const payload = JSON.stringify({
+            api_key: this.posthogApiKey,
+            event: entry.event,
+            properties: {
+                distinct_id: entry.userId || entry.email || 'anonymous_server',
+                ...entry.properties,
+                $timestamp: entry.timestamp,
+                $lib: 'story-menu-app-native-node'
+            }
+        });
+
+        const req = https.request({
+            hostname: 'app.posthog.com',
+            path: '/capture/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        }, (res) => {
+            res.on('data', () => {}); // consume stream
+        });
+
+        req.on('error', (err) => {
+            console.error('[Analytics] PostHog dispatch failed:', err.message);
+        });
+
+        req.write(payload);
+        req.end();
     }
 
     private flush() {
         if (this.queue.length === 0) return;
         const batch = this.queue.splice(0);
-        // In production, send batch to analytics provider
-        // For now, structured logs are sufficient for Cloud Logging → BigQuery export
+        // Direct batch ingestion can be added here if desired, otherwise sendToPostHog captures immediate events
     }
 
     // ─── Pre-defined events ────────────────────────────────────────────

@@ -79,6 +79,28 @@ export function getIsolatedSchemaName(): string {
 
 // A mock Pool client that translates basic SQL to Firestore operations
 class FirebaseMockPool {
+    private localAdmins: any[] = [];
+    private localSessions: any[] = [];
+
+    constructor() {
+        // Preseed both admin accounts with password 'AdminUser123!'
+        const crypto = require('crypto');
+        const defaultPassword = "AdminUser123!";
+        
+        const seedAdmin = (username: string) => {
+            const salt = crypto.randomBytes(16).toString('hex');
+            const hash = crypto.pbkdf2Sync(defaultPassword, salt, 1000, 64, 'sha512').toString('hex');
+            this.localAdmins.push({
+                username,
+                password_hash: hash,
+                salt,
+                role: 'super_admin'
+            });
+        };
+        seedAdmin('abglco@protonmail.com');
+        seedAdmin('angelburgosrosado@gmail.com');
+    }
+
     async query(sqlString: string, params: any[] = []): Promise<{ rows: any[], rowCount: number }> {
         const sql = sqlString.trim().replace(/\s+/g, ' ');
 
@@ -87,6 +109,26 @@ class FirebaseMockPool {
             if (sql.toUpperCase().startsWith('CREATE TABLE')) return { rows: [], rowCount: 0 };
             
             if (sql.match(/SELECT 1/i)) return { rows: [{'?column?': 1}], rowCount: 1 };
+
+            // Admin Users & Sessions intercepts for fallback sandbox
+            if (sql.match(/SELECT\s+\*\s+FROM\s+admin_users\s+WHERE\s+username\s+=\s+\$1/i)) {
+                const user = this.localAdmins.find(u => u.username === params[0]);
+                return { rows: user ? [user] : [], rowCount: user ? 1 : 0 };
+            }
+
+            if (sql.match(/INSERT\s+INTO\s+admin_sessions/i)) {
+                this.localSessions.push({
+                    token: params[0],
+                    username: params[1],
+                    expires_at: params[2]
+                });
+                return { rows: [], rowCount: 1 };
+            }
+
+            if (sql.match(/SELECT\s+username\s+FROM\s+admin_sessions/i)) {
+                const session = this.localSessions.find(s => s.token === params[0] && new Date(s.expires_at) > new Date());
+                return { rows: session ? [{ username: session.username }] : [], rowCount: session ? 1 : 0 };
+            }
 
             // 1. App Settings
             if (sql.match(/SELECT\s+\*\s+FROM\s+app_settings/i)) {

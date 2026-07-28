@@ -13,6 +13,7 @@ import * as admin from 'firebase-admin';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import firebaseConfig from './firebase-applet-config.json';
+import crypto from 'crypto';
 
 import {
     FirestoreAppSettingsRepository,
@@ -84,7 +85,6 @@ class FirebaseMockPool {
 
     constructor() {
         // Preseed both admin accounts with password 'AdminUser123!'
-        const crypto = require('crypto');
         const defaultPassword = "AdminUser123!";
         
         const seedAdmin = (username: string) => {

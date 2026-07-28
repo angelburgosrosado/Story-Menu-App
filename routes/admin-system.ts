@@ -255,4 +255,15 @@ router.delete('/feature-flags/:name', async (req: Request, res: Response): Promi
     }
 });
 
+import { getRateLimitStores } from '../middleware/rateLimit';
+
+router.get('/system/rate-limits', async (req: Request, res: Response): Promise<any> => {
+    try {
+        const limits = getRateLimitStores();
+        return res.json(limits);
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+});
+
 export default router;

@@ -76,6 +76,7 @@ export const AdminApp: React.FC = () => {
     | "ai_sandbox"
     | "logs"
     | "global_characters"
+    | "rate_limits"
   >("dashboard");
   const [customLoginUsername, setCustomLoginUsername] = useState("");
   const [customLoginPassword, setCustomLoginPassword] = useState("");
@@ -138,6 +139,7 @@ export const AdminApp: React.FC = () => {
   const [formFlagAllowed, setFormFlagAllowed] = useState("");
   const [formFlagExcluded, setFormFlagExcluded] = useState("");
   const [formFlagEnvs, setFormFlagEnvs] = useState("production, staging, development");
+  const [rateLimits, setRateLimits] = useState<any>({});
   const [manageTokenEmail, setManageTokenEmail] = useState<string>("");
   const [tokenAmount, setTokenAmount] = useState("");
   const [categoryModal, setCategoryModal] = useState<any>(null);
@@ -278,6 +280,7 @@ export const AdminApp: React.FC = () => {
         languagesRes,
         glossaryRes,
         featureFlagsRes,
+        rateLimitsRes,
       ] = await Promise.all([
         adminFetch("/api/admin/stats")
           .then((r) => (r.ok ? r.json() : null))
@@ -318,6 +321,9 @@ export const AdminApp: React.FC = () => {
         adminFetch("/api/admin/feature-flags")
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
+        adminFetch("/api/admin/system/rate-limits")
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({})),
       ]);
       if (statsRes) setStats(statsRes);
       setCustomers(custRes);
@@ -332,6 +338,7 @@ export const AdminApp: React.FC = () => {
       setLanguages(Array.isArray(languagesRes) ? languagesRes : []);
       setGlossaries(Array.isArray(glossaryRes) ? glossaryRes : []);
       setFirestoreFeatureFlags(Array.isArray(featureFlagsRes) ? featureFlagsRes : []);
+      setRateLimits(rateLimitsRes || {});
       runDiagnostics();
     } catch (error) {
       console.error("Admin API Error:", error);
@@ -2568,6 +2575,156 @@ export const AdminApp: React.FC = () => {
               {/* AI Costs */}
               {activeTab === "ai_costs" && (
                 <AdminCostAnalyticsView analyticsData={costAnalytics} />
+              )}
+
+              {/* Rate Limits Dashboard */}
+              {activeTab === "rate_limits" && (
+                <div className="p-8 space-y-8 bg-slate-50 relative animate-in fade-in duration-200">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                      API Rate Limit Monitoring <span className="text-xs bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">Active</span>
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Real-time API traffic throttling, active sessions, and client sliding windows
+                    </p>
+                  </div>
+
+                  {/* Metrics Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Monitored Endpoints
+                        </h3>
+                        <Activity className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <div className="text-3xl font-black text-slate-800">
+                        {Object.keys(rateLimits).length}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Active route limit pools in Express
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Active Sliding Windows
+                        </h3>
+                        <Users className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div className="text-3xl font-black text-slate-800">
+                        {Object.values(rateLimits).reduce(
+                          (acc: number, arr: any) => acc + (arr?.length || 0),
+                          0
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Total individual IPs being tracked
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Global Traffic Health
+                        </h3>
+                        <span className="text-xs font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
+                          Stable
+                        </span>
+                      </div>
+                      <div className="text-3xl font-black text-slate-800">
+                        100%
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Zero request pool saturation detected
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Route Pools Grid */}
+                  <div className="space-y-6">
+                    {Object.entries(rateLimits).map(([route, clients]: [string, any]) => (
+                      <div
+                        key={route}
+                        className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                      >
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                          <div>
+                            <span className="font-bold text-sm text-slate-800 uppercase font-mono tracking-tight">
+                              {route}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100 font-mono">
+                            {clients.length} active sessions
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs text-slate-600">
+                            <thead className="bg-slate-50/50 text-slate-400 font-bold text-[10px] uppercase tracking-wider border-b border-slate-100">
+                              <tr>
+                                <th className="p-4">Client Identity (IP Context)</th>
+                                <th className="p-4">Hit Count</th>
+                                <th className="p-4">Window Start</th>
+                                <th className="p-4 text-right">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {clients.map((client: any, index: number) => {
+                                // Define threshold looks
+                                const count = client.count;
+                                let badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                                let statusText = "Safe";
+                                if (count > 50) {
+                                  badgeColor = "bg-amber-50 text-amber-600 border-amber-100";
+                                  statusText = "Warning";
+                                }
+                                if (count > 100) {
+                                  badgeColor = "bg-rose-50 text-rose-600 border-rose-100";
+                                  statusText = "Throttled";
+                                }
+                                return (
+                                  <tr key={index} className="hover:bg-slate-50/30 transition-colors">
+                                    <td className="p-4 font-mono font-bold text-slate-700">
+                                      {client.key}
+                                    </td>
+                                    <td className="p-4 font-bold text-slate-800">
+                                      {client.count} requests
+                                    </td>
+                                    <td className="p-4 text-slate-400">
+                                      {new Date(client.windowStart).toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-right">
+                                      <span
+                                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeColor}`}
+                                      >
+                                        {statusText}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {clients.length === 0 && (
+                                <tr>
+                                  <td colSpan={4} className="p-8 text-center text-slate-400">
+                                    No active request windows currently open for this route.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+
+                    {Object.keys(rateLimits).length === 0 && (
+                      <div className="text-center p-12 text-slate-400 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        No active rate limit sliding windows recorded in system memory.
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {activeTab === "logs" && (

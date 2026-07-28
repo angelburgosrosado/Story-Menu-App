@@ -120,3 +120,18 @@ export async function enforceTokenBudget(
     
     return { allowed: false, error: 'User not found' };
 }
+
+export function getRateLimitStores() {
+    const result: Record<string, any[]> = {};
+    for (const [route, ipMap] of stores.entries()) {
+        result[route] = [];
+        for (const [key, entry] of ipMap.entries()) {
+            result[route].push({
+                key,
+                count: entry.count,
+                windowStart: new Date(entry.windowStart).toISOString(),
+            });
+        }
+    }
+    return result;
+}

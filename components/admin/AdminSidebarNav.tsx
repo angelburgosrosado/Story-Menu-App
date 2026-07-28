@@ -98,6 +98,7 @@ export const AdminSidebarNav: React.FC<AdminSidebarNavProps> = ({
                     Developer & Testing
                 </div>
                 <NavItem tab="diagnostics" icon={Terminal} label="System Diagnostics" />
+                <NavItem tab="rate_limits" icon={Activity} label="Rate Limits" />
                 <NavItem tab="ai_sandbox" icon={Play} label="Prompt Sandbox" />
             </div>
 

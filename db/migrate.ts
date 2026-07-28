@@ -164,10 +164,12 @@ async function rollbackMigration(targetVersion: number) {
 export default { runMigrations, rollbackMigration };
 
 // CLI
-const args = process.argv.slice(2);
-if (args[0] === 'rollback') {
-    const target = parseInt(args[1] || '0', 10);
-    rollbackMigration(target).catch(console.error);
-} else {
-    runMigrations().catch(console.error);
+if (process.env.NODE_ENV !== 'test') {
+    const args = process.argv.slice(2);
+    if (args[0] === 'rollback') {
+        const target = parseInt(args[1] || '0', 10);
+        rollbackMigration(target).catch(console.error);
+    } else {
+        runMigrations().catch(console.error);
+    }
 }

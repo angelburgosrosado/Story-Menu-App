@@ -7,6 +7,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Allow public read on test/connection for pre-flight handshake
+    match /test/connection {
+      allow read: if true;
+    }
+
     // --- Core Primitives & Helpers ---
     function isSignedIn() {
       return request.auth != null;
@@ -30,7 +35,8 @@ service cloud.firestore {
 
     // --- 2. Users Collection Rules ---
     match /users/{userId} {
-      allow read, delete: if isOwner(userId);
+      allow read: if isOwner(userId) || (isSignedIn() && resource != null && resource.data.email.lower() == request.auth.token.email.lower());
+      allow delete: if isOwner(userId);
       allow create, update: if isOwner(userId) 
         && incoming().id == userId
         && incoming().email is string

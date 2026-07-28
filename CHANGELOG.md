@@ -6,6 +6,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — 2026-07-28
+
+### Added
+- **AI Cost Analytics Dashboard UI** — Implemented interactive Recharts AreaChart, PieChart, and BarChart to visualize operating fees, API model distributions, and activity costs. Integrates a search-supported operational telemetry audit trail of logs.
+- **Firestore-backed Feature Flags** — Implemented an advanced feature flags manager UI inside `AdminApp.tsx` allowing percentage-based rollouts, environment gating, and user-targeting whitelist/blacklist parsing with server-side validation.
+- **API Rate Limit Dashboard** — Implemented sliding window traffic counters tracking client IP requests in real-time, backed by `/api/admin/system/rate-limits` telemetry endpoint.
+- **PWA Service Worker Registration** — Registered service worker `/sw.js` in `index.tsx` to cache assets and support offline story reader.
+- **Native PostHog Integration** — Added native, dependency-free HTTPS event dispatching inside `middleware/analytics.ts`.
+- **System Unit Tests** — Created comprehensive test suites `tests/admin-system.test.ts` and `tests/db-resilience.test.ts` to cover feature flags, rate limit metrics, and self-healing DB connection errors, raising test coverage to 83 passing tests.
+
+### Fixed
+- **Database Connection Error Typo** — Resolved a pre-existing typo (`econrefused` -> `econnrefused`) inside `db.ts` to ensure TCP socket exceptions are correctly caught by the self-healing layer.
+
 ## [Unreleased] — 2026-07-25
 
 ### Phase 1 — Security & Critical Blockers

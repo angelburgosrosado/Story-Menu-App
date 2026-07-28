@@ -52,8 +52,6 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-// Need to set the databaseId if not default
-db.settings({ databaseId: (firebaseConfig as any).firestoreDatabaseId });
 
 export function isDatabaseConnected(): boolean {
     return true; // We assume Firebase is always connected

@@ -128,6 +128,16 @@ export const AdminApp: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
   const [bypasses, setBypasses] = useState<any[]>([]);
+  const [firestoreFeatureFlags, setFirestoreFeatureFlags] = useState<any[]>([]);
+  const [showAddFirestoreFlagModal, setShowAddFirestoreFlagModal] = useState(false);
+  const [editingFirestoreFlag, setEditingFirestoreFlag] = useState<any>(null);
+  const [formFlagName, setFormFlagName] = useState("");
+  const [formFlagDesc, setFormFlagDesc] = useState("");
+  const [formFlagEnabled, setFormFlagEnabled] = useState(false);
+  const [formFlagPercent, setFormFlagPercent] = useState(100);
+  const [formFlagAllowed, setFormFlagAllowed] = useState("");
+  const [formFlagExcluded, setFormFlagExcluded] = useState("");
+  const [formFlagEnvs, setFormFlagEnvs] = useState("production, staging, development");
   const [manageTokenEmail, setManageTokenEmail] = useState<string>("");
   const [tokenAmount, setTokenAmount] = useState("");
   const [categoryModal, setCategoryModal] = useState<any>(null);
@@ -267,6 +277,7 @@ export const AdminApp: React.FC = () => {
         bypassesRes,
         languagesRes,
         glossaryRes,
+        featureFlagsRes,
       ] = await Promise.all([
         adminFetch("/api/admin/stats")
           .then((r) => (r.ok ? r.json() : null))
@@ -304,6 +315,9 @@ export const AdminApp: React.FC = () => {
         adminFetch("/api/admin/glossary")
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
+        adminFetch("/api/admin/feature-flags")
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
       ]);
       if (statsRes) setStats(statsRes);
       setCustomers(custRes);
@@ -317,6 +331,7 @@ export const AdminApp: React.FC = () => {
       setBypasses(Array.isArray(bypassesRes) ? bypassesRes : []);
       setLanguages(Array.isArray(languagesRes) ? languagesRes : []);
       setGlossaries(Array.isArray(glossaryRes) ? glossaryRes : []);
+      setFirestoreFeatureFlags(Array.isArray(featureFlagsRes) ? featureFlagsRes : []);
       runDiagnostics();
     } catch (error) {
       console.error("Admin API Error:", error);
@@ -1924,162 +1939,358 @@ export const AdminApp: React.FC = () => {
               {/* Features & Modules Toggles */}
               {activeTab === "features" && (
                 <div className="p-8">
-                  <div className="mb-8 max-w-2xl">
-                    <h3 className="font-bold text-lg text-slate-800 mb-2">
-                      UI Feature Flags
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      Enable or disable core platform modules dynamically.
-                      Changes apply to the frontend immediately without a
-                      rebuild.
-                    </p>
+                  <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-800 mb-2">
+                        Firestore Feature Flags & Rollouts
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Configure fine-grained percentage rollouts, targeting rules, and environment gates.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingFirestoreFlag(null);
+                        setFormFlagName("");
+                        setFormFlagDesc("");
+                        setFormFlagEnabled(false);
+                        setFormFlagPercent(100);
+                        setFormFlagAllowed("");
+                        setFormFlagExcluded("");
+                        setFormFlagEnvs("production, staging, development");
+                        setShowAddFirestoreFlagModal(true);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                    >
+                      + Create Feature Flag
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {settings
-                      .filter(
-                        (s: any) =>
-                          s.keyName && s.keyName.startsWith("feature_"),
-                      )
-                      .map((s: any) => {
-                        const f = s.keyName;
-                        const isEnabled = s.keyValue === "true";
-                        return (
-                          <div
-                            key={f}
-                            className={`p-6 rounded-2xl shadow-sm border transition-all ${isEnabled ? "bg-white border-blue-200" : "bg-slate-50 border-slate-200"}`}
-                          >
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <div className="font-bold text-sm text-slate-800 mb-1">
-                                  {f
-                                    .split("_")
-                                    .slice(1)
-                                    .map(
-                                      (w: string) =>
-                                        w.charAt(0).toUpperCase() + w.slice(1),
-                                    )
-                                    .join(" ")}
-                                </div>
-                                <div className="text-[10px] text-slate-400 font-mono bg-slate-100 px-2 py-1 rounded inline-block">
-                                  {f}
-                                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {firestoreFeatureFlags.map((flag: any) => {
+                      const isEnabled = flag.enabled;
+                      return (
+                        <div
+                          key={flag.name}
+                          className={`p-6 rounded-2xl shadow-sm border transition-all ${isEnabled ? "bg-white border-blue-200" : "bg-slate-50 border-slate-200"}`}
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <div className="font-bold text-base text-slate-800 mb-1 font-sans uppercase tracking-tight">
+                                {flag.name.replace(/-/g, " ")}
                               </div>
-                              <button
-                                onClick={() =>
-                                  handleUpdateSetting(
-                                    f,
-                                    isEnabled ? "false" : "true",
-                                    s.isSecret,
-                                    s.description,
-                                  )
-                                }
-                                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isEnabled ? "bg-blue-600" : "bg-slate-300"}`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isEnabled ? "translate-x-6" : "translate-x-1"}`}
-                                />
-                              </button>
+                              <div className="text-[10px] text-slate-400 font-mono bg-slate-100 px-2 py-1 rounded inline-block">
+                                {flag.name}
+                              </div>
                             </div>
-
-                            <div className="mb-3 mt-3">
-                              <textarea
-                                className="w-full text-xs text-slate-600 p-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none resize-none"
-                                rows={2}
-                                placeholder="Add an explanation for this feature..."
-                                defaultValue={s.description || ""}
-                                onBlur={(e) => {
-                                  if (e.target.value !== s.description) {
-                                    handleUpdateSetting(
-                                      f,
-                                      s.keyValue,
-                                      s.isSecret,
-                                      e.target.value,
-                                    );
-                                  }
-                                }}
-                              />
-                            </div>
-
-                            <p className="text-xs text-slate-500 mt-3 border-t border-slate-100 pt-3">
-                              {isEnabled ? (
-                                <span className="text-emerald-600 font-medium">
-                                  ✓ Globally Active
-                                </span>
-                              ) : (
-                                <span className="text-amber-600 font-medium">
-                                  ⚠ Disabled Globally
-                                </span>
-                              )}
-                              <span className="block mt-1">
-                                Users require a Subscription Plan with this
-                                feature unlocked to access it.
-                              </span>
-                            </p>
-                          </div>
-                        );
-                      })}
-
-                    <div
-                      className="p-5 rounded-2xl border border-dashed border-slate-300 bg-transparent flex flex-col items-center justify-center text-slate-500 cursor-pointer hover:bg-slate-50 hover:text-blue-600 transition-colors"
-                      onClick={() => setShowAddFeatureModal(true)}
-                    >
-                      <span className="font-bold text-sm">
-                        + New Feature Flag
-                      </span>
-                    </div>
-
-                    {showAddFeatureModal && (
-                      <div className="absolute top-0 left-0 w-full h-full bg-slate-900/50 z-10 flex items-center justify-center p-4">
-                        <div className="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
-                          <h3 className="font-bold text-lg mb-4">
-                            Add Custom Feature Flag
-                          </h3>
-                          <input
-                            type="text"
-                            placeholder="feature_name"
-                            className="w-full border p-2 rounded mb-4"
-                            value={newFeature.keyName}
-                            onChange={(e) =>
-                              setNewFeature({
-                                ...newFeature,
-                                keyName: e.target.value,
-                              })
-                            }
-                          />
-                          <div className="flex justify-end gap-3">
                             <button
-                              className="px-4 py-2 bg-slate-100 rounded"
-                              onClick={() => setShowAddFeatureModal(false)}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              className="px-4 py-2 bg-blue-600 text-white rounded"
                               onClick={async () => {
-                                await adminFetch("/api/admin/settings", {
+                                const updated = {
+                                  ...flag,
+                                  enabled: !flag.enabled,
+                                };
+                                await adminFetch("/api/admin/feature-flags", {
                                   method: "POST",
                                   headers: {
                                     "Content-Type": "application/json",
                                   },
-                                  body: JSON.stringify({
-                                    keyName: newFeature.keyName,
-                                    keyValue: "false",
-                                    isSecret: false,
-                                    description: newFeature.description,
-                                  }),
+                                  body: JSON.stringify(updated),
                                 });
-                                setShowAddFeatureModal(false);
                                 fetchData();
                               }}
+                              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isEnabled ? "bg-blue-600" : "bg-slate-300"}`}
                             >
-                              Create Flag
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isEnabled ? "translate-x-6" : "translate-x-1"}`}
+                              />
+                            </button>
+                          </div>
+
+                          <p className="text-xs text-slate-600 mb-4 h-10 overflow-hidden line-clamp-2">
+                            {flag.description || "No description provided."}
+                          </p>
+
+                          {/* Rollout Progress Bar */}
+                          <div className="mb-4">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              <span>Rollout Percentage</span>
+                              <span>{flag.percentage}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="bg-blue-600 h-1.5 rounded-full transition-all"
+                                style={{ width: `${flag.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Environments as Tags */}
+                          <div className="mb-4">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                              Target Environments
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {flag.environments && flag.environments.length > 0 ? (
+                                flag.environments.map((env: string) => (
+                                  <span
+                                    key={env}
+                                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 font-mono uppercase border border-slate-200"
+                                  >
+                                    {env}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">
+                                  All Environments
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Allowed/Excluded info */}
+                          <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 mb-4">
+                            <div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                Allowed Users
+                              </div>
+                              <div className="text-xs font-bold text-slate-700">
+                                {flag.allowedUsers?.length || 0} targeted
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                Excluded Users
+                              </div>
+                              <div className="text-xs font-bold text-slate-700">
+                                {flag.excludedUsers?.length || 0} excluded
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                            <button
+                              onClick={() => {
+                                setEditingFirestoreFlag(flag);
+                                setFormFlagName(flag.name);
+                                setFormFlagDesc(flag.description || "");
+                                setFormFlagEnabled(flag.enabled);
+                                setFormFlagPercent(flag.percentage ?? 100);
+                                setFormFlagAllowed(
+                                  flag.allowedUsers ? flag.allowedUsers.join(", ") : ""
+                                );
+                                setFormFlagExcluded(
+                                  flag.excludedUsers ? flag.excludedUsers.join(", ") : ""
+                                );
+                                setFormFlagEnvs(
+                                  flag.environments
+                                    ? flag.environments.join(", ")
+                                    : "production, staging, development"
+                                );
+                                setShowAddFirestoreFlagModal(true);
+                              }}
+                              className="px-3 py-1.5 text-xs text-slate-600 hover:text-blue-600 border border-slate-200 bg-white hover:bg-slate-50 font-bold rounded-lg transition-all"
+                            >
+                              Edit Rollout
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (confirm(`Are you sure you want to delete flag "${flag.name}"?`)) {
+                                  await adminFetch(`/api/admin/feature-flags/${flag.name}`, {
+                                    method: "DELETE",
+                                  });
+                                  fetchData();
+                                }
+                              }}
+                              className="px-3 py-1.5 text-xs text-rose-500 hover:text-white border border-rose-200 bg-white hover:bg-rose-500 font-bold rounded-lg transition-all"
+                            >
+                              Delete
                             </button>
                           </div>
                         </div>
+                      );
+                    })}
+
+                    {firestoreFeatureFlags.length === 0 && (
+                      <div className="col-span-2 text-center p-12 text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                        No active advanced Firestore feature flags found.
                       </div>
                     )}
                   </div>
+
+                  {/* Add / Edit Firestore Flag Modal */}
+                  {showAddFirestoreFlagModal && (
+                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-150">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                          <h3 className="font-bold text-lg text-slate-800">
+                            {editingFirestoreFlag ? "Modify Feature Rollout" : "Create Advanced Feature Flag"}
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                          {/* Name */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Flag Name (unique slug)
+                            </label>
+                            <input
+                              type="text"
+                              disabled={!!editingFirestoreFlag}
+                              placeholder="e.g. premium-generation-models"
+                              value={formFlagName}
+                              onChange={(e) => setFormFlagName(e.target.value)}
+                              className="w-full border border-slate-200 p-3 rounded-xl text-sm font-mono text-slate-700 bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all disabled:opacity-50"
+                            />
+                          </div>
+
+                          {/* Description */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Description
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="Detail the module behavior and system dependencies of this flag..."
+                              value={formFlagDesc}
+                              onChange={(e) => setFormFlagDesc(e.target.value)}
+                              className="w-full border border-slate-200 p-3 rounded-xl text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
+                            />
+                          </div>
+
+                          {/* Percent & Enabled */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                State
+                              </label>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setFormFlagEnabled(!formFlagEnabled)}
+                                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${formFlagEnabled ? "bg-blue-600" : "bg-slate-300"}`}
+                                >
+                                  <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formFlagEnabled ? "translate-x-6" : "translate-x-1"}`}
+                                  />
+                                </button>
+                                <span className="text-xs font-bold text-slate-700">
+                                  {formFlagEnabled ? "Enabled" : "Disabled"}
+                                </span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                Rollout Percentage ({formFlagPercent}%)
+                              </label>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={formFlagPercent}
+                                onChange={(e) => setFormFlagPercent(Number(e.target.value))}
+                                className="w-full accent-blue-600"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Environments */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Target Environments (comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. production, staging, development"
+                              value={formFlagEnvs}
+                              onChange={(e) => setFormFlagEnvs(e.target.value)}
+                              className="w-full border border-slate-200 p-3 rounded-xl text-sm font-mono text-slate-700 bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all"
+                            />
+                          </div>
+
+                          {/* Allowed Users */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Allowed User Contexts (comma-separated emails/IDs)
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="e.g. angel@abglco.com, tester-id, @abglco.com"
+                              value={formFlagAllowed}
+                              onChange={(e) => setFormFlagAllowed(e.target.value)}
+                              className="w-full border border-slate-200 p-3 rounded-xl text-xs text-slate-700 font-mono bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
+                            />
+                          </div>
+
+                          {/* Excluded Users */}
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Excluded User Contexts (comma-separated emails/IDs)
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="e.g. bad-actor@abglco.com"
+                              value={formFlagExcluded}
+                              onChange={(e) => setFormFlagExcluded(e.target.value)}
+                              className="w-full border border-slate-200 p-3 rounded-xl text-xs text-slate-700 font-mono bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all resize-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                          <button
+                            type="button"
+                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
+                            onClick={() => {
+                              setShowAddFirestoreFlagModal(false);
+                              setEditingFirestoreFlag(null);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!formFlagName.trim()) {
+                                alert("Flag name is required");
+                                return;
+                              }
+                              const payload = {
+                                name: formFlagName.trim().toLowerCase(),
+                                description: formFlagDesc.trim(),
+                                enabled: formFlagEnabled,
+                                percentage: Number(formFlagPercent),
+                                allowedUsers: formFlagAllowed
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                                excludedUsers: formFlagExcluded
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                                environments: formFlagEnvs
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                              };
+                              await adminFetch("/api/admin/feature-flags", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify(payload),
+                              });
+                              setShowAddFirestoreFlagModal(false);
+                              setEditingFirestoreFlag(null);
+                              fetchData();
+                            }}
+                            className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                          >
+                            Save Settings
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

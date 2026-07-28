@@ -219,4 +219,40 @@ router.get('/system/bypasses', async (req, res): Promise<any> => {
 
     return res.json(bypasses);
 });
+
+// Feature Flag management endpoints (Advanced Firestore Flags)
+import { featureFlags } from '../middleware/featureFlags';
+
+router.get('/feature-flags', async (req: Request, res: Response): Promise<any> => {
+    try {
+        const flags = await featureFlags.getAllFlags();
+        return res.json(flags);
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/feature-flags', async (req: Request, res: Response): Promise<any> => {
+    try {
+        const flag = req.body;
+        if (!flag.name) {
+            return res.status(400).json({ error: 'Flag name is required' });
+        }
+        await featureFlags.setFlag(flag);
+        return res.json({ success: true });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+});
+
+router.delete('/feature-flags/:name', async (req: Request, res: Response): Promise<any> => {
+    try {
+        const name = req.params.name as string;
+        await featureFlags.deleteFlag(name);
+        return res.json({ success: true });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+});
+
 export default router;

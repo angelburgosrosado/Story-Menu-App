@@ -36,12 +36,14 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SA }}
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
@@ -49,7 +51,7 @@ jobs:
       - name: Verify deployment
         run: |
           sleep 30
-          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format='value(status.url)')
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --project ${{ secrets.GCP_PROJECT_ID }} --region ${{ env.REGION }} --format='value(status.url)')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
           if [ "$STATUS" != "200" ]; then
             echo "❌ Deployment health check failed: HTTP $STATUS"

@@ -26,6 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSuccess, onSwitc
       
       // Store in Firestore for future connections
       await setDoc(doc(db, 'users', user.uid), {
+        id: user.uid,
         email: user.email,
         displayName: user.displayName || 'Google User',
         createdAt: new Date().toISOString(),

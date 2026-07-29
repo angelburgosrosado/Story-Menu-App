@@ -27,6 +27,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
       
       // Store in Firestore for future connections
       await setDoc(doc(db, 'users', user.uid), {
+        id: user.uid,
         email: user.email,
         displayName: user.displayName || 'Google User',
         createdAt: new Date().toISOString(),
@@ -56,6 +57,7 @@ export const SignupPage: React.FC<SignupPageProps> = ({ onBack, onSuccess, onSwi
       
       // Store in Firestore for future connections
       await setDoc(doc(db, 'users', userCredential.user.uid), {
+        id: userCredential.user.uid,
         email: email,
         displayName: name,
         createdAt: new Date().toISOString(),

@@ -46,7 +46,7 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          source: ./
 
       - name: Verify deployment
         run: |

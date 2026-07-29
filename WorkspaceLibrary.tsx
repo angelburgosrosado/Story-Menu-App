@@ -355,12 +355,12 @@ export const WorkspaceLibrary = ({
                                                     <span className={isEditorial
                                                          ? "block font-sans font-bold text-xs text-stone-900 group-hover:text-stone-700 truncate transition-colors"
                                                          : "block font-mono font-black text-xs text-white group-hover:text-cyan-400 truncate transition-colors"}>
-                                                         {draft.title}
+                                                         {typeof draft.title === 'string' ? draft.title : 'Untitled'}
                                                     </span>
                                                     <span className={isEditorial
                                                          ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[8px] font-sans text-stone-605 px-1.5 py-0.5 uppercase font-bold"
                                                          : "inline-block mt-1 bg-cyan-950 border border-cyan-800 rounded text-[8px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase font-bold"}>
-                                                         {draft.genre || 'Classic Horror'}
+                                                         {typeof draft.genre === 'string' ? draft.genre : 'Classic Horror'}
                                                     </span>
                                                </div>
 

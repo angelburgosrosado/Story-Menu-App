@@ -120,7 +120,7 @@ export const WorkspaceLibrary = ({
                                                    <div className={isEditorial
                                                         ? "absolute top-1 left-1 bg-stone-800 text-[8px] font-sans text-stone-50 px-1 py-0.5 rounded"
                                                         : "absolute top-1 left-1 bg-black/80 text-[8px] font-mono text-white px-1 py-0.2 rounded border border-slate-600/50"}>
-                                                        {project.language || 'en-US'}
+                                                        {typeof project.language === 'string' ? project.language : 'en-US'}
                                                    </div>
                                               </div>
 
@@ -130,12 +130,12 @@ export const WorkspaceLibrary = ({
                                                         <span className={isEditorial
                                                              ? "block font-sans font-bold text-sm tracking-wide text-stone-900 group-hover:text-stone-700 truncate transition-colors"
                                                              : "block font-mono font-bold text-sm tracking-wide text-white group-hover:text-yellow-300 truncate transition-colors"}>
-                                                             {project.title}
+                                                             {typeof project.title === 'string' ? project.title : 'Untitled Project'}
                                                         </span>
                                                         <span className={isEditorial
                                                              ? "inline-block mt-1 bg-stone-100 border border-stone-200 rounded text-[9px] font-sans text-stone-600 px-1.5 py-0.5 uppercase tracking-wider font-bold"
                                                              : "inline-block mt-1 bg-blue-600/40 border border-blue-500 rounded text-[9px] font-mono text-cyan-300 px-1.5 py-0.5 uppercase tracking-wider font-bold"}>
-                                                             {project.genre}
+                                                             {typeof project.genre === 'string' ? project.genre : 'Unknown Genre'}
                                                         </span>
                                                    </div>
                                                    

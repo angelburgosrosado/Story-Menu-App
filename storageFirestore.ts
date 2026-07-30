@@ -185,6 +185,25 @@ export interface FirestoreDraft {
   artStyle?: string;
   comicFaces: string; // Serialized ComicFace[]
   storyBlueprint: string; // Serialized ChapterGoal[]
+  
+  // Expanded Wizard State
+  selectedFormatId?: string;
+  selectedFlowId?: string;
+  selectedPrimaryGoalId?: string;
+  selectedSecondaryGoalId?: string;
+  freeformGoalNote?: string;
+  selectedPersonaId?: string;
+  personaRole?: string;
+  isPrimaryPersona?: boolean;
+  recurringIntent?: boolean;
+  personaStoryNotes?: string;
+  bilingualMode?: boolean;
+  sourceLanguage?: string;
+  targetLanguage?: string;
+  readingMode?: string;
+  voiceStyle?: string;
+  soundtrackTheme?: string;
+
   settings?: any; // To catch all UI wizard state
   createdAt?: any;
   updatedAt?: any;
@@ -203,6 +222,22 @@ export async function saveDraftToFirestore(userId: string, draft: Omit<Firestore
       artStyle: draft.artStyle || '',
       comicFaces: draft.comicFaces,
       storyBlueprint: draft.storyBlueprint,
+      selectedFormatId: draft.selectedFormatId || null,
+      selectedFlowId: draft.selectedFlowId || null,
+      selectedPrimaryGoalId: draft.selectedPrimaryGoalId || null,
+      selectedSecondaryGoalId: draft.selectedSecondaryGoalId || null,
+      freeformGoalNote: draft.freeformGoalNote || '',
+      selectedPersonaId: draft.selectedPersonaId || null,
+      personaRole: draft.personaRole || '',
+      isPrimaryPersona: draft.isPrimaryPersona ?? true,
+      recurringIntent: draft.recurringIntent ?? true,
+      personaStoryNotes: draft.personaStoryNotes || '',
+      bilingualMode: draft.bilingualMode ?? false,
+      sourceLanguage: draft.sourceLanguage || '',
+      targetLanguage: draft.targetLanguage || '',
+      readingMode: draft.readingMode || '',
+      voiceStyle: draft.voiceStyle || '',
+      soundtrackTheme: draft.soundtrackTheme || '',
       settings: draft.settings || {},
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
@@ -231,6 +266,22 @@ export async function getDraftsFromFirestore(userId: string): Promise<FirestoreD
         artStyle: data.artStyle || '',
         comicFaces: data.comicFaces || '[]',
         storyBlueprint: data.storyBlueprint || '[]',
+        selectedFormatId: data.selectedFormatId,
+        selectedFlowId: data.selectedFlowId,
+        selectedPrimaryGoalId: data.selectedPrimaryGoalId,
+        selectedSecondaryGoalId: data.selectedSecondaryGoalId,
+        freeformGoalNote: data.freeformGoalNote,
+        selectedPersonaId: data.selectedPersonaId,
+        personaRole: data.personaRole,
+        isPrimaryPersona: data.isPrimaryPersona,
+        recurringIntent: data.recurringIntent,
+        personaStoryNotes: data.personaStoryNotes,
+        bilingualMode: data.bilingualMode,
+        sourceLanguage: data.sourceLanguage,
+        targetLanguage: data.targetLanguage,
+        readingMode: data.readingMode,
+        voiceStyle: data.voiceStyle,
+        soundtrackTheme: data.soundtrackTheme,
         settings: data.settings || {},
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()

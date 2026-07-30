@@ -1118,11 +1118,13 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                         });
                                                         const { uploadUrl, assetId, publicUrl } = await urlRes.json();
                                                         
-                                                        await fetch(uploadUrl, {
-                                                            method: 'PUT',
-                                                            headers: { 'Content-Type': file.type },
-                                                            body: file
-                                                        });
+                                                        if (uploadUrl) {
+                                                            await fetch(uploadUrl, {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': file.type },
+                                                                body: file
+                                                            });
+                                                        }
 
                                                         const base64 = await fileToBase64(file);
                                                         const dbRes = await fetch('/api/reference-images', {

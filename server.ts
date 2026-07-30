@@ -4316,23 +4316,32 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
             const assetId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const storagePath = `reference-images/${assetId}.${ext}`;
 
-            // We need a configured firebase-admin with storage bucket
-            const bucket = getStorage().bucket(); 
-            
-            const [uploadUrl] = await bucket.file(storagePath).getSignedUrl({
-                version: 'v4',
-                action: 'write',
-                expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-                contentType: mimeType
-            });
+            try {
+                // Try to use a configured firebase-admin with storage bucket
+                const bucket = getStorage().bucket(); 
+                
+                const [uploadUrl] = await bucket.file(storagePath).getSignedUrl({
+                    version: 'v4',
+                    action: 'write',
+                    expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+                    contentType: mimeType
+                });
 
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
-            return res.json({
-                uploadUrl,
-                assetId,
-                publicUrl
-            });
+                return res.json({
+                    uploadUrl,
+                    assetId,
+                    publicUrl
+                });
+            } catch (storageErr) {
+                console.warn("Storage bucket not configured, falling back to mock upload url:", storageErr);
+                return res.json({
+                    uploadUrl: '',
+                    assetId,
+                    publicUrl: ''
+                });
+            }
         } catch (e: any) {
             console.error("Error generating signed URL:", e);
             return res.status(500).json({ error: "Failed to generate upload URL", details: e.message });

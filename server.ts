@@ -4189,11 +4189,12 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     app.post('/api/personas', async (req, res): Promise<any> => {
         const { displayName, shortDescription, longDescription, personaType, roleDefaults, ageGroup, audience_tags, language_tags, stylePreference, visualSummary, generationSafeDescription, usageMode, referenceImageId, referenceImageStatus, recurringCharacter, visibilityScope, consentStatus, moderationStatus, approvedForGeneration } = req.body;
         const id = crypto.randomUUID();
-        const slug = displayName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const safeName = displayName || 'Unnamed Character';
+        const slug = safeName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const data = {
             id,
             slug,
-            displayName,
+            displayName: safeName,
             shortDescription: shortDescription || '',
             longDescription: longDescription || '',
             personaType: personaType || 'Custom Character',

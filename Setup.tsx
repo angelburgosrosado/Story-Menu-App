@@ -1151,7 +1151,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     ) : (
                                         <div className="flex gap-4 items-center p-2">
                                             <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shrink-0">
-                                                <img src={uploadedRefImage.previewUrl} className="w-full h-full object-cover" />
+                                                <img src={uploadedRefImage.previewUrl.startsWith('http') || uploadedRefImage.previewUrl.startsWith('data:') ? uploadedRefImage.previewUrl : `data:${uploadedRefImage.mimeType || 'image/jpeg'};base64,${uploadedRefImage.previewUrl}`} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 space-y-1 text-xs">
                                                 <p className="font-bold text-slate-300">{uploadedRefImage.fileName}</p>
@@ -1229,15 +1229,33 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                         moderationStatus: uploadedRefImage ? 'Approved' : 'Unmoderated',
                                         visualSummary: uploadedRefImage?.previewUrl || editingPersona.visualSummary
                                     };
-                                    const res = await fetch('/api/personas', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(body)
-                                    }).then(r => r.json());
+                                    try {
+                                        const method = editingPersona.id ? 'PUT' : 'POST';
+                                        const url = editingPersona.id ? `/api/personas/${editingPersona.id}` : '/api/personas';
+                                        const res = await fetch(url, {
+                                            method,
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        }).then(r => r.json());
 
-                                    setPersonas([...personas, res]);
-                                    setSelectedPersona(res);
-                                    setShowPersonaCreator(false);
+                                        if (res.error) {
+                                            console.error("Error from API:", res.error);
+                                            alert("Failed to save character: " + res.error);
+                                            return;
+                                        }
+
+                                        if (editingPersona.id) {
+                                            setPersonas(personas.map(p => p.id === editingPersona.id ? { ...p, ...res } : p));
+                                            setSelectedPersona({ ...editingPersona, ...res });
+                                        } else {
+                                            setPersonas([...personas, res]);
+                                            setSelectedPersona(res);
+                                        }
+                                        setShowPersonaCreator(false);
+                                    } catch (e: any) {
+                                        console.error("Fetch error:", e);
+                                        alert("Could not connect to server to save character.");
+                                    }
                                 }}
                             >
                                 Save Character

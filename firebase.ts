@@ -4,7 +4,7 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getAnalytics, isSupported, logEvent, Analytics } from 'firebase/analytics';
 import firebaseConfig from './firebase-applet-config.json';
@@ -96,7 +96,12 @@ export async function testFirestoreConnection(): Promise<boolean> {
   }
 }
 
-// Ensure pre-flight handshake verifies connection on start
+// Allow E2E tests to inject custom tokens to simulate real sign-ins
+if (typeof window !== 'undefined') {
+  (window as any).e2eSignIn = async (token: string) => {
+    return signInWithCustomToken(auth, token);
+  };
+}
 testFirestoreConnection().catch(() => {});
 
 // --- Firestore Diagnostic Error Logger & Thrower ---

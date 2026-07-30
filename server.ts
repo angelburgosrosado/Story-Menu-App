@@ -2059,6 +2059,69 @@ Sitemap: https://storymenu.app/sitemap.xml`
     }
 
     /**
+     * E2E TEST AUTHENTICATION BYPASS
+     * Safely generates custom Firebase tokens for automated E2E tests without real OAuth prompts.
+     */
+    app.post('/api/e2e/login', async (req, res): Promise<any> => {
+        try {
+            const { email, secret, provider } = req.body;
+            
+            // 1. Feature Flag Validation
+            if (process.env.E2E_AUTH_ENABLED !== 'true') {
+                console.warn("⚠️ [Auth] E2E login attempted but E2E_AUTH_ENABLED is not true.");
+                return res.status(403).json({ error: "E2E Auth is disabled." });
+            }
+
+            // 2. Secret Validation
+            if (!secret || secret !== process.env.E2E_AUTH_SECRET) {
+                console.warn(`⚠️ [Auth] E2E login attempted for ${email} with invalid secret.`);
+                return res.status(401).json({ error: "Invalid E2E secret." });
+            }
+
+            // 3. Strict Allowlist Validation
+            const allowlistRaw = process.env.E2E_EMAIL_ALLOWLIST || '';
+            const allowlist = allowlistRaw.split(',').map(e => e.trim().toLowerCase()).filter(e => e);
+            
+            if (!allowlist.includes(email.toLowerCase())) {
+                console.warn(`⚠️ [Auth] E2E login attempted for non-allowlisted email: ${email}`);
+                return res.status(403).json({ error: "Email not in E2E allowlist." });
+            }
+
+            // 4. Firebase User Reconciliation (Look up existing user)
+            const authAdmin = getAuth();
+            let uid = '';
+            try {
+                const userRecord = await authAdmin.getUserByEmail(email);
+                uid = userRecord.uid;
+            } catch (err: any) {
+                // If user doesn't exist (e.g. auth db wiped), gracefully fail or create if explicitly allowed
+                // The requirements state: "do not create or reassign credits unless the user record is missing and the system absolutely requires lookup repair."
+                if (err.code === 'auth/user-not-found') {
+                    console.info(`ℹ️ [Auth] E2E user ${email} not found. Creating test identity...`);
+                    const newUser = await authAdmin.createUser({
+                        email,
+                        emailVerified: true,
+                        displayName: 'E2E Test User'
+                    });
+                    uid = newUser.uid;
+                } else {
+                    throw err;
+                }
+            }
+
+            // 5. Generate Custom Token
+            // Custom tokens allow the client-side Firebase Auth SDK to sign in programmatically.
+            const customToken = await authAdmin.createCustomToken(uid);
+            console.info(`✅ [Auth] E2E login generated custom token for: ${email}`);
+
+            return res.json({ success: true, customToken });
+        } catch (error: any) {
+            console.error("❌ [Auth] E2E login failed:", error);
+            return res.status(500).json({ error: error.message });
+        }
+    });
+
+    /**
      * DATABASE HEALTH & CONFIG STATUS
      */
     app.get('/api/db-status', (req, res) => {

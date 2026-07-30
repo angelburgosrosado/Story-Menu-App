@@ -355,7 +355,7 @@ export const AuthScreen: React.FC<AccountProps> = ({ onUserChange, onClose }) =>
         onClick={handleOfflineMode}
         className={offlineBtn}
       >
-        {isEditorial ? '✍️ Continue without signing in (local only)' : '⚡ Continue in Offline Sandbox Mode'}
+        {isEditorial ? '✍️ Continue without signing in (local only)' : '⚡ Continue in Guest Studio'}
       </button>
     </div>
   );
@@ -539,7 +539,7 @@ export const AccountPanel: React.FC<AccountProps & { onOpenAuth: () => void }> =
               <span className={metaKey}>{isEditorial ? 'Storage:' : 'PERSISTENCE SITE:'}</span>
               <span className={`font-bold ${isEditorial ? 'text-stone-600' : 'text-blue-300'}`}>
                 {currentUser.isOffline
-                  ? (isEditorial ? 'Local only' : 'OFFLINE SECURE')
+                  ? (isEditorial ? 'Local only' : 'GUEST STUDIO')
                   : (isEditorial ? 'Cloud Firestore' : 'CLOUD FIRESTORE')}
               </span>
             </div>

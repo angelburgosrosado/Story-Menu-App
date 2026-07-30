@@ -491,7 +491,7 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ currentUser, o
                           Current Plan: {currentUser.tier || 'Free Creator'}
                         </div>
                         <div className={isEditorial ? 'text-sm text-stone-500 mt-1' : 'text-xs font-mono text-gray-400 mt-1'}>
-                          {currentUser.isOffline ? 'Offline Sandbox Mode' : 'Cloud Sync Active'}
+                          {currentUser.isOffline ? 'Guest Studio' : 'Cloud Sync Active'}
                         </div>
                       </div>
                       <div className={`p-3 rounded-full ${isEditorial ? 'bg-stone-200 text-stone-600' : 'bg-gray-800 text-yellow-400'}`}>

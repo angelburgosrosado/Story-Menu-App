@@ -33,6 +33,11 @@ export interface FirestoreProject {
   genre: string;
   language: string;
   comicFaces: string; // JSON String
+  artStyle?: string;
+  storyHtml?: string;
+  heroId?: string;
+  friendId?: string;
+  villainId?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -100,7 +105,7 @@ export async function deleteCharacterFromFirestore(userId: string, charId: strin
 /**
  * --- Project Operations ---
  */
-export async function saveProjectToFirestore(userId: string, project: Omit<FirestoreProject, 'createdAt' | 'updatedAt' | 'id'> & { id?: string }): Promise<string> {
+export async function saveProjectToFirestore(userId: string, project: Omit<FirestoreProject, 'createdAt' | 'updatedAt' | 'id' | 'userId'> & { id?: string, userId?: string }): Promise<string> {
   const projectId = project.id || `proj_${Math.random().toString(36).substring(2, 11)}`;
   const path = `users/${userId}/projects/${projectId}`;
   try {
@@ -112,6 +117,11 @@ export async function saveProjectToFirestore(userId: string, project: Omit<Fires
       genre: project.genre,
       language: project.language,
       comicFaces: project.comicFaces,
+      artStyle: project.artStyle || '',
+      storyHtml: project.storyHtml || '',
+      heroId: project.heroId || '',
+      friendId: project.friendId || '',
+      villainId: project.villainId || '',
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     }, { merge: true });
@@ -136,8 +146,13 @@ export async function getProjectsFromFirestore(userId: string): Promise<Firestor
         userId: data.userId || userId,
         title: data.title || 'Untitled Comic',
         genre: data.genre || 'Action',
-        language: data.language || 'English',
+        language: data.language || 'en-US',
         comicFaces: data.comicFaces || '[]',
+        artStyle: data.artStyle || '',
+        storyHtml: data.storyHtml || '',
+        heroId: data.heroId || '',
+        friendId: data.friendId || '',
+        villainId: data.villainId || '',
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
       });
@@ -170,6 +185,7 @@ export interface FirestoreDraft {
   artStyle?: string;
   comicFaces: string; // Serialized ComicFace[]
   storyBlueprint: string; // Serialized ChapterGoal[]
+  settings?: any; // To catch all UI wizard state
   createdAt?: any;
   updatedAt?: any;
 }
@@ -187,6 +203,7 @@ export async function saveDraftToFirestore(userId: string, draft: Omit<Firestore
       artStyle: draft.artStyle || '',
       comicFaces: draft.comicFaces,
       storyBlueprint: draft.storyBlueprint,
+      settings: draft.settings || {},
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     }, { merge: true });
@@ -214,6 +231,7 @@ export async function getDraftsFromFirestore(userId: string): Promise<FirestoreD
         artStyle: data.artStyle || '',
         comicFaces: data.comicFaces || '[]',
         storyBlueprint: data.storyBlueprint || '[]',
+        settings: data.settings || {},
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString()
       });

@@ -22,7 +22,7 @@ import {
   deleteDraftFromFirestore, 
   saveDraftToFirestore
 } from './storageFirestore';
-import { Persona, ChapterGoal, CharacterIdentitySchema, StartingFormat, CreatorFlow, StoryGoal, UsageMode, ReferenceImage } from './types';
+import { Persona, GeneratedCharacterModel, ChapterGoal, CharacterIdentitySchema, StartingFormat, CreatorFlow, StoryGoal, UsageMode, ReferenceImage } from './types';
 import { SetupStep1Format } from './components/setup/SetupStep1Format';
 import { SetupStep8Review } from './components/setup/SetupStep8Review';
 import { playPageTurnSFX, playSparkleSFX } from './audio';
@@ -52,9 +52,9 @@ interface LaunchConfig {
 interface SetupProps {
     show: boolean;
     isTransitioning: boolean;
-    hero: Persona | null;
-    friend: Persona | null;
-    villain: Persona | null;
+    hero: GeneratedCharacterModel | null;
+    friend: GeneratedCharacterModel | null;
+    villain: GeneratedCharacterModel | null;
     selectedGenre: string;
     selectedArtStyle?: string;
     onArtStyleChange?: (styleId: string) => void;
@@ -75,9 +75,9 @@ interface SetupProps {
     onVoiceChange: (val: string) => void;
     onSoundtrackChange: (val: boolean) => void;
     onLaunch: (config: LaunchConfig) => void;
-    onSelectHero: (p: Persona | null) => void;
-    onSelectFriend: (p: Persona | null) => void;
-    onSelectVillain: (p: Persona | null) => void;
+    onSelectHero: (p: GeneratedCharacterModel | null) => void;
+    onSelectFriend: (p: GeneratedCharacterModel | null) => void;
+    onSelectVillain: (p: GeneratedCharacterModel | null) => void;
     onLoadProject: (project: any) => void;
     creativeDirectives: string;
     onCreativeDirectivesChange: (val: string) => void;
@@ -390,6 +390,68 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                             >
                                                 <Trash2 size={13} />
                                             </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* DRAFTS SECTION */}
+                            <h3 className="font-bold text-slate-300 text-sm tracking-tight border-b border-slate-800 pb-2 mt-6">Saved Drafts</h3>
+                            {isLoadingLibrary ? (
+                                <p className="text-xs text-slate-500 animate-pulse">Loading...</p>
+                            ) : savedDrafts.length === 0 ? (
+                                <p className="text-xs text-slate-500 italic">No working drafts.</p>
+                            ) : (
+                                <div className="space-y-2 mt-2">
+                                    {savedDrafts.map((d) => (
+                                        <div 
+                                            key={d.id} 
+                                            onClick={() => {
+                                                if (d.settings) {
+                                                    setProjectTitle(d.settings.projectTitle || d.title);
+                                                    setProjectDesc(d.settings.projectDesc || '');
+                                                    setAudienceType(d.settings.audienceType || 'General');
+                                                    setAgeGrade(d.settings.ageGrade || 'General');
+                                                    setReadingLevel(d.settings.readingLevel || 'General');
+                                                    setStoryGoal(d.settings.storyGoal || '');
+                                                    setWizardTone(d.settings.wizardTone || 'adventurous');
+                                                    setAiSuggestionsEnabled(d.settings.aiSuggestionsEnabled ?? true);
+                                                    setActiveNudge(d.settings.activeNudge || '');
+                                                    setBilingualMode(d.settings.bilingualMode ?? false);
+                                                    setSourceLanguage(d.settings.sourceLanguage || 'en-US');
+                                                    setTargetLanguage(d.settings.targetLanguage || 'es-MX');
+                                                    setReadingMode(d.settings.readingMode || 'single');
+                                                    setLockedGlossary(d.settings.lockedGlossary ?? true);
+                                                    setPreserveCharacterNames(d.settings.preserveCharacterNames ?? true);
+                                                    setSimplifyVocabulary(d.settings.simplifyVocabulary ?? false);
+                                                    setReadingLevelAdaptation(d.settings.readingLevelAdaptation ?? true);
+                                                    setNarrationEnabled(d.settings.narrationEnabled ?? true);
+                                                    setVoiceStyle(d.settings.voiceStyle || 'Zephyr');
+                                                    setSoundtrackTheme(d.settings.soundtrackTheme || 'Whimsical Ambient');
+                                                    setCharacterVoiceMode(d.settings.characterVoiceMode ?? true);
+                                                    setVoiceLanguageAlignment(d.settings.voiceLanguageAlignment || 'US English');
+                                                    setVoiceTone(d.settings.voiceTone || 'warm');
+                                                    setMusicIntensity(d.settings.musicIntensity || 'subtle');
+                                                    setShowAdvancedAudio(d.settings.showAdvancedAudio ?? false);
+                                                    if (d.settings.selectedFormat) setSelectedFormat(d.settings.selectedFormat);
+                                                    if (d.settings.selectedFlow) setSelectedFlow(d.settings.selectedFlow);
+                                                    if (d.settings.selectedPrimaryGoal) setSelectedPrimaryGoal(d.settings.selectedPrimaryGoal);
+                                                    if (d.settings.selectedSecondaryGoal) setSelectedSecondaryGoal(d.settings.selectedSecondaryGoal);
+                                                    setFreeformGoalNote(d.settings.freeformGoalNote || '');
+                                                    if (d.settings.selectedPersona) setSelectedPersona(d.settings.selectedPersona);
+                                                    setPersonaRole(d.settings.personaRole || 'Main character');
+                                                    setIsPrimaryPersona(d.settings.isPrimaryPersona ?? true);
+                                                    setRecurringIntent(d.settings.recurringIntent ?? true);
+                                                    setPersonaStoryNotes(d.settings.personaStoryNotes || '');
+                                                }
+                                                if (props.onLoadDraft) props.onLoadDraft(d);
+                                            }}
+                                            className="p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800/60 rounded-xl cursor-pointer transition-all flex items-center justify-between"
+                                        >
+                                            <div className="text-left overflow-hidden pr-2">
+                                                <p className="text-xs font-bold text-slate-200 truncate">{d.title}</p>
+                                                <p className="text-[10px] text-slate-400 truncate mt-0.5">WIP Draft</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

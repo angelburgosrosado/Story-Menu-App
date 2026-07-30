@@ -11,7 +11,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, Persona as CharacterPersona, CharacterIdentitySchema, ChapterGoal } from './types';
+import { MAX_STORY_PAGES, BACK_COVER_PAGE, TOTAL_PAGES, INITIAL_PAGES, BATCH_SIZE, DECISION_PAGES, GENRES, STYLE_KEYWORDS, TONES, LANGUAGES, ComicFace, Beat, GeneratedCharacterModel as CharacterPersona, CharacterIdentitySchema, ChapterGoal } from './types';
 import { Setup } from './Setup';
 import { KidStoryDashboard } from './KidStoryDashboard';
 import { PersonalizedDashboard } from './PersonalizedDashboard';
@@ -507,7 +507,8 @@ const App: React.FC = () => {
                         storyHtml: blueprint.storyHtml || '',
                         heroId: guestHero?.id || '',
                         friendId: guestFriend?.id || '',
-                        villainId: guestVillain?.id || ''
+                        villainId: guestVillain?.id || '',
+                        comicFaces: blueprint.comicFaces || '[]'
                       });
                     }
 

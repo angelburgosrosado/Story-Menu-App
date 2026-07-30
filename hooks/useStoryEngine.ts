@@ -1,4 +1,4 @@
-import { ComicFace, Beat, Persona, CharacterIdentitySchema, ChapterGoal } from '../types';
+import { ComicFace, Beat, Persona, GeneratedCharacterModel, CharacterIdentitySchema, ChapterGoal } from '../types';
 
 export const generateImageBase = async (
     beat: Beat,
@@ -10,9 +10,9 @@ export const generateImageBase = async (
         villainVisuals?: string;
         selectedGenre?: string;
         selectedLanguage?: string;
-        heroRef?: Persona | null;
-        friendRef?: Persona | null;
-        villainRef?: Persona | null;
+        heroRef?: GeneratedCharacterModel | null;
+        friendRef?: GeneratedCharacterModel | null;
+        villainRef?: GeneratedCharacterModel | null;
         provider?: 'gemini' | 'llamagen' | 'comfyui' | 'leonardo';
     }
 ): Promise<string> => {

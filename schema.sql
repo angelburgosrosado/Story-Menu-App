@@ -215,6 +215,7 @@ CREATE TABLE IF NOT EXISTS personas (
     "visualSummary" TEXT,
     "generationSafeDescription" TEXT,
     "usageMode" TEXT,
+    "referenceImageId" TEXT,
     "referenceImageStatus" TEXT,
     "recurringCharacter" TEXT,
     "visibilityScope" TEXT,

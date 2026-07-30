@@ -130,7 +130,7 @@ export const VOICES = [
     { id: 'Charon', name: 'Charon (Dark & Intense)' }
 ];
 
-export interface Persona {
+export interface GeneratedCharacterModel {
   base64: string;
   desc: string;
   hairText?: string;

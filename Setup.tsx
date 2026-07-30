@@ -1124,10 +1124,11 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                             body: file
                                                         });
 
+                                                        const base64 = await fileToBase64(file);
                                                         const dbRes = await fetch('/api/reference-images', {
                                                             method: 'POST',
                                                             headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ fileName: file.name, mimeType: file.type, previewUrl: publicUrl })
+                                                            body: JSON.stringify({ fileName: file.name, mimeType: file.type, previewUrl: base64 })
                                                         });
                                                         const savedRef = await dbRes.json();
                                                         setUploadedRefImage(savedRef);

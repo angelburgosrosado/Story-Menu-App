@@ -40,3 +40,6 @@ google-cloud-sdk/
 test-results/
 playwright-report/
 playwright/.cache/
+
+/firebase-service-account.json
+

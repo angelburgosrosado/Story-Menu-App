@@ -28,16 +28,42 @@ async function e2eBypassLogin(page: Page, email: string) {
         throw new Error('No customToken returned from E2E Auth endpoint.');
     }
 
+    // Setup console listener to catch browser errors during auth
+    page.on('console', msg => console.log('BROWSER:', msg.text()));
+
     // 2. Navigate to root to ensure app environment is loaded and window.e2eSignIn exists
     await page.goto('/');
 
     // 3. Inject the token directly into the client-side Firebase Auth instance
     await page.evaluate(async (token) => {
+        // Unregister service workers first, as PWA intercepts often hang Firebase Auth API calls in Playwright
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let r of registrations) {
+                await r.unregister();
+            }
+        }
+
         const win = window as any;
         if (typeof win.e2eSignIn !== 'function') {
             throw new Error('window.e2eSignIn is not defined. Ensure firebase.ts exposes it.');
         }
-        await win.e2eSignIn(token);
+        
+        console.log('Starting signInWithCustomToken...');
+        return new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('signInWithCustomToken hung for 30 seconds')), 30000);
+            win.e2eSignIn(token)
+                .then(() => {
+                    clearTimeout(timeout);
+                    console.log('signInWithCustomToken succeeded!');
+                    resolve();
+                })
+                .catch((err: any) => {
+                    clearTimeout(timeout);
+                    console.error('signInWithCustomToken failed:', err);
+                    reject(err);
+                });
+        });
     }, customToken);
 
     // 4. Wait for authentication to resolve (UI reacts to onAuthStateChanged)

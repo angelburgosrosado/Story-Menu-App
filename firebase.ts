@@ -96,9 +96,13 @@ export async function testFirestoreConnection(): Promise<boolean> {
   }
 }
 
+import { setPersistence, inMemoryPersistence } from 'firebase/auth';
+
 // Allow E2E tests to inject custom tokens to simulate real sign-ins
 if (typeof window !== 'undefined') {
   (window as any).e2eSignIn = async (token: string) => {
+    // Avoid IndexedDB hangs in Playwright tests by explicitly setting in-memory persistence
+    await setPersistence(auth, inMemoryPersistence);
     return signInWithCustomToken(auth, token);
   };
 }

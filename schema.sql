@@ -134,3 +134,238 @@ CREATE TABLE IF NOT EXISTS webhook_logs (
     error_message TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Auto-generated missing generic tables
+CREATE TABLE IF NOT EXISTS starting_formats (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    short_description TEXT,
+    long_description TEXT,
+    audience_tags JSONB,
+    category_tags JSONB,
+    recommended_for TEXT,
+    sample_output_hint TEXT,
+    age_range TEXT,
+    visibility_state TEXT,
+    show_in_onboarding BOOLEAN DEFAULT false,
+    show_in_homeschool BOOLEAN DEFAULT false,
+    show_in_teacher_flows BOOLEAN DEFAULT false,
+    featured BOOLEAN DEFAULT false,
+    sort_order INT DEFAULT 0,
+    icon TEXT
+);
+
+CREATE TABLE IF NOT EXISTS creator_flows (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    short_description TEXT,
+    best_for TEXT,
+    output_hint TEXT,
+    related_formats JSONB,
+    visibility_state TEXT,
+    show_in_onboarding BOOLEAN DEFAULT false,
+    featured BOOLEAN DEFAULT false,
+    sort_order INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS story_goals (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    short_description TEXT,
+    category TEXT,
+    tags JSONB,
+    related_formats JSONB,
+    related_creator_flows JSONB,
+    importance INT DEFAULT 0,
+    visibility_state TEXT,
+    show_in_wizard BOOLEAN DEFAULT false,
+    show_in_homeschool BOOLEAN DEFAULT false,
+    show_in_teacher_flows BOOLEAN DEFAULT false,
+    featured BOOLEAN DEFAULT false,
+    sort_order INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS usage_modes (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    label TEXT,
+    "shortDescription" TEXT,
+    "generationBehaviorHint" TEXT,
+    "safetyNotes" TEXT,
+    "visibleInWizard" BOOLEAN DEFAULT false,
+    "sortOrder" INT DEFAULT 0,
+    status TEXT
+);
+
+CREATE TABLE IF NOT EXISTS personas (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    "displayName" TEXT,
+    "shortDescription" TEXT,
+    "longDescription" TEXT,
+    "personaType" TEXT,
+    "roleDefaults" TEXT,
+    "ageGroup" TEXT,
+    audience_tags JSONB,
+    language_tags JSONB,
+    "stylePreference" TEXT,
+    "visualSummary" TEXT,
+    "generationSafeDescription" TEXT,
+    "usageMode" TEXT,
+    "referenceImageStatus" TEXT,
+    "recurringCharacter" TEXT,
+    "visibilityScope" TEXT,
+    "consentStatus" TEXT,
+    "moderationStatus" TEXT,
+    "approvedForGeneration" TEXT,
+    sort_order INT DEFAULT 0,
+    status TEXT
+);
+
+CREATE TABLE IF NOT EXISTS styles (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    "shortDescription" TEXT,
+    "longDescription" TEXT,
+    "visualMood" TEXT,
+    "audienceTags" TEXT,
+    "useCaseTags" TEXT,
+    "styleFamily" TEXT,
+    "recommendationTags" TEXT,
+    "visibleInStudio" BOOLEAN DEFAULT false,
+    "visibleInHomeschool" BOOLEAN DEFAULT false,
+    "visibleInTeacherFlow" BOOLEAN DEFAULT false,
+    "visibilityState" TEXT,
+    featured BOOLEAN DEFAULT false,
+    "sortOrder" INT DEFAULT 0,
+    "internalTestingOnly" BOOLEAN DEFAULT false,
+    "artworkReference" TEXT
+);
+
+CREATE TABLE IF NOT EXISTS prompt_templates (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    "workflowType" TEXT,
+    "formatMappings" JSONB,
+    "creatorFlowMappings" JSONB,
+    "styleModifiers" JSONB,
+    "educationalMode" TEXT,
+    "bilingualHandlingHint" TEXT,
+    "personaConsistencyHint" TEXT,
+    status TEXT,
+    "visibleInAdmin" BOOLEAN DEFAULT false,
+    "internalTestingOnly" BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS languages (
+    id VARCHAR(255) PRIMARY KEY,
+    code TEXT,
+    slug TEXT,
+    "displayName" TEXT,
+    "nativeName" TEXT,
+    direction TEXT,
+    status TEXT,
+    "visibleInStudio" BOOLEAN DEFAULT false,
+    "visibleInKidStory" BOOLEAN DEFAULT false,
+    "visibleInComicStudio" BOOLEAN DEFAULT false,
+    "visibleInTeacherFlow" BOOLEAN DEFAULT false,
+    "visibleInHomeschool" BOOLEAN DEFAULT false,
+    "supportsBilingual" BOOLEAN DEFAULT false,
+    "supportsNarration" BOOLEAN DEFAULT false,
+    "supportsTranslation" BOOLEAN DEFAULT false,
+    "internalTestingOnly" BOOLEAN DEFAULT false,
+    "educationalNotes" TEXT,
+    "sortOrder" INT DEFAULT 0,
+    featured BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS glossary_entries (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    "sourceTerm" TEXT,
+    "preferredTranslation" TEXT,
+    "sourceLanguageCode" TEXT,
+    "targetLanguageCode" TEXT,
+    "termType" TEXT,
+    "preserveTerm" BOOLEAN DEFAULT false,
+    "scopeType" TEXT,
+    "internalTestingOnly" BOOLEAN DEFAULT false,
+    status TEXT,
+    "sortOrder" INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS translation_workflows (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    "workflowType" TEXT,
+    "eligibleSourceLanguages" JSONB,
+    "eligibleTargetLanguages" JSONB,
+    "glossarySupport" TEXT,
+    "protectedTermSupport" TEXT,
+    "bilingualOutputSupport" TEXT,
+    "narrationCompatibility" TEXT,
+    status TEXT,
+    "internalTestingOnly" BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS voices (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    "displayName" TEXT,
+    "providerId" TEXT,
+    "modelId" TEXT,
+    "languageCodes" JSONB,
+    "primaryLanguageCode" TEXT,
+    "accentLabel" TEXT,
+    "toneLabel" TEXT,
+    "ageDescriptor" TEXT,
+    "narratorSuitability" TEXT,
+    "childSafe" TEXT,
+    "classroomSafe" TEXT,
+    "supportsBilingualWorkflows" BOOLEAN DEFAULT false,
+    "visibleInStudio" BOOLEAN DEFAULT false,
+    "visibleInKidStory" BOOLEAN DEFAULT false,
+    "visibleInComicStudio" BOOLEAN DEFAULT false,
+    "visibleInTeacherFlow" BOOLEAN DEFAULT false,
+    "visibleInHomeschool" BOOLEAN DEFAULT false,
+    "internalTestingOnly" BOOLEAN DEFAULT false,
+    status TEXT,
+    featured BOOLEAN DEFAULT false,
+    "sortOrder" INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS soundtrack_items (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    category TEXT,
+    mood TEXT,
+    "educationalSuitability" TEXT,
+    "familySuitability" TEXT,
+    "classroomSuitability" TEXT,
+    "languageNeutral" TEXT,
+    status TEXT,
+    "internalTestingOnly" BOOLEAN DEFAULT false,
+    "sortOrder" INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS narration_workflows (
+    id VARCHAR(255) PRIMARY KEY,
+    slug TEXT,
+    title TEXT,
+    "workflowType" TEXT,
+    "eligibleLanguages" JSONB,
+    "eligibleVoices" JSONB,
+    "soundtrackSupport" TEXT,
+    "bilingualCompatibility" TEXT,
+    "exportCompatibility" TEXT,
+    status TEXT,
+    "internalTestingOnly" BOOLEAN DEFAULT false
+);
+

@@ -440,6 +440,7 @@ const App: React.FC = () => {
   // --- Transition States ---
   const [showSetup, setShowSetup] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showMigrationToast, setShowMigrationToast] = useState(false);
 
   const generatingPages = useRef(new Set<number>());
   const historyRef = useRef<ComicFace[]>([]);
@@ -478,6 +479,47 @@ const App: React.FC = () => {
               setActiveCreator({ id: fullUser.id, email: fullUser.email, tier: fullUser.tier });
               localStorage.setItem('infinite_heroes_creator', JSON.stringify(fullUser));
               setIsAuthLoading(false);
+
+              // Perform Guest Studio Migration
+              const offlineBlueprintStr = localStorage.getItem('offline_blueprint');
+              const offlineHeroStr = localStorage.getItem('offline_hero');
+              const offlineFriendStr = localStorage.getItem('offline_friend');
+              const offlineVillainStr = localStorage.getItem('offline_villain');
+
+              if (offlineBlueprintStr || offlineHeroStr) {
+                (async () => {
+                  try {
+                    const blueprint = offlineBlueprintStr ? JSON.parse(offlineBlueprintStr) : {};
+                    const guestHero = offlineHeroStr ? JSON.parse(offlineHeroStr) : null;
+                    const guestFriend = offlineFriendStr ? JSON.parse(offlineFriendStr) : null;
+                    const guestVillain = offlineVillainStr ? JSON.parse(offlineVillainStr) : null;
+
+                    if (guestHero) await saveCharacterToFirestore(fullUser.id, guestHero);
+                    if (guestFriend) await saveCharacterToFirestore(fullUser.id, guestFriend);
+                    if (guestVillain) await saveCharacterToFirestore(fullUser.id, guestVillain);
+
+                    if (offlineBlueprintStr) {
+                      await saveProjectToFirestore(fullUser.id, {
+                        title: blueprint.title || 'Migrated Guest Project',
+                        genre: blueprint.genre || 'Action',
+                        language: blueprint.language || 'en-US',
+                        artStyle: blueprint.artStyle || 'comic',
+                        storyHtml: blueprint.storyHtml || '',
+                        heroId: guestHero?.id || '',
+                        friendId: guestFriend?.id || '',
+                        villainId: guestVillain?.id || ''
+                      });
+                    }
+
+                    ['offline_blueprint', 'offline_hero', 'offline_friend', 'offline_villain', 'offline_story', 'offline_drafts'].forEach(k => localStorage.removeItem(k));
+                    
+                    setShowMigrationToast(true);
+                    setTimeout(() => setShowMigrationToast(false), 5000);
+                  } catch (e) {
+                    console.error("Failed to migrate guest data:", e);
+                  }
+                })();
+              }
 
               if (tokenData.tokens !== undefined) {
                 window.dispatchEvent(new CustomEvent('token-balance-updated', { detail: tokenData.tokens }));
@@ -1189,7 +1231,25 @@ const handleVillainUpload = async (file: File) => {
 
   return (
     <div className={`app-container relative w-full h-screen overflow-hidden transition-all duration-700 ${isLightMode ? 'bg-amber-50' : 'bg-orange-950'}`}>
-      <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700`}>
+      
+      {/* Migration Toast */}
+      {showMigrationToast && (
+        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-3 animate-bounce">
+          <span>✅</span> Guest Studio work successfully synced to your new account!
+        </div>
+      )}
+
+      {/* Guest Studio Banner */}
+      {currentUser?.isOffline && (
+        <div className="absolute top-0 left-0 w-full bg-blue-600/90 text-white text-center py-1.5 z-50 text-xs font-medium shadow-md flex justify-center items-center gap-4 backdrop-blur-sm">
+          <span>You are in Guest Studio. Your work is only saved to this browser.</span>
+          <button onClick={() => setShowAuthModal(true)} className="bg-white text-blue-700 px-3 py-0.5 rounded-full font-bold hover:bg-blue-50 transition-colors shadow-sm">
+            Create an Account to Sync to Cloud
+          </button>
+        </div>
+      )}
+
+      <div className={`main-content flex ${isLightMode ? 'text-amber-900' : 'text-orange-100'} transition-all duration-700 ${currentUser?.isOffline ? 'pt-8' : ''}`}>
 
         {/* Left Sidebar / Controls (conditionally rendered) */}
         {!showSetup && skin !== 'kid-story' && !isStarted && (

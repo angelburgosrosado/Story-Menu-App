@@ -1015,7 +1015,7 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                     
                                     <div className="border-t border-slate-900 pt-3 space-y-1.5 text-[9px] font-medium text-slate-400">
                                         <p>📂 Format: {wizardGenre} ({wizardTone})</p>
-                                        <p>👤 Cast: {selectedPersona ? `${selectedPersona.displayName} (${personaRole})` : 'No custom character cast'}</p>
+                                        <p>👤 Cast: {selectedPersona ? `${selectedPersona.displayName || 'Unnamed Character'} (${personaRole})` : 'No custom character cast'}</p>
                                         <p>🌐 Language: {bilingualMode ? `${sourceLanguage.toUpperCase()} ↔ ${targetLanguage.toUpperCase()} (${readingMode})` : `${sourceLanguage.toUpperCase()}`}</p>
                                         <p>🔊 {narrationEnabled ? `Narrated by ${voiceStyle} with ${soundtrackTheme} music` : 'Muted'}</p>
                                     </div>
@@ -1111,18 +1111,26 @@ export const Setup: React.FC<SetupProps> = (props) => {
                                                     if (!file) return;
                                                     setUploadingRefImage(true);
                                                     try {
-                                                        const base64 = await fileToBase64(file);
-                                                        setUploadedRefImage({
-                                                            id: 'img-' + Math.random().toString(36).substr(2, 9),
-                                                            fileName: file.name,
-                                                            mimeType: file.type,
-                                                            previewUrl: base64,
-                                                            uploadStatus: 'Completed',
-                                                            cropStatus: 'Cropped',
-                                                            moderationStatus: 'Approved',
-                                                            consentVerified: true,
-                                                            approvedForGeneration: true
+                                                        const urlRes = await fetch('/api/assets/upload-url', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ fileName: file.name, mimeType: file.type })
                                                         });
+                                                        const { uploadUrl, assetId, publicUrl } = await urlRes.json();
+                                                        
+                                                        await fetch(uploadUrl, {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': file.type },
+                                                            body: file
+                                                        });
+
+                                                        const dbRes = await fetch('/api/reference-images', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ fileName: file.name, mimeType: file.type, previewUrl: publicUrl })
+                                                        });
+                                                        const savedRef = await dbRes.json();
+                                                        setUploadedRefImage(savedRef);
                                                     } catch (err) {
                                                         alert("Could not load image.");
                                                     } finally {

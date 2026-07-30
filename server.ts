@@ -47,6 +47,7 @@ import Stripe from 'stripe';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { generalLimiter, aiGenerationLimiter, authLimiter, checkoutLimiter, enforceTokenBudget } from './middleware/rateLimit';
 import { securityHeaders, validate, validateImageUpload, checkoutSchema, geminiSuggestSchema } from './middleware/security';
 import { logger } from './middleware/logger';
@@ -4304,6 +4305,40 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     });
 
     // User mock Reference Image Upload API
+    app.post('/api/assets/upload-url', async (req, res): Promise<any> => {
+        try {
+            const { mimeType, fileName } = req.body;
+            if (!fileName || !mimeType) {
+                return res.status(400).json({ error: "fileName and mimeType are required" });
+            }
+
+            const ext = fileName.split('.').pop() || 'img';
+            const assetId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const storagePath = `reference-images/${assetId}.${ext}`;
+
+            // We need a configured firebase-admin with storage bucket
+            const bucket = getStorage().bucket(); 
+            
+            const [uploadUrl] = await bucket.file(storagePath).getSignedUrl({
+                version: 'v4',
+                action: 'write',
+                expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+                contentType: mimeType
+            });
+
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+            return res.json({
+                uploadUrl,
+                assetId,
+                publicUrl
+            });
+        } catch (e: any) {
+            console.error("Error generating signed URL:", e);
+            return res.status(500).json({ error: "Failed to generate upload URL", details: e.message });
+        }
+    });
+
     app.post('/api/reference-images', async (req, res): Promise<any> => {
         const { fileName, mimeType, previewUrl } = req.body;
         const data = {

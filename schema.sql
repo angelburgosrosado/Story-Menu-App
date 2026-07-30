@@ -370,3 +370,17 @@ CREATE TABLE IF NOT EXISTS narration_workflows (
     "internalTestingOnly" BOOLEAN DEFAULT false
 );
 
+
+CREATE TABLE IF NOT EXISTS reference_images (
+    id VARCHAR(255) PRIMARY KEY,
+    "fileName" TEXT,
+    "mimeType" TEXT,
+    "previewUrl" TEXT,
+    "uploadStatus" TEXT,
+    "cropStatus" TEXT,
+    "moderationStatus" TEXT,
+    "consentVerified" BOOLEAN,
+    "approvedForGeneration" BOOLEAN,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

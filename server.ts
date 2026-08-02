@@ -4226,7 +4226,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         const pool = getDbPool();
         try {
             await pool.query(
-                `INSERT INTO personas (id, slug, "displayName", "shortDescription", "longDescription", "personaType", "roleDefaults", "ageGroup", audience_tags, language_tags, "stylePreference", "visualSummary", "generationSafeDescription", "usageMode", "referenceImageId", "referenceImageStatus", "recurringCharacter", "visibilityScope", "consentStatus", "moderationStatus", "approvedForGeneration", sort_order, status)
+                `INSERT INTO personas (id, slug, displayname, shortdescription, longdescription, personatype, roledefaults, agegroup, audience_tags, language_tags, stylepreference, visualsummary, generationsafedescription, usagemode, referenceimageid, referenceimagestatus, recurringcharacter, visibilityscope, consentstatus, moderationstatus, approvedforgeneration, sort_order, status)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
                 [
                     data.id, data.slug, data.displayName, data.shortDescription, data.longDescription,
@@ -4372,7 +4372,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         const pool = getDbPool();
         try {
             await pool.query(
-                `INSERT INTO reference_images (id, fileName, mimeType, previewUrl, uploadStatus, cropStatus, moderationStatus, consentVerified, approvedForGeneration)
+                `INSERT INTO reference_images (id, "fileName", "mimeType", "previewUrl", "uploadStatus", "cropStatus", "moderationStatus", "consentVerified", "approvedForGeneration")
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
                 [
                     data.id, data.fileName, data.mimeType, data.previewUrl, data.uploadStatus,

@@ -1,3 +1,13 @@
+/**
+ * Screen Name: Client Application Entry
+ * Purpose: Mount React root, configure global routing, register PWA service worker, and intercept API routes for decoupled deployments
+ * Version: 2.1.0
+ * Date: 2026-09-04
+ * Phase: Phase 6 - Decoupled Production Deployment (Vercel Frontend + Render Backend)
+ * What changed in this revision:
+ *   - Injected global fetch routing for VITE_API_URL to automatically target external Render backend when deployed on Vercel
+ */
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -7,6 +17,24 @@ import './index.css';
 import './i18n';
 
 import { HelmetProvider } from 'react-helmet-async';
+
+// Global API interceptor for decoupled backend deployment (Render backend + Vercel frontend)
+const apiBase = ((import.meta.env.VITE_API_URL as string) || '').replace(/\/+$/, '');
+if (apiBase && typeof window !== 'undefined' && window.fetch) {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
+        if (typeof input === 'string' && input.startsWith('/api/')) {
+            return originalFetch(`${apiBase}${input}`, init);
+        }
+        if (input instanceof URL && input.pathname.startsWith('/api/')) {
+            return originalFetch(`${apiBase}${input.pathname}${input.search}`, init);
+        }
+        if (input instanceof Request && input.url.startsWith('/api/')) {
+            return originalFetch(new Request(`${apiBase}${input.url}`, input));
+        }
+        return originalFetch(input, init);
+    };
+}
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
     state = { hasError: false, error: null as Error | null };

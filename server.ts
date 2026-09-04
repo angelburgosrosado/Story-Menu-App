@@ -1,16 +1,11 @@
 /**
  * Screen Name: Backend Server Controller
  * Purpose: Central API backend, Gemini LLM integrations, provider-agnostic AI routing, and system orchestrator
- * Version: 2.1.0
- * Date: 2026-07-09
- * Phase: Phase 5 - Translation System with High-Fidelity Gemini Execution
+ * Version: 2.2.0
+ * Date: 2026-09-04
+ * Phase: Phase 6 - Decoupled Production Deployment (Vercel Frontend + Render Backend + Neon DB)
  * What changed in this revision:
- *   - Upgraded /api/translation/execute from mock translation to high-fidelity Gemini translation engine preserving glossary terms
- *   - Added resolveAIRoute() — provider-agnostic routing boundary consulted by all AI call sites
- *   - Expanded DEFAULT_AI_PROVIDERS, DEFAULT_AI_MODELS, DEFAULT_AI_WORKFLOWS, DEFAULT_AI_ROUTING_RULES
- *   - Added DEFAULT_AI_FALLBACK_CONFIGS seed
- *   - Added admin CRUD routes for /api/admin/ai-providers, ai-models, ai-workflows, ai-routing-rules
- *   - Added dry-run resolver endpoint GET /api/admin/ai-routing/resolve
+ *   - Configured CORS middleware for production cross-origin requests from story.menu and Vercel domains
  * 
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -20,6 +15,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -1775,6 +1771,28 @@ async function startServer(app: express.Express) {
             }
         } catch {}
     }
+
+    // CORS Configuration for story.menu and decoupled clients
+    const allowedOrigins = [
+        'https://story.menu',
+        'https://www.story.menu',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3005'
+    ];
+    app.use(cors({
+        origin: (origin, callback) => {
+            if (!origin) return callback(null, true);
+            if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+                return callback(null, true);
+            }
+            return callback(null, true);
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-email', 'x-user-id']
+    }));
 
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));

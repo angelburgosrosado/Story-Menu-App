@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS story_goals (
     tags JSONB,
     related_formats JSONB,
     related_creator_flows JSONB,
-    importance INT DEFAULT 0,
+    importance VARCHAR(50) DEFAULT 'General',
     visibility_state TEXT,
     show_in_wizard BOOLEAN DEFAULT false,
     show_in_homeschool BOOLEAN DEFAULT false,

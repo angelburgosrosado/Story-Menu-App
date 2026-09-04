@@ -1,11 +1,13 @@
 /**
  * Screen Name: Backend Server Controller
  * Purpose: Central API backend, Gemini LLM integrations, provider-agnostic AI routing, and system orchestrator
- * Version: 2.2.0
+ * Version: 2.3.0
  * Date: 2026-09-04
- * Phase: Phase 6 - Decoupled Production Deployment (Vercel Frontend + Render Backend + Neon DB)
+ * Phase: Phase 6 - Production Launch Stability
  * What changed in this revision:
- *   - Configured CORS middleware for production cross-origin requests from story.menu and Vercel domains
+ *   - Configured rawBody capture in express.json verify callback for authentic Stripe webhook signature verification
+ *   - Fixed prompt_templates seed JSON serialization for Neon PostgreSQL JSONB columns
+ *   - Confirmed story_goals importance column compatibility with string values
  * 
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -1557,8 +1559,8 @@ async function seedDefaultWizardLibraries(): Promise<void> {
                     `INSERT INTO prompt_templates (id, slug, title, workflowType, formatMappings, creatorFlowMappings, styleModifiers, educationalMode, bilingualHandlingHint, personaConsistencyHint, status, visibleInAdmin, internalTestingOnly)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
                     [
-                        item.id, item.slug, item.title, item.workflowType, item.formatMappings,
-                        item.creatorFlowMappings, item.styleModifiers, item.educationalMode,
+                        item.id, item.slug, item.title, item.workflowType, JSON.stringify(item.formatMappings),
+                        JSON.stringify(item.creatorFlowMappings), JSON.stringify(item.styleModifiers), item.educationalMode,
                         item.bilingualHandlingHint, item.personaConsistencyHint, item.status,
                         item.visibleInAdmin, item.internalTestingOnly
                     ]
@@ -1794,7 +1796,14 @@ async function startServer(app: express.Express) {
         allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-email', 'x-user-id']
     }));
 
-    app.use(express.json({ limit: '50mb' }));
+    app.use(express.json({
+        limit: '50mb',
+        verify: (req: any, _res, buf) => {
+            if (req.originalUrl && req.originalUrl.startsWith('/api/webhooks/stripe')) {
+                req.rawBody = buf;
+            }
+        }
+    }));
     app.use(express.urlencoded({ extended: true, limit: '50mb' }));
     
     // Task 1.7: Security headers on all responses
@@ -3869,7 +3878,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
         let event: Stripe.Event;
         try {
-            event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
+            event = stripe.webhooks.constructEvent((req as any).rawBody || req.body, sig as string, webhookSecret);
         } catch (err: any) {
             console.error(`[Stripe Webhook] Signature verification failed: ${err.message}`);
             return res.status(400).json({ error: `Webhook Error: ${err.message}` });

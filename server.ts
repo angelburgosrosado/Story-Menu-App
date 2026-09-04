@@ -4372,7 +4372,7 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
         const pool = getDbPool();
         try {
             await pool.query(
-                `INSERT INTO reference_images (id, "fileName", "mimeType", "previewUrl", "uploadStatus", "cropStatus", "moderationStatus", "consentVerified", "approvedForGeneration")
+                `INSERT INTO reference_images (id, fileName, mimeType, previewUrl, uploadStatus, cropStatus, moderationStatus, consentVerified, approvedForGeneration)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
                 [
                     data.id, data.fileName, data.mimeType, data.previewUrl, data.uploadStatus,

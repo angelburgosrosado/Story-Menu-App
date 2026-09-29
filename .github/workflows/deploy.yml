@@ -1,9 +1,8 @@
-# Deploy — Push to main (Task 1.6)
-name: Deploy to Cloud Run
+# Deploy — Push to main (Retired: Relocated from Cloud Run to Vercel)
+name: Deploy to Cloud Run (Disabled)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch: # Disabled automatic push trigger; relocated to Vercel
 
 env:
   SERVICE_NAME: story-menu-app

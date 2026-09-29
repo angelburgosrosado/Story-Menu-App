@@ -242,7 +242,7 @@ async function getSettingValue(key: string): Promise<string> {
     return process.env[key.toUpperCase()] || '';
 }
 
-export default function setupServer(app: express.Application) {
+export function setupServer(app: express.Application) {
     try {
         const envPath = path.join(process.cwd(), '.env');
         const envContent = fs.readFileSync(envPath, 'utf8');
@@ -5511,7 +5511,12 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
 
 }
 
-startServer(app).catch((err) => {
-    console.error("🚨 CRITICAL ERROR DURING startServer():", err);
-    process.exit(1);
-});
+if (!process.env.VERCEL) {
+    startServer(app).catch((err) => {
+        console.error("🚨 CRITICAL ERROR DURING startServer():", err);
+        process.exit(1);
+    });
+}
+
+export { app };
+export default app;

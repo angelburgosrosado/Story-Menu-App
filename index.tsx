@@ -18,8 +18,8 @@ import './i18n';
 
 import { HelmetProvider } from 'react-helmet-async';
 
-// Global API interceptor for decoupled backend deployment (Render backend + Vercel frontend)
-const apiBase = ((import.meta.env.VITE_API_URL as string) || '').replace(/\/+$/, '');
+// Global API interceptor for decoupled backend deployment (Vercel serverless / proxy)
+const apiBase = (((import.meta as any).env?.VITE_API_URL as string) || '').replace(/\/+$/, '');
 if (apiBase && typeof window !== 'undefined' && window.fetch) {
     const originalFetch = window.fetch.bind(window);
     window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {

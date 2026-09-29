@@ -395,7 +395,10 @@ var init_repositories = __esm({
       }
     }
     firestoreDb = (0, import_firestore.getFirestore)();
-    firestoreDb.settings({ databaseId: firebase_applet_config_default.firestoreDatabaseId });
+    try {
+      firestoreDb.settings({ databaseId: firebase_applet_config_default.firestoreDatabaseId });
+    } catch (e) {
+    }
     FirestoreAppSettingsRepository = class {
       async getAll() {
         const snapshot = await firestoreDb.collection("app_settings").get();

@@ -27,7 +27,9 @@ if (!getApps().length) {
 }
 
 const firestoreDb = getFirestore();
-firestoreDb.settings({ databaseId: (firebaseConfig as any).firestoreDatabaseId });
+try {
+    firestoreDb.settings({ databaseId: (firebaseConfig as any).firestoreDatabaseId });
+} catch (e) {}
 
 export interface IAppSettingsRepository {
     getAll(): Promise<any[]>;

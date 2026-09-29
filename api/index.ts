@@ -1,7 +1,4 @@
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const serverMod = require('./server.cjs');
+import { getApp } from '../server';
 
 export default async function handler(req: any, res: any) {
   if (!req.socket) req.socket = {};
@@ -13,7 +10,6 @@ export default async function handler(req: any, res: any) {
     req.connection = req.socket;
   }
 
-  const getApp = serverMod.getApp;
-  const app = getApp ? await getApp() : (serverMod.default || serverMod.app || serverMod);
+  const app = await getApp();
   return app(req, res);
 }

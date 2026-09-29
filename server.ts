@@ -64,15 +64,16 @@ try {
 
 let startupError: any = null;
 
-// Capture and diagnostics for any unhandled startup crashes
-process.on('uncaughtException', (err) => {
-    console.error('🚨 UNCAUGHT EXCEPTION:', err && (err.stack || err.message || err));
-    process.exit(1);
-});
+if (!process.env.VERCEL) {
+    process.on('uncaughtException', (err) => {
+        console.error('🚨 UNCAUGHT EXCEPTION:', err && (err.stack || err.message || err));
+        process.exit(1);
+    });
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('⚠️ UNHANDLED PROMISE REJECTION:', reason);
-});
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('⚠️ UNHANDLED PROMISE REJECTION:', reason);
+    });
+}
 
 let aiClient: GoogleGenAI | null = null;
 function getAIClient(customKey?: string): GoogleGenAI {

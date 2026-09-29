@@ -1,6 +1,10 @@
 import { getApp } from '../server';
 
 export default async function handler(req: any, res: any) {
+  if (req.url === '/api/health' || req.url === '/api/health/') {
+    return res.status(200).json({ status: 'ok', service: 'story-menu-api', serverless: true, timestamp: new Date().toISOString() });
+  }
+
   if (!req.socket) req.socket = {};
   if (!req.socket.remoteAddress) {
     const forwarded = req.headers ? (req.headers['x-forwarded-for'] || req.headers['x-real-ip']) : null;
@@ -10,6 +14,14 @@ export default async function handler(req: any, res: any) {
     req.connection = req.socket;
   }
 
-  const app = await getApp();
-  return app(req, res);
+  try {
+    const app = await getApp();
+    return app(req, res);
+  } catch (err: any) {
+    console.error('Serverless bootstrap error:', err);
+    return res.status(500).json({
+      error: 'Serverless execution error',
+      message: err?.message || String(err)
+    });
+  }
 }

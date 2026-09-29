@@ -1,4 +1,7 @@
-import { getApp } from '../server';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const serverMod = require('./server.cjs');
 
 export default async function handler(req: any, res: any) {
   if (req.url === '/api/health' || req.url === '/api/health/') {
@@ -15,7 +18,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const app = await getApp();
+    const getApp = serverMod.getApp;
+    const app = getApp ? await getApp() : (serverMod.default || serverMod.app || serverMod);
     return app(req, res);
   } catch (err: any) {
     console.error('Serverless bootstrap error:', err);

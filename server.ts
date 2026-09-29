@@ -26,8 +26,8 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from '@google/gen
 import { getDbPool, isDatabaseConnected, initializeDatabaseSchema, markDatabaseOffline, testCustomConnectionString, resetConnectionState } from './db';
 import { getModerationConfig, passesLocalFilter } from './i18nModeration';
 import { calculateTokenCost, AI_MODELS } from './pricingIntelligence';
-import apiV1Router from './api/v1/index';
-import classroomRouter from './api/classroom';
+import apiV1Router from './routes/v1/index';
+import classroomRouter from './routes/classroom';
 import adminRoutesRouter from './routes/admin';
 import adminAiRouter from './routes/admin-ai';
 import adminUsersRouter from './routes/admin-users';

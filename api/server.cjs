@@ -3988,6 +3988,7 @@ var server_exports = {};
 __export(server_exports, {
   app: () => app,
   default: () => server_default,
+  getApp: () => getApp,
   setupServer: () => setupServer
 });
 module.exports = __toCommonJS(server_exports);
@@ -4414,7 +4415,8 @@ function securityHeaders(req, res, next) {
   res.set("X-XSS-Protection", "1; mode=block");
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  if (req.secure || req.headers["x-forwarded-proto"] === "https") {
+  const isSecure = req.headers?.["x-forwarded-proto"] === "https" || req.socket?.encrypted || false;
+  if (isSecure) {
     res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
   next();
@@ -6849,7 +6851,7 @@ async function ensureUserExists(pool, userId) {
     console.warn(`Could not auto-seed user ID ${userId}:`, e.message);
   }
 }
-async function startServer(app2) {
+async function configureApp(app2) {
   const isCompiledFile = _dirname.includes("dist") || _filename.includes("dist") || _filename.endsWith(".cjs");
   const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION || process.env.GOOGLE_CLOUD_PROJECT !== void 0;
   const hasCompiledAssets = import_fs2.default.existsSync(import_path2.default.join(process.cwd(), "dist", "index.html"));
@@ -10151,34 +10153,58 @@ ${text}
     }
   }
   app2.use(errorTracker.errorHandler.bind(errorTracker));
-  await startGenerationWorker();
   try {
-    const serverInstance = app2.listen(port, "0.0.0.0", () => {
-      console.log(`\u{1F310} Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || "none (default 3001)"})`);
-    });
-    serverInstance.on("error", (err) => {
-      console.error("\u{1F6A8} Resilient Server binding error event:", err);
-      if (err.code === "EADDRINUSE") {
-        console.error(`\u{1F4A1} HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
-      }
-    });
-    process.on("SIGTERM", async () => {
-      console.log("[Server] SIGTERM received; closing generation worker/queue...");
-      await closeGenerationQueue();
-      serverInstance.close(() => process.exit(0));
-    });
-    process.on("SIGINT", async () => {
-      console.log("[Server] SIGINT received; closing generation worker/queue...");
-      await closeGenerationQueue();
-      serverInstance.close(() => process.exit(0));
-    });
-  } catch (listenError) {
-    console.error("\u{1F6A8} CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);
-    process.exit(1);
+    await startGenerationWorker();
+  } catch (e) {
+    console.warn("[Queue] Could not start generation worker:", e.message);
   }
+  return app2;
+}
+var configuredAppPromise = null;
+function getApp() {
+  if (!configuredAppPromise) {
+    configuredAppPromise = configureApp(app);
+  }
+  return configuredAppPromise;
 }
 if (!process.env.VERCEL) {
-  startServer(app).catch((err) => {
+  getApp().then((configuredApp) => {
+    let port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+    if (process.env.PORT) {
+      try {
+        const cleanedPortStr = process.env.PORT.toString().replace(/['"]/g, "").trim();
+        const parsedPort = parseInt(cleanedPortStr, 10);
+        if (!isNaN(parsedPort) && parsedPort > 0) {
+          port = parsedPort;
+        }
+      } catch {
+      }
+    }
+    try {
+      const serverInstance = configuredApp.listen(port, "0.0.0.0", () => {
+        console.log(`\u{1F310} Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || "none (default 3001)"})`);
+      });
+      serverInstance.on("error", (err) => {
+        console.error("\u{1F6A8} Resilient Server binding error event:", err);
+        if (err.code === "EADDRINUSE") {
+          console.error(`\u{1F4A1} HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
+        }
+      });
+      process.on("SIGTERM", async () => {
+        console.log("[Server] SIGTERM received; closing generation worker/queue...");
+        await closeGenerationQueue();
+        serverInstance.close(() => process.exit(0));
+      });
+      process.on("SIGINT", async () => {
+        console.log("[Server] SIGINT received; closing generation worker/queue...");
+        await closeGenerationQueue();
+        serverInstance.close(() => process.exit(0));
+      });
+    } catch (listenError) {
+      console.error("\u{1F6A8} CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);
+      process.exit(1);
+    }
+  }).catch((err) => {
     console.error("\u{1F6A8} CRITICAL ERROR DURING startServer():", err);
     process.exit(1);
   });
@@ -10187,6 +10213,7 @@ var server_default = app;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   app,
+  getApp,
   setupServer
 });
 /**

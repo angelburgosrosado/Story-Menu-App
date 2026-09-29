@@ -1752,7 +1752,7 @@ async function ensureUserExists(pool: any, userId: string) {
     }
 }
 
-async function startServer(app: express.Express) {
+async function configureApp(app: express.Express): Promise<express.Express> {
     const isCompiledFile = _dirname.includes('dist') || _filename.includes('dist') || _filename.endsWith('.cjs');
     const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION || process.env.GOOGLE_CLOUD_PROJECT !== undefined;
     const hasCompiledAssets = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
@@ -5475,44 +5475,63 @@ OUTPUT STRICT JSON ONLY (No markdown formatting):
     app.use(errorTracker.errorHandler.bind(errorTracker));
 
     // Start generation worker (BullMQ if REDIS_URL is set, otherwise in-memory handlers are already registered)
-    await startGenerationWorker();
-
-    // Start listening on port only when all API endpoints and static assets are fully configured
-
-
     try {
-
-        const serverInstance = app.listen(port, "0.0.0.0", () => {
-
-            console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3001)'})`);
-        });
-
-        serverInstance.on('error', (err: any) => {
-            console.error("🚨 Resilient Server binding error event:", err);
-            if (err.code === 'EADDRINUSE') {
-                console.error(`💡 HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
-            }
-        });
-
-        process.on('SIGTERM', async () => {
-            console.log('[Server] SIGTERM received; closing generation worker/queue...');
-            await closeGenerationQueue();
-            serverInstance.close(() => process.exit(0));
-        });
-        process.on('SIGINT', async () => {
-            console.log('[Server] SIGINT received; closing generation worker/queue...');
-            await closeGenerationQueue();
-            serverInstance.close(() => process.exit(0));
-        });
-    } catch (listenError: any) {
-        console.error("🚨 CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);
-        process.exit(1);
+        await startGenerationWorker();
+    } catch (e: any) {
+        console.warn('[Queue] Could not start generation worker:', e.message);
     }
 
+    return app;
+}
+
+let configuredAppPromise: Promise<express.Express> | null = null;
+export function getApp(): Promise<express.Express> {
+    if (!configuredAppPromise) {
+        configuredAppPromise = configureApp(app);
+    }
+    return configuredAppPromise;
 }
 
 if (!process.env.VERCEL) {
-    startServer(app).catch((err) => {
+    getApp().then((configuredApp) => {
+        let port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+        if (process.env.PORT) {
+            try {
+                const cleanedPortStr = process.env.PORT.toString().replace(/['"]/g, '').trim();
+                const parsedPort = parseInt(cleanedPortStr, 10);
+                if (!isNaN(parsedPort) && parsedPort > 0) {
+                    port = parsedPort;
+                }
+            } catch {}
+        }
+
+        try {
+            const serverInstance = configuredApp.listen(port, "0.0.0.0", () => {
+                console.log(`🌐 Resilient Express Server listening on http://0.0.0.0:${port} (Vite port context: ${process.env.PORT || 'none (default 3001)'})`);
+            });
+
+            serverInstance.on('error', (err: any) => {
+                console.error("🚨 Resilient Server binding error event:", err);
+                if (err.code === 'EADDRINUSE') {
+                    console.error(`💡 HINT: Host port ${port} is already in use by another active process. Check system metrics.`);
+                }
+            });
+
+            process.on('SIGTERM', async () => {
+                console.log('[Server] SIGTERM received; closing generation worker/queue...');
+                await closeGenerationQueue();
+                serverInstance.close(() => process.exit(0));
+            });
+            process.on('SIGINT', async () => {
+                console.log('[Server] SIGINT received; closing generation worker/queue...');
+                await closeGenerationQueue();
+                serverInstance.close(() => process.exit(0));
+            });
+        } catch (listenError: any) {
+            console.error("🚨 CRITICAL: Synchronous error during app.listen():", listenError.message || listenError);
+            process.exit(1);
+        }
+    }).catch((err) => {
         console.error("🚨 CRITICAL ERROR DURING startServer():", err);
         process.exit(1);
     });

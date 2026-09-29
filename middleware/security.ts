@@ -10,7 +10,8 @@ export function securityHeaders(req: any, res: any, next: any) {
     res.set('X-XSS-Protection', '1; mode=block');
     res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    const isSecure = req.headers?.['x-forwarded-proto'] === 'https' || req.socket?.encrypted || false;
+    if (isSecure) {
         res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     next();

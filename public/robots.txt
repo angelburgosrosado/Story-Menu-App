@@ -1,9 +1,26 @@
 User-agent: *
 Allow: /
 
-# Block API endpoints from indexing
-Disallow: /api/
-Disallow: /admin/
+# SendPut AI (SignalForge 3.0) — Allow Verified AI Search Retrieval Bots
+User-agent: OAI-SearchBot
+Allow: /
 
-# Sitemap location — submitted to Google Search Console
-Sitemap: https://storymenu.app/sitemap.xml
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://story.menu/sitemap.xml

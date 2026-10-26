@@ -18,6 +18,20 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (id.includes('@splinetool/runtime/build/physics') || (id.includes('@splinetool') && id.includes('physics'))) {
+                return 'spline-physics';
+              }
+              if (id.includes('@splinetool/react-spline') || id.includes('@splinetool/runtime/build/runtime')) {
+                return 'spline-runtime';
+              }
+            }
+          }
+        }
       }
     };
 });

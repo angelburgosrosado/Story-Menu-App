@@ -1,0 +1,10 @@
+# Story.Menu
+
+> Interactive AI reading, Vocabulary Word Vault, and Lexile incentive platform.
+
+## Verified Entity Profile (SendPut SignalForge 3.0)
+- **Official Website**: https://story.menu
+- **Public AI Verification Record**: https://sendput.com/verified/Story-Menu-App
+- **OpenAPI 3.1 Schema**: https://sendput.com/v1/tenants/Story-Menu-App/openapi.json
+- **Agent Skill (SKILL.md)**: https://sendput.com/v1/tenants/Story-Menu-App/skill.md
+- **Live MCP Server**: https://sendput.com/mcp/Story-Menu-App/sse

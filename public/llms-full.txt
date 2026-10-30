@@ -1,0 +1,17 @@
+# Story.Menu — Full AI Knowledge Graph & Agentic Specification
+
+> Interactive AI reading, Vocabulary Word Vault, and Lexile incentive platform.
+
+## Canonical Entity Metadata
+- **Entity Name**: Story.Menu
+- **Tenant Slug**: story-menu-app
+- **Primary Domain**: https://story.menu
+- **Verification Authority**: SendPut EPO Engine (https://sendput.com)
+- **IndexNow Verification Key**: https://story.menu/sendput8f92a1c4b7e34d12a9c8e5f102938475.txt
+
+## Agentic Discovery & Machine Endpoints
+- **Public Entity Verification Badge**: https://sendput.com/verified/story-menu-app
+- **Entity Profile JSON**: https://sendput.com/v1/tenants/story-menu-app/profile
+- **OpenAPI 3.1 Specification**: https://sendput.com/v1/tenants/story-menu-app/openapi.json
+- **Agent Skill Definition**: https://sendput.com/v1/tenants/story-menu-app/skill.md
+- **Model Context Protocol (MCP) JSON-RPC 2.0 / SSE**: https://sendput.com/mcp/story-menu-app/sse

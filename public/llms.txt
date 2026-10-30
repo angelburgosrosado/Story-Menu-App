@@ -2,9 +2,10 @@
 
 > Interactive AI reading, Vocabulary Word Vault, and Lexile incentive platform.
 
-## Verified Entity Profile (SendPut SignalForge 3.0)
+## Verified Entity Profile (SendPut EPO Engine)
 - **Official Website**: https://story.menu
-- **Public AI Verification Record**: https://sendput.com/verified/Story-Menu-App
-- **OpenAPI 3.1 Schema**: https://sendput.com/v1/tenants/Story-Menu-App/openapi.json
-- **Agent Skill (SKILL.md)**: https://sendput.com/v1/tenants/Story-Menu-App/skill.md
-- **Live MCP Server**: https://sendput.com/mcp/Story-Menu-App/sse
+- **Public AI Verification Record**: https://sendput.com/verified/story-menu-app
+- **Full AI Knowledge Graph Feed**: https://story.menu/llms-full.txt
+- **OpenAPI 3.1 Schema**: https://sendput.com/v1/tenants/story-menu-app/openapi.json
+- **Agent Skill (SKILL.md)**: https://sendput.com/v1/tenants/story-menu-app/skill.md
+- **Live MCP Server**: https://sendput.com/mcp/story-menu-app/sse

@@ -1,11 +1,14 @@
 User-agent: *
 Allow: /
 
-# SendPut AI (SignalForge 3.0) — Allow Verified AI Search Retrieval Bots
+# SendPut EPO Engine — Allow Verified AI Search Retrieval Bots
 User-agent: OAI-SearchBot
 Allow: /
 
 User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
 Allow: /
 
 User-agent: PerplexityBot
